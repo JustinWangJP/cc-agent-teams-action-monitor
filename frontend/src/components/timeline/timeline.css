@@ -1,0 +1,319 @@
+/**
+ * タイムライン用スタイル定義。
+ *
+ * vis-timeline のカスタムスタイルを定義します。
+ * ダークモード対応とメッセージタイプ別のスタイルを含みます。
+ */
+
+/* ============================================
+   ベーススタイル
+   ============================================ */
+
+.vis-timeline {
+  border-radius: 0.5rem;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+}
+
+.vis-timeline .vis-panel {
+  background-color: transparent;
+}
+
+/* ============================================
+   軸（時間軸）
+   ============================================ */
+
+.vis-timeline .vis-time-axis .vis-text {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.dark .vis-timeline .vis-time-axis .vis-text {
+  color: #94a3b8;
+}
+
+.vis-timeline .vis-time-axis .vis-grid.vis-minor {
+  border-color: #e2e8f0;
+}
+
+.dark .vis-timeline .vis-time-axis .vis-grid.vis-minor {
+  border-color: #334155;
+}
+
+.vis-timeline .vis-time-axis .vis-grid.vis-major {
+  border-color: #cbd5e1;
+}
+
+.dark .vis-timeline .vis-time-axis .vis-grid.vis-major {
+  border-color: #475569;
+}
+
+/* ============================================
+   アイテム（メッセージボックス）
+   ============================================ */
+
+.vis-timeline .vis-item {
+  border-radius: 0.375rem;
+  border-width: 1px;
+  border-style: solid;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  transition: all 0.15s ease-out;
+  cursor: pointer;
+}
+
+.vis-timeline .vis-item:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  z-index: 10;
+}
+
+.vis-timeline .vis-item.vis-selected {
+  box-shadow: 0 0 0 2px #3b82f6;
+  z-index: 11;
+}
+
+.dark .vis-timeline .vis-item.vis-selected {
+  box-shadow: 0 0 0 2px #60a5fa;
+}
+
+/* 通常メッセージ */
+.vis-timeline .timeline-item-message {
+  background-color: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.dark .vis-timeline .timeline-item-message {
+  background-color: #1e3a8a;
+  border-color: #3b82f6;
+  color: #dbeafe;
+}
+
+/* アイドル通知 */
+.vis-timeline .timeline-item-idle {
+  background-color: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.dark .vis-timeline .timeline-item-idle {
+  background-color: #78350f;
+  border-color: #f59e0b;
+  color: #fef3c7;
+}
+
+/* シャットダウン要求 */
+.vis-timeline .timeline-item-shutdown {
+  background-color: #fecaca;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.dark .vis-timeline .timeline-item-shutdown {
+  background-color: #7f1d1d;
+  border-color: #ef4444;
+  color: #fecaca;
+}
+
+/* シャットダウン応答 */
+.vis-timeline .timeline-item-shutdown-response {
+  background-color: #e0e7ff;
+  border-color: #a5b4fc;
+  color: #3730a3;
+}
+
+.dark .vis-timeline .timeline-item-shutdown-response {
+  background-color: #312e81;
+  border-color: #6366f1;
+  color: #e0e7ff;
+}
+
+/* プラン承認要求 */
+.vis-timeline .timeline-item-plan-request {
+  background-color: #fce7f3;
+  border-color: #f9a8d4;
+  color: #9d174d;
+}
+
+.dark .vis-timeline .timeline-item-plan-request {
+  background-color: #831843;
+  border-color: #ec4899;
+  color: #fce7f3;
+}
+
+/* プラン承認応答 */
+.vis-timeline .timeline-item-plan-response {
+  background-color: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.dark .vis-timeline .timeline-item-plan-response {
+  background-color: #14532d;
+  border-color: #22c55e;
+  color: #dcfce7;
+}
+
+/* タスク割り当て */
+.vis-timeline .timeline-item-task {
+  background-color: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #075985;
+}
+
+.dark .vis-timeline .timeline-item-task {
+  background-color: #164e63;
+  border-color: #06b6d4;
+  color: #e0f2fe;
+}
+
+/* 不明なタイプ */
+.vis-timeline .timeline-item-unknown {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.dark .vis-timeline .timeline-item-unknown {
+  background-color: #334155;
+  border-color: #64748b;
+  color: #f1f5f9;
+}
+
+/* デフォルト */
+.vis-timeline .timeline-item-default {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.dark .vis-timeline .timeline-item-default {
+  background-color: #334155;
+  border-color: #64748b;
+  color: #f1f5f9;
+}
+
+/* ============================================
+   グループ（送信者）
+   ============================================ */
+
+.vis-timeline .vis-group {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dark .vis-timeline .vis-group {
+  border-bottom: 1px solid #334155;
+}
+
+.vis-timeline .vis-group .vis-label {
+  color: #334155;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+}
+
+.dark .vis-timeline .vis-group .vis-label {
+  color: #cbd5e1;
+}
+
+.vis-timeline .vis-group:hover {
+  background-color: #f8fafc;
+}
+
+.dark .vis-timeline .vis-group:hover {
+  background-color: #1e293b;
+}
+
+/* ============================================
+   カレントタイム（現在時刻バー）
+   ============================================ */
+
+.vis-timeline .vis-custom-time {
+  background-color: #ef4444;
+  width: 2px;
+}
+
+.vis-timeline .vis-custom-time .vis-custom-time-killer {
+  background-color: #ef4444;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  top: -6px;
+  left: -5px;
+}
+
+/* ============================================
+   背景エリア
+   ============================================ */
+
+.vis-timeline .vis-background {
+  background-color: #ffffff;
+}
+
+.dark .vis-timeline .vis-background {
+  background-color: #0f172a;
+}
+
+/* ============================================
+   今日・週末などの背景ハイライト
+   ============================================ */
+
+.vis-timeline .vis-weekend {
+  background-color: #f8fafc;
+}
+
+.dark .vis-timeline .vis-weekend {
+  background-color: #1e293b;
+}
+
+.vis-timeline .vis-today {
+  background-color: #eff6ff;
+}
+
+.dark .vis-timeline .vis-today {
+  background-color: #1e3a8a;
+}
+
+/* ============================================
+   ツールチップ
+   ============================================ */
+
+.vis-timeline .vis-tooltip {
+  background-color: #1e293b;
+  color: #f1f5f9;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+/* ============================================
+   フォーカススタイル（アクセシビリティ）
+   ============================================ */
+
+.vis-timeline:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ============================================
+   レスポンシブ対応
+   ============================================ */
+
+@media (max-width: 640px) {
+  .vis-timeline .vis-item {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.25rem;
+  }
+
+  .vis-timeline .vis-group .vis-label {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.25rem;
+  }
+
+  .vis-timeline .vis-time-axis .vis-text {
+    font-size: 0.625rem;
+  }
+}
