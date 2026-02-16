@@ -48,6 +48,8 @@ export interface Team {
  *
  * チーム名、メンバー数、ステータスを持ち、一覧画面での高速表示用に
  * 最適化されています。
+ *
+ * モデル情報を含める場合は `models` プロパティを追加してください。
  */
 export interface TeamSummary {
   name: string;
@@ -56,4 +58,8 @@ export interface TeamSummary {
   status: 'active' | 'inactive';
   lastActivity?: string;
   leadAgentId: string;
+  /** モデル使用状況（オプション） */
+  models?: string[];
+  /** プライマリモデル（最も使用されているモデル） */
+  primaryModel?: string;
 }

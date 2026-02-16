@@ -68,3 +68,59 @@ export interface WebSocketMessage {
   event?: string;
   messages?: InboxMessage[];
 }
+
+/**
+ * メッセージタイプの列挙。
+ *
+ * エージェント間通信で使用されるプロトコルメッセージの種類を定義します。
+ */
+export type MessageType =
+  | 'message'
+  | 'idle_notification'
+  | 'shutdown_request'
+  | 'shutdown_approved'
+  | 'task_assignment'
+  | 'unknown';
+
+/**
+ * パース済みメッセージを表すインターフェース。
+ *
+ * InboxMessage を拡張し、プロトコルメッセージのパース結果を追加します。
+ * text フィールドが JSON かプレインテキストかを自動判定します。
+ */
+export interface ParsedMessage extends InboxMessage {
+  /** パースされたメッセージタイプ */
+  parsedType: MessageType;
+  /** プロトコルメッセージの場合のパース結果 */
+  parsedData?: ProtocolMessage;
+  /** 受信者（推定） */
+  to?: string;
+}
+
+/**
+ * メッセージフィルター条件を表すインターフェース。
+ *
+ * タイムライン表示時のフィルタリング条件を定義します。
+ */
+export interface MessageFilter {
+  /** 送信者でフィルタ（空配列で全送信者） */
+  senders: string[];
+  /** 受信者でフィルタ（空配列で全受信者） */
+  receivers: string[];
+  /** メッセージタイプでフィルタ（空配列で全タイプ） */
+  types: MessageType[];
+  /** 未読のみを表示 */
+  unreadOnly: boolean;
+}
+
+/**
+ * 時間範囲を表すインターフェース。
+ *
+ * タイムラインの表示期間を定義します。
+ */
+export interface TimeRange {
+  /** 開始時刻 */
+  start: Date;
+  /** 終了時刻 */
+  end: Date;
+}
