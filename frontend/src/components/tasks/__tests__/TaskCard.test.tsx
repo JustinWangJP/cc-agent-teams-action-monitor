@@ -3,8 +3,7 @@
  *
  * T-CMP-006: タスクカード表示
  *
- * @
- */
+*/
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { TaskCard } from '../TaskCard'
@@ -89,7 +88,7 @@ describe('TaskCard', () => {
         ...mockTask,
         owner: undefined
       }
-      const { container } = render(<TaskCard task={taskWithoutOwner} />)
+      render(<TaskCard task={taskWithoutOwner} />)
       expect(screen.queryByText(/Owner:/)).not.toBeInTheDocument()
     })
 

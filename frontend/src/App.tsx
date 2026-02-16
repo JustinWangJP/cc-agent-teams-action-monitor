@@ -15,6 +15,7 @@ import { TaskCard } from '@/components/tasks/TaskCard';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { TimelinePanel } from '@/components/timeline/TimelinePanel';
 import { TaskDependencyGraph } from '@/components/graph/TaskDependencyGraph';
+import { AgentNetworkGraph } from '@/components/graph';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTeams } from '@/hooks/useTeams';
@@ -28,6 +29,7 @@ import {
   MessageSquare,
   ListTodo,
   GitBranch,
+  Network,
 } from 'lucide-react';
 
 /**
@@ -38,6 +40,7 @@ const VIEWS = [
   { id: 'timeline' as const, label: 'タイムライン', icon: MessageSquare },
   { id: 'tasks' as const, label: 'タスク', icon: ListTodo },
   { id: 'graphs' as const, label: '依存グラフ', icon: GitBranch },
+  { id: 'network' as const, label: '通信ネットワーク', icon: Network },
 ];
 
 function App() {
@@ -337,6 +340,31 @@ function App() {
                 height={600}
                 onNodeClick={handleNodeClick}
               />
+            </div>
+          )}
+
+          {/* Network Graph View */}
+          {currentView === 'network' && (
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                エージェント通信ネットワーク
+              </h2>
+              {selectedTeam ? (
+                <AgentNetworkGraph
+                  teamName={selectedTeam}
+                  width={1100}
+                  height={600}
+                  onNodeClick={(node) => console.log('Selected agent:', node)}
+                  onNodeHover={(node) => console.log('Hover agent:', node)}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-96">
+                  <div className="text-center text-gray-500 dark:text-gray-400">
+                    <Network className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>通信ネットワークを表示するチームを選択してください</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

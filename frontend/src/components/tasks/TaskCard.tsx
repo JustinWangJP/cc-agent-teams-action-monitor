@@ -10,8 +10,7 @@ import { StatusBadge } from '@/components/common/StatusBadge';
  * @param props.task - タスクサマリーデータ
  * @returns タスクカード要素
  *
- * @
- */
+*/
 interface TaskCardProps {
   task: TaskSummary;
 }

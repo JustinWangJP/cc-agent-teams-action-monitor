@@ -13,15 +13,13 @@ import type {
   ParsedMessage,
   MessageFilter,
   TimeRange,
-  MessageType,
 } from '@/types/message';
-import type { Team } from '@/types/team';
 import type { Task } from '@/types/task';
 
 /**
  * ビューの種類。
  */
-export type ViewType = 'overview' | 'timeline' | 'tasks' | 'graphs';
+export type ViewType = 'overview' | 'timeline' | 'tasks' | 'graphs' | 'network';
 
 /**
  * ソート順の種類。

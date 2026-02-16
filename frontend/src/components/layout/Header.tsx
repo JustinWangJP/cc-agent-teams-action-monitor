@@ -10,8 +10,7 @@ import { ThemeToggle } from '@/components/common/ThemeToggle';
  * @param props.connectionStatus - WebSocket 接続状態
  * @returns ヘッダー要素
  *
- * @
- */
+*/
 interface HeaderProps {
   connectionStatus: 'connecting' | 'open' | 'closed';
 }

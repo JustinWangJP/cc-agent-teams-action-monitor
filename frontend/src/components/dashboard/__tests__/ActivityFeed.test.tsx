@@ -3,8 +3,7 @@
  *
  * T-CMP-007: フィード表示
  *
- * @
- */
+*/
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ActivityFeed } from '../ActivityFeed'
@@ -12,17 +11,19 @@ import { ActivityFeed } from '../ActivityFeed'
 const mockActivities = [
   {
     id: '1',
-    type: 'task_update',
-    message: 'Task completed',
+    type: 'task_update' as const,
+    teamName: 'team-1',
+    agentName: 'test-agent',
+    content: 'Task completed',
     timestamp: '2025-01-15T10:30:00Z',
-    agent: 'test-agent'
   },
   {
     id: '2',
-    type: 'team_update',
-    message: 'New member joined',
+    type: 'member_join' as const,
+    teamName: 'team-1',
+    agentName: 'lead-agent',
+    content: 'New member joined',
     timestamp: '2025-01-15T09:00:00Z',
-    agent: 'lead-agent'
   }
 ]
 

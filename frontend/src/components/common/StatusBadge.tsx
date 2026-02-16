@@ -8,8 +8,7 @@
  * @param props.size - バッジサイズ（'sm' | 'md'）
  * @returns ステータスバッジ要素
  *
- * @
- */
+*/
 interface StatusBadgeProps {
   status: string;
   size?: 'sm' | 'md';

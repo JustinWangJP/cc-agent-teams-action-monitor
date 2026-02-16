@@ -4,8 +4,7 @@
  * T-CMP-004: チームカード表示
  * T-CMP-005: クリックイベント
  *
- * @
- */
+*/
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TeamCard } from '../TeamCard'

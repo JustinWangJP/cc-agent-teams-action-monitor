@@ -15,8 +15,7 @@ let isPageReloading = false;
  * @returns connectionStatus - 接続状態（'connecting' | 'open' | 'closed'）
  * @returns sendMessage - メッセージ送信関数
  *
- * @
- */
+*/
 export function useWebSocket(channel: string) {
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'open' | 'closed'>('connecting');

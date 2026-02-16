@@ -13,8 +13,7 @@ import { Team, TeamSummary } from '@/types/team';
  * @returns refetch - 手動再取得関数
  * @returns setTeams - チーム状態更新関数
  *
- * @
- */
+*/
 export function useTeams() {
   const [teams, setTeams] = useState<TeamSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,8 +56,7 @@ export function useTeams() {
  * @returns error - エラーメッセージ（null 可能）
  * @returns setTeam - チーム状態更新関数
  *
- * @
- */
+*/
 export function useTeam(teamName: string) {
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);

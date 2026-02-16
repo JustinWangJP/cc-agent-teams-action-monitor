@@ -9,8 +9,7 @@ import { ActivityEvent } from '@/types/message';
  * @param props.activities - アクティビティイベント配列
  * @returns アクティビティフィード要素
  *
- * @
- */
+*/
 interface ActivityFeedProps {
   activities: ActivityEvent[];
 }

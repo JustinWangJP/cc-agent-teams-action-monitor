@@ -4,8 +4,7 @@
  * T-HK-001: データ取得
  * T-HK-002: ローディング状態
  *
- * @
- */
+*/
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { useTeams, useTeam } from '../useTeams'

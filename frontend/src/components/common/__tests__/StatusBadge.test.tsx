@@ -5,8 +5,7 @@
  * T-CMP-003: pending ステータス
  * T-CMP-0XX: その他ステータスのカバレッジ
  *
- * @
- */
+*/
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { StatusBadge } from '../StatusBadge'

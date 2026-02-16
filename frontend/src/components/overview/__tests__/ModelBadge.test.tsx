@@ -11,8 +11,7 @@
  * T-CMP-MB-008: サイズバリエーション
  * T-CMP-MB-009: ModelBadgeGroup グループ表示
  *
- * @
- */
+*/
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ModelBadge, ModelBadgeGroup } from '../ModelBadge'

@@ -11,8 +11,7 @@ import { Header } from './Header';
  * @param props.connectionStatus - WebSocket 接続状態
  * @returns レイアウト要素
  *
- * @
- */
+*/
 interface LayoutProps {
   children: ReactNode;
   connectionStatus: 'connecting' | 'open' | 'closed';

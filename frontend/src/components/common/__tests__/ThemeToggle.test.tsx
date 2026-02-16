@@ -8,18 +8,19 @@
  * T-CMP-TT-005: サイズバリエーション
  * T-CMP-TT-006: アクセシビリティ属性
  *
- * @
- */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+*/
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ThemeToggle } from '../ThemeToggle'
 
 // localStorage のモック
 const localStorageMock = {
-  getItem: vi.fn(() => null),
-  setItem: vi.fn(),
+  getItem: vi.fn() as Mock<[string], string | null>,
+  setItem: vi.fn() as Mock<[string, string], void>,
   clear: vi.fn(),
 }
+localStorageMock.getItem.mockReturnValue(null)
+
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
   writable: true,

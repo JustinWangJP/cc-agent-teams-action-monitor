@@ -4,8 +4,7 @@
  * InboxMessage、ProtocolMessage、ActivityEvent、WebSocketMessage インターフェースを定義し、
  * エージェント間通信とリアルタイム更新を型安全に管理します。
  *
- * @
- */
+*/
 
 /**
  * インボックスメッセージを表すインターフェース。

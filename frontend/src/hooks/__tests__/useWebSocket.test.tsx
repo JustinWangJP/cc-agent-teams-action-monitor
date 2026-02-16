@@ -5,12 +5,10 @@
  * T-HK-005: メッセージ受信
  * T-HK-006: 再接続
  *
- * @
- */
+*/
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useWebSocket } from '../useWebSocket'
-import type { WebSocketMessage } from '@/types/message'
 
 // WebSocket のモック
 class MockWebSocket {
@@ -111,15 +109,10 @@ describe('useWebSocket', () => {
         expect(result.current.connectionStatus).toBe('open')
       })
 
-      const testMessage: WebSocketMessage = {
-        type: 'team_update',
-        team: 'test-team',
-        data: { event: 'modified' }
-      }
-
+      // 注: WebSocketメッセージのシミュレートは実際のWebSocketインスタンスに
+      //     アクセスする方法によって調整が必要
       act(() => {
         // WebSocketインスタンスに直接アクセスしてメッセージをシミュレート
-        // 注: 実装によりヘルパー関数を使う
       })
 
       // 注: このテストは実際のWebSocketインスタンスにアクセスする方法に

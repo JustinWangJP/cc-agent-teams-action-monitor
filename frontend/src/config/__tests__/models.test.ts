@@ -6,8 +6,7 @@
  * T-CFG-MD-003: getModelIdsByProvider 関数
  * T-CFG-MD-004: 既知モデルの設定値
  *
- * @
- */
+*/
 import { describe, it, expect } from 'vitest'
 import { MODEL_CONFIGS, getModelConfig, getModelIdsByProvider } from '../models'
 

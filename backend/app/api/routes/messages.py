@@ -12,6 +12,14 @@ from typing import Optional, Literal
 from app.config import settings
 from app.models.timeline import TimelineData, TimelineItem, TimelineGroup, MessageType
 from app.models.model import ModelListResponse, ModelConfig
+from app.models.network import (
+    NetworkData,
+    AgentNode,
+    CommunicationEdge,
+    EdgeTypeCounts,
+    NetworkMeta,
+    NetworkTimeRange,
+)
 
 router = APIRouter()
 
@@ -473,3 +481,196 @@ async def get_messages(
     )
 
     return {"messages": filtered_messages, "count": len(filtered_messages)}
+
+
+@router.get("/teams/{team_name}/messages/network", response_model=NetworkData)
+async def get_message_network(
+    team_name: str,
+    start_time: Optional[str] = Query(None, description="開始時刻 (ISO 8601)"),
+    end_time: Optional[str] = Query(None, description="終了時刻 (ISO 8601)"),
+):
+    """エージェント通信ネットワークのデータを取得する。
+
+    指定されたチームのエージェント間通信をネットワークグラフ形式で返します。
+    ノード（エージェント）とエッジ（通信関係）を集計し、モデル情報を結合します。
+
+    Args:
+        team_name: チーム名
+        start_time: 開始時刻 (ISO 8601形式)
+        end_time: 終了時刻 (ISO 8601形式)
+
+    Returns:
+        ネットワークデータ（ノード、エッジ、メタ情報）
+    """
+    team_dir = get_team_dir(team_name)
+    inboxes = get_team_inboxes(team_dir)
+
+    # モデル設定をマップ化
+    model_config_map = {config.id: config for config in MODEL_CONFIGS}
+
+    # 全メッセージを収集
+    all_messages = []
+    for agent_name, messages in inboxes.items():
+        if isinstance(messages, list):
+            for msg in messages:
+                msg["inbox_owner"] = agent_name
+                msg["from"] = msg.get("from", agent_name)
+                all_messages.append(msg)
+
+    # タイムスタンプでソート
+    all_messages.sort(key=lambda m: m.get("timestamp", ""))
+
+    # フィルター条件の解析
+    start_dt = datetime.fromisoformat(start_time) if start_time else None
+    end_dt = datetime.fromisoformat(end_time) if end_time else None
+
+    # 時間範囲フィルター
+    filtered_messages = all_messages
+    if start_dt:
+        filtered_messages = [
+            m
+            for m in filtered_messages
+            if datetime.fromisoformat(m["timestamp"].replace("Z", "+00:00")) >= start_dt
+        ]
+    if end_dt:
+        filtered_messages = [
+            m
+            for m in filtered_messages
+            if datetime.fromisoformat(m["timestamp"].replace("Z", "+00:00")) <= end_dt
+        ]
+
+    # ========================================================================
+    # ノード集計（エージェント別）
+    # ========================================================================
+
+    # エージェントごとの統計を集計
+    agent_stats: dict[str, dict] = {}  # agent_name -> {sent, received, model}
+
+    for msg in filtered_messages:
+        sender = msg.get("from")
+        receiver = msg.get("inbox_owner")
+
+        if sender:
+            if sender not in agent_stats:
+                agent_stats[sender] = {"sent": 0, "received": 0, "model": None}
+            agent_stats[sender]["sent"] += 1
+
+        if receiver and receiver != sender:
+            if receiver not in agent_stats:
+                agent_stats[receiver] = {"sent": 0, "received": 0, "model": None}
+            agent_stats[receiver]["received"] += 1
+
+    # モデル情報を取得（config.json から）
+    config_file = team_dir / "config.json"
+    agent_models: dict[str, str] = {}  # agent_name -> model_id
+    if config_file.exists():
+        with open(config_file, "r", encoding="utf-8") as f:
+            config_data = json.load(f)
+            members = config_data.get("members", [])
+            for member in members:
+                agent_name = member.get("name")
+                model_id = member.get("model")
+                if agent_name and model_id:
+                    agent_models[agent_name] = model_id
+
+    # ノードを作成
+    nodes = []
+    for agent_name, stats in agent_stats.items():
+        model_id = agent_models.get(agent_name, "unknown")
+        model_config = model_config_map.get(
+            model_id,
+            ModelConfig(
+                id="unknown",
+                color="#94A3B8",
+                icon="⚪",
+                label="Unknown",
+                provider="other",
+            ),
+        )
+
+        nodes.append(
+            AgentNode(
+                id=agent_name,
+                label=agent_name,
+                model=model_id,
+                modelColor=model_config.color,
+                modelIcon=model_config.icon,
+                messageCount=stats["sent"] + stats["received"],
+                sentCount=stats["sent"],
+                receivedCount=stats["received"],
+            )
+        )
+
+    # ========================================================================
+    # エッジ集計（送信者→受信者）
+    # ========================================================================
+
+    # エッジキー: "sender->receiver"
+    edge_stats: dict[str, dict] = {}  # edge_key -> {count, types, last_timestamp}
+
+    for msg in filtered_messages:
+        sender = msg.get("from")
+        receiver = msg.get("inbox_owner")
+
+        if not sender or not receiver or sender == receiver:
+            continue
+
+        edge_key = f"{sender}->{receiver}"
+
+        if edge_key not in edge_stats:
+            edge_stats[edge_key] = {
+                "count": 0,
+                "types": EdgeTypeCounts().model_dump(),
+                "last_timestamp": msg.get("timestamp", ""),
+            }
+
+        edge_stats[edge_key]["count"] += 1
+
+        # メッセージタイプを判定してカウント
+        msg_type = parse_message_type(msg.get("text", ""))
+        msg_type_str = msg_type.value
+
+        # タイプ別カウントを更新
+        types_dict = edge_stats[edge_key]["types"]
+        if msg_type_str in types_dict:
+            types_dict[msg_type_str] += 1
+        else:
+            types_dict["other"] += 1
+
+        # 最終タイムスタンプを更新
+        msg_timestamp = msg.get("timestamp", "")
+        if msg_timestamp > edge_stats[edge_key]["last_timestamp"]:
+            edge_stats[edge_key]["last_timestamp"] = msg_timestamp
+
+    # エッジを作成
+    edges = []
+    for edge_key, stats in edge_stats.items():
+        sender, receiver = edge_key.split("->")
+
+        # 優占タイプを判定
+        types_counts = stats["types"]
+        dominant_type = max(types_counts.items(), key=lambda x: x[1])[0]
+
+        edges.append(
+            CommunicationEdge(
+                source=sender,
+                target=receiver,
+                count=stats["count"],
+                types=EdgeTypeCounts(**types_counts),
+                dominantType=dominant_type,
+                lastTimestamp=stats["last_timestamp"],
+            )
+        )
+
+    # ========================================================================
+    # メタ情報
+    # ========================================================================
+
+    time_range = get_time_range(filtered_messages)
+
+    meta = NetworkMeta(
+        totalMessages=len(filtered_messages),
+        timeRange=NetworkTimeRange(min=time_range["min"], max=time_range["max"]),
+    )
+
+    return NetworkData(nodes=nodes, edges=edges, teamName=team_name, meta=meta)

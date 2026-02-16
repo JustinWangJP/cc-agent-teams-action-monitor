@@ -44,7 +44,7 @@ export interface ThemeToggleProps {
 export function ThemeToggle({
   className = '',
   size = 'md',
-  iconOnly = true,
+  iconOnly: _iconOnly = true,
   onThemeChange,
 }: ThemeToggleProps) {
   // 初期レンダリング検出用フラグ

@@ -4,8 +4,7 @@
  * Member、Team、TeamSummary インターフェースを定義し、
  * Claude Code Agent Teams のチーム構成を型安全に管理します。
  *
- * @
- */
+*/
 
 /**
  * チームメンバー情報を表すインターフェース。

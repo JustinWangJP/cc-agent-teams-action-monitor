@@ -15,8 +15,7 @@ import type { ModelUsage } from '@/types/model';
  * @param props.showModels - モデルバッジを表示するかどうか（任意、デフォルトfalse）
  * @returns チームカード要素
  *
- * @
- */
+*/
 interface TeamCardProps {
   team: TeamSummary;
   onClick?: () => void;

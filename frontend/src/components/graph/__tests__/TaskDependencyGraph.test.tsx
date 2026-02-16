@@ -4,7 +4,7 @@
  * @module components/graph/__tests__/TaskDependencyGraph.test
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { TaskDependencyGraph } from '../TaskDependencyGraph';
 

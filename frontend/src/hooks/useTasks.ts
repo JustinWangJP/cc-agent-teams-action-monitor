@@ -13,8 +13,7 @@ import { Task, TaskSummary } from '@/types/task';
  * @returns refetch - 手動再取得関数
  * @returns setTasks - タスク状態更新関数
  *
- * @
- */
+*/
 export function useTasks() {
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,8 +55,7 @@ export function useTasks() {
  * @returns error - エラーメッセージ（null 可能）
  * @returns setTasks - タスク状態更新関数
  *
- * @
- */
+*/
 export function useTeamTasks(teamName: string) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);

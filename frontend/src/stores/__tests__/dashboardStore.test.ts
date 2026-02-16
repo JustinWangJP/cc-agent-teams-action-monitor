@@ -15,7 +15,8 @@ import {
   useUIState,
   useCurrentView,
 } from '../dashboardStore';
-import type { ParsedMessage, Task } from '@/types';
+import type { ParsedMessage } from '@/types/message';
+import type { Task } from '@/types/task';
 
 describe('dashboardStore', () => {
   // 各テスト前にストアをリセット
@@ -138,7 +139,7 @@ describe('dashboardStore', () => {
       const newFilter = {
         senders: ['agent-1', 'agent-2'],
         receivers: [],
-        types: ['message'],
+        types: ['message'] as ('message' | 'idle_notification' | 'shutdown_request' | 'shutdown_approved' | 'task_assignment' | 'unknown')[],
         unreadOnly: true,
       };
 

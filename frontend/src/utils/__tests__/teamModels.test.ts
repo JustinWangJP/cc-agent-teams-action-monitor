@@ -7,8 +7,7 @@
  * T-UT-TM-004: getUniqueModelIds
  * T-UT-TM-005: 未知のモデルの扱い
  *
- * @
- */
+*/
 import { describe, it, expect } from 'vitest'
 import { computeTeamModels, computeTeamModelSummary, getUniqueModelIds } from '../teamModels'
 import type { Member } from '@/types/team'
