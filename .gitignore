@@ -205,3 +205,11 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+#Ignore Claude Code related files.
+mcp.json
+.claude/
+.agents/
+start-claude-*.sh
+
+*/node_modules/*
