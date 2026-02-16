@@ -4,6 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class', // クラスベースのダークモードを有効化
   theme: {
     extend: {
       colors: {
@@ -20,6 +21,13 @@ export default {
           900: '#0c4a6e',
         },
       },
+      // ダークモード用の色定義を追加
+      backgroundColor: theme => ({
+        ...theme('colors'),
+        'dark-primary': '#0F172A', // slate-900
+        'dark-secondary': '#1E293B', // slate-800
+        'dark-tertiary': '#334155', // slate-700
+      }),
     },
   },
   plugins: [],
