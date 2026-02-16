@@ -10,43 +10,41 @@ from pydantic import BaseModel, Field
 
 
 class InboxMessage(BaseModel):
-    """インボックスメッセージのデータモデル。
+        """インボックスメッセージのデータモデル。
 
-    送信者（from）、メッセージ本文、要約、タイムスタンプ、色設定、
-    既読フラグを含みます。エージェント間のメッセージ通信に使用します。
+        送信者（from）、メッセージ本文、要約、タイムスタンプ、色設定、
+        既読フラグを含みます。エージェント間のメッセージ通信に使用します。
 
 
-    """
+        """
 
-    from_: str = Field(alias="from")
-    text: str
-    summary: Optional[str] = None
-    timestamp: str
-    color: Optional[str] = None
-    read: bool = False
+        from_: str = Field(alias="from")
+        text: str
+        summary: Optional[str] = None
+        timestamp: str
+        color: Optional[str] = None
+        read: bool = False
 
-    class Config:
-        populate_by_name = True
+        model_config = {"populate_by_name": True}
 
 
 class ProtocolMessage(BaseModel):
-    """プロトコルメッセージのデータモデル。
+        """プロトコルメッセージのデータモデル。
 
-    メッセージタイプ、送信者、タイムスタンプ、リクエストID、アイドル理由等を含みます。
-    Claude Code エージェント間の JSON-in-JSON 通信に使用します。
+        メッセージタイプ、送信者、タイムスタンプ、リクエストID、アイドル理由等を含みます。
+        Claude Code エージェント間の JSON-in-JSON 通信に使用します。
 
 
-    """
+        """
 
-    type: str
-    from_: Optional[str] = Field(None, alias="from")
-    timestamp: Optional[str] = None
-    requestId: Optional[str] = None
-    idleReason: Optional[str] = None
-    reason: Optional[str] = None
+        type: str
+        from_: Optional[str] = Field(None, alias="from")
+        timestamp: Optional[str] = None
+        requestId: Optional[str] = None
+        idleReason: Optional[str] = None
+        reason: Optional[str] = None
 
-    class Config:
-        populate_by_name = True
+        model_config = {"populate_by_name": True}
 
 
 class ActivityEvent(BaseModel):
