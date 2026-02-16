@@ -28,7 +28,7 @@ class Settings(BaseSettings):
         tasks_dir: Path = Path.home() / ".claude" / "tasks"
 
         # CORS settings
-        cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+        cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173", "*"]
 
         model_config = {"env_prefix": "DASHBOARD_"}
 

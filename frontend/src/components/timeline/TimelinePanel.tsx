@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import MessageTimeline from './MessageTimeline';
 import TimelineFilters from './TimelineFilters';
@@ -61,13 +61,19 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   const [error, setError] = useState<ApiError | null>(null);
   const [filteredData, setFilteredData] = useState<TimelineDataType | null>(null);
 
-  const { timeRange, messageFilter, searchQuery } =
-    useDashboardStore();
+  // 初回ロードかどうかを追跡（時間範囲フィルタをスキップするため）
+  const isInitialLoadRef = useRef(true);
+
+  // 個別セレクターを使用して無限ループを防止
+  const timeRange = useDashboardStore((state) => state.timeRange);
+  const setTimeRange = useDashboardStore((state) => state.setTimeRange);
+  const messageFilter = useDashboardStore((state) => state.messageFilter);
+  const searchQuery = useDashboardStore((state) => state.searchQuery);
 
   /**
    * タイムラインデータを取得。
    */
-  const fetchTimelineData = useCallback(async () => {
+  const fetchTimelineData = useCallback(async (skipTimeRange = false) => {
     if (!teamName) return;
 
     setIsLoading(true);
@@ -76,12 +82,14 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
     try {
       const params = new URLSearchParams();
 
-      // 時間範囲パラメータ
-      if (timeRange.start) {
-        params.append('start_time', timeRange.start.toISOString());
-      }
-      if (timeRange.end) {
-        params.append('end_time', timeRange.end.toISOString());
+      // 時間範囲パラメータ（初回ロード時はスキップして全データを取得）
+      if (!skipTimeRange) {
+        if (timeRange.start) {
+          params.append('start_time', timeRange.start.toISOString());
+        }
+        if (timeRange.end) {
+          params.append('end_time', timeRange.end.toISOString());
+        }
       }
 
       // 送信者フィルター
@@ -126,6 +134,15 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
 
       setData(result);
       setFilteredData(result);
+
+      // 初回ロード時、データの時間範囲をストアに反映
+      if (skipTimeRange && result.timeRange) {
+        setTimeRange({
+          start: new Date(result.timeRange.min),
+          end: new Date(result.timeRange.max),
+        });
+        isInitialLoadRef.current = false;
+      }
     } catch (err) {
       const apiError: ApiError = {
         message: err instanceof Error ? err.message : '不明なエラー',
@@ -136,24 +153,30 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [teamName, timeRange, messageFilter, searchQuery, apiBaseUrl]);
+  }, [teamName, timeRange, messageFilter, searchQuery, apiBaseUrl, setTimeRange]);
 
   /**
    * 初期ロードとチーム変更時にデータ取得。
+   * 初回は時間範囲フィルタなしで全データを取得し、データの時間範囲をストアに反映する。
    */
   useEffect(() => {
     if (teamName) {
-      fetchTimelineData();
+      isInitialLoadRef.current = true;
+      fetchTimelineData(true);
     }
   }, [teamName]);
 
   /**
    * フィルター/検索変更時にデータ再取得。
+   * 初回ロード後のみ実行（時間範囲フィルタあり）。
    */
   useEffect(() => {
+    // 初回ロード時はスキップ
+    if (isInitialLoadRef.current) return;
+
     if (teamName && !isLoading) {
       const timer = setTimeout(() => {
-        fetchTimelineData();
+        fetchTimelineData(false);
       }, 500);
       return () => clearTimeout(timer);
     }
@@ -170,7 +193,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * リフレッシュハンドラー。
    */
   const handleRefresh = useCallback(() => {
-    fetchTimelineData();
+    fetchTimelineData(false);
   }, [fetchTimelineData]);
 
   /**

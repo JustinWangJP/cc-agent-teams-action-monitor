@@ -24,6 +24,10 @@ export interface Member {
   color?: string;
   status: 'active' | 'idle';
   lastActivity?: string;
+  /** エージェントのプロンプト（オプション） */
+  prompt?: string;
+  /** バックエンドタイプ（オプション） */
+  backendType?: string;
 }
 
 /**
@@ -45,7 +49,7 @@ export interface Team {
 /**
  * チーム一覧表示用のサマリーインターフェース。
  *
- * チーム名、メンバー数、ステータスを持ち、一覧画面での高速表示用に
+ * チーム名、メンバー数、タスク数、ステータスを持ち、一覧画面での高速表示用に
  * 最適化されています。
  *
  * モデル情報を含める場合は `models` プロパティを追加してください。
@@ -54,9 +58,13 @@ export interface TeamSummary {
   name: string;
   description?: string;
   memberCount: number;
+  /** チームに関連するタスク数 */
+  taskCount: number;
   status: 'active' | 'inactive';
   lastActivity?: string;
   leadAgentId: string;
+  /** 作成日時（Unixタイムスタンプ、ソート用） */
+  createdAt?: number;
   /** モデル使用状況（オプション） */
   models?: string[];
   /** プライマリモデル（最も使用されているモデル） */

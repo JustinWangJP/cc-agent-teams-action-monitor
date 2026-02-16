@@ -8,9 +8,9 @@
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { Search, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { useFilters } from '@/stores/dashboardStore';
+import { useDashboardStore } from '@/stores/dashboardStore';
 import { clsx } from 'clsx';
 
 /**
@@ -54,14 +54,17 @@ export const MessageSearch: React.FC<MessageSearchProps> = ({
   onSearch,
   onClear,
 }) => {
-  const { searchQuery, setSearchQuery } = useFilters();
+  // 個別セレクターを使用して無限ループを防止
+  const searchQuery = useDashboardStore((state) => state.searchQuery);
+  const setSearchQuery = useDashboardStore((state) => state.setSearchQuery);
   const [inputValue, setInputValue] = useState(searchQuery);
   const [showOptions, setShowOptions] = useState(false);
   const [options, setOptions] = useState<SearchOptions>({
     caseSensitive: false,
     useRegex: false,
   });
-  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  // useRefを使用してタイマーを管理（再レンダリングを防ぐ）
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
    * 検索クエリ変更ハンドラー（デバウンス付き）。
@@ -70,18 +73,16 @@ export const MessageSearch: React.FC<MessageSearchProps> = ({
     (value: string) => {
       setInputValue(value);
 
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
 
-      const timer = setTimeout(() => {
+      debounceTimerRef.current = setTimeout(() => {
         setSearchQuery(value);
         onSearch?.(value);
       }, 300);
-
-      setDebounceTimer(timer);
     },
-    [setSearchQuery, onSearch, debounceTimer],
+    [setSearchQuery, onSearch],
   );
 
   /**
@@ -99,14 +100,14 @@ export const MessageSearch: React.FC<MessageSearchProps> = ({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
-        if (debounceTimer) {
-          clearTimeout(debounceTimer);
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
         }
         setSearchQuery(inputValue);
         onSearch?.(inputValue);
       }
     },
-    [inputValue, setSearchQuery, onSearch, debounceTimer],
+    [inputValue, setSearchQuery, onSearch],
   );
 
   // ストアの検索クエリと入力値を同期
@@ -115,14 +116,13 @@ export const MessageSearch: React.FC<MessageSearchProps> = ({
   }, [searchQuery]);
 
   // コンポーネントアンマウント時にタイマーをクリア
-  useEffect(
-    () => () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
-    },
-    [debounceTimer],
-  );
+    };
+  }, []);
 
   const hasQuery = inputValue.trim().length > 0;
 

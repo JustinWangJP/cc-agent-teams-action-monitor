@@ -12,7 +12,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Check, ChevronDown, X } from 'lucide-react';
 import type { MessageFilter, MessageType } from '@/types/message';
 import { MESSAGE_TYPES } from '@/types/timeline';
-import { useFilters } from '@/stores/dashboardStore';
+import { useDashboardStore } from '@/stores/dashboardStore';
 import { clsx } from 'clsx';
 
 /**
@@ -183,7 +183,9 @@ export const TimelineFilters: React.FC<TimelineFiltersProps> = ({
   availableTypes = MESSAGE_TYPES.map((t) => t.value as MessageType),
   onFilterChange,
 }) => {
-  const { messageFilter, updateMessageFilter } = useFilters();
+  // 個別セレクターを使用して無限ループを防止
+  const messageFilter = useDashboardStore((state) => state.messageFilter);
+  const updateMessageFilter = useDashboardStore((state) => state.updateMessageFilter);
 
   const handleSendersChange = useCallback(
     (values: string[]) => {

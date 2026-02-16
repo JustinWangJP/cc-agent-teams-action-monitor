@@ -29,6 +29,8 @@ class Member(BaseModel):
     color: Optional[str] = None
     status: str = "idle"  # active, idle
     lastActivity: Optional[datetime] = None
+    prompt: Optional[str] = None  # エージェントのプロンプト
+    backendType: Optional[str] = None  # バックエンドタイプ
 
 
 class Team(BaseModel):
@@ -52,7 +54,7 @@ class Team(BaseModel):
 class TeamSummary(BaseModel):
     """チーム一覧表示用のサマリーモデル。
 
-    チーム名、説明、メンバー数、ステータス（active/inactive）、リードエージェントIDを含みます。
+    チーム名、説明、メンバー数、タスク数、ステータス（active/inactive）、リードエージェントIDを含みます。
     一覧画面での高速表示に最適化された軽量モデルです。
 
 
@@ -61,6 +63,8 @@ class TeamSummary(BaseModel):
     name: str
     description: Optional[str] = ""
     memberCount: int
+    taskCount: int = 0  # チームに関連するタスク数
     status: str  # active, inactive
     lastActivity: Optional[datetime] = None
     leadAgentId: str
+    createdAt: Optional[int] = None  # 作成日時（Unixタイムスタンプ、ソート用）

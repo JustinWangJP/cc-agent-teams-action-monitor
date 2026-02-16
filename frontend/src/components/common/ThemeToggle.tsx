@@ -113,7 +113,7 @@ export function ThemeToggle({
       onClick={toggleTheme}
       className={`
         inline-flex items-center justify-center
-        rounded-lg transition-all duration-200
+        rounded-lg transition-all duration-300 ease-in-out
         bg-gray-100 dark:bg-slate-700
         hover:bg-gray-200 dark:hover:bg-slate-600
         text-gray-700 dark:text-gray-200
@@ -127,7 +127,7 @@ export function ThemeToggle({
       {theme === 'light' ? (
         // 月アイコン（ダークモード切り替え）
         <svg
-          className={`w-5 h-5 ${iconSize[size]}`}
+          className={`w-5 h-5 ${iconSize[size]} transition-transform duration-300 hover:rotate-12`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -142,7 +142,7 @@ export function ThemeToggle({
       ) : (
         // 太陽アイコン（ライトモード切り替え）
         <svg
-          className={`w-5 h-5 ${iconSize[size]}`}
+          className={`w-5 h-5 ${iconSize[size]} transition-transform duration-300 hover:rotate-90`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

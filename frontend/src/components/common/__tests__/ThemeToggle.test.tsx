@@ -274,6 +274,26 @@ describe('ThemeToggle', () => {
     })
   })
 
+  describe('アニメーション (TC-401)', () => {
+    it('300msのトランジションを持つ', () => {
+      render(<ThemeToggle />)
+      const button = screen.getByRole('button')
+      expect(button.className).toContain('duration-300')
+    })
+
+    it('ease-in-outタイミング関数を持つ', () => {
+      render(<ThemeToggle />)
+      const button = screen.getByRole('button')
+      expect(button.className).toContain('ease-in-out')
+    })
+
+    it('アイコンホバーアニメーションを持つ', () => {
+      render(<ThemeToggle />)
+      const svg = screen.getByRole('button').querySelector('svg')
+      expect(svg?.className).toContain('transition-transform')
+    })
+  })
+
   describe('SSR 対応', () => {
     it('SSR 環境（window.undefined）でデフォルトライトモードになる', () => {
       // 元の window オブジェクトを保存

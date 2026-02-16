@@ -249,8 +249,8 @@ async def test_get_network_with_time_filter(client: AsyncClient, tmp_path):
         )
         assert response_filtered.status_code == 200
         data_filtered = response_filtered.json()
-        # 10:00 のメッセージのみ（範囲に含まれる）
-        assert data_filtered["meta"]["totalMessages"] == 1
+        # 10:00 と 11:00 のメッセージ（範囲に含まれる、境界値を含む）
+        assert data_filtered["meta"]["totalMessages"] == 2
 
     finally:
         # クリーンアップ

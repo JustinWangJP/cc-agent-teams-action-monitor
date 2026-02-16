@@ -9,27 +9,28 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { TeamCard } from '@/components/dashboard/TeamCard';
-import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
+import { TeamCard, TeamDetailPanel } from '@/components/dashboard';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { ErrorDisplay } from '@/components/common/ErrorDisplay';
 import { TimelinePanel } from '@/components/timeline/TimelinePanel';
 import { TaskDependencyGraph } from '@/components/graph/TaskDependencyGraph';
 import { AgentNetworkGraph } from '@/components/graph';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { useWebSocket } from '@/hooks/useWebSocket';
-import { useTeams } from '@/hooks/useTeams';
+import { useTeams, useTeam } from '@/hooks/useTeams';
 import { useTasks } from '@/hooks/useTasks';
-import { useDashboardStore, useCurrentView } from '@/stores/dashboardStore';
+import { useDashboardStore } from '@/stores/dashboardStore';
 import { TeamSummary } from '@/types/team';
 import { TaskSummary } from '@/types/task';
-import { ActivityEvent } from '@/types/message';
 import {
   LayoutDashboard,
   MessageSquare,
   ListTodo,
   GitBranch,
   Network,
+  Search,
+  X,
 } from 'lucide-react';
 
 /**
@@ -44,31 +45,23 @@ const VIEWS = [
 ];
 
 function App() {
-  const { teams, loading: teamsLoading, setTeams } = useTeams();
-  const { tasks, loading: tasksLoading, setTasks } = useTasks();
+  const { teams, loading: teamsLoading, error: teamsError, refetch: refetchTeams, setTeams } = useTeams();
+  const { tasks, loading: tasksLoading, error: tasksError, refetch: refetchTasks, setTasks } = useTasks();
   const { lastMessage, connectionStatus } = useWebSocket('dashboard');
-  const [activities, setActivities] = useState<ActivityEvent[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const { currentView, setCurrentView } = useCurrentView();
-  const { setSelectedTask } = useDashboardStore();
+  // 選択されたチームの詳細を取得
+  const { team: selectedTeamDetail } = useTeam(selectedTeam || '');
+
+  // 個別のセレクターを使用して無限レンダリングを防ぐ
+  const currentView = useDashboardStore((state) => state.currentView);
+  const setCurrentView = useDashboardStore((state) => state.setCurrentView);
+  const setSelectedTask = useDashboardStore((state) => state.setSelectedTask);
 
   // Handle WebSocket messages
   useEffect(() => {
     if (!lastMessage) return;
-
-    const addActivity = (event: Partial<ActivityEvent>) => {
-      const activity: ActivityEvent = {
-        id: `${Date.now()}-${Math.random()}`,
-        type: event.type || 'message',
-        teamName: event.teamName || '',
-        agentName: event.agentName || 'Unknown',
-        content: event.content || '',
-        timestamp: new Date().toISOString(),
-        metadata: event.metadata,
-      };
-      setActivities((prev) => [activity, ...prev].slice(0, 50));
-    };
 
     if (lastMessage.type === 'team_update' && lastMessage.team) {
       // Refresh teams list
@@ -76,13 +69,6 @@ function App() {
         .then((res) => res.json())
         .then((data: TeamSummary[]) => setTeams(data))
         .catch(console.error);
-
-      addActivity({
-        type: 'member_join',
-        teamName: lastMessage.team,
-        agentName: 'System',
-        content: `Team ${lastMessage.team} updated`,
-      });
     }
 
     if (lastMessage.type === 'task_update' && lastMessage.team) {
@@ -91,24 +77,6 @@ function App() {
         .then((res) => res.json())
         .then((data: TaskSummary[]) => setTasks(data))
         .catch(console.error);
-
-      addActivity({
-        type: 'task_update',
-        teamName: lastMessage.team,
-        agentName: (lastMessage.data as { owner?: string })?.owner || 'Unknown',
-        content: `Task ${lastMessage.task_id} updated`,
-      });
-    }
-
-    if (lastMessage.type === 'inbox_update' && lastMessage.team && lastMessage.agent) {
-      addActivity({
-        type: 'message',
-        teamName: lastMessage.team,
-        agentName: lastMessage.agent,
-        content: lastMessage.messages?.length
-          ? `New message: ${lastMessage.messages[lastMessage.messages.length - 1]?.text?.slice(0, 50)}...`
-          : 'Inbox updated',
-      });
     }
   }, [lastMessage, setTeams, setTasks]);
 
@@ -119,9 +87,24 @@ function App() {
     completed: tasks.filter((t) => t.status === 'completed'),
   };
 
+  // チームを作成日時順（新しい順）にソート (TC-002)
+  const sortedTeams = [...teams].sort((a, b) => {
+    // createdAt がある場合はそれを使用、ない場合は lastActivity を使用
+    const aTime = a.createdAt ?? (a.lastActivity ? new Date(a.lastActivity).getTime() / 1000 : 0);
+    const bTime = b.createdAt ?? (b.lastActivity ? new Date(b.lastActivity).getTime() / 1000 : 0);
+    return bTime - aTime; // 新しい順（降順）
+  });
+
+  // チーム検索フィルター (TC-006)
+  const searchedTeams = searchQuery.trim()
+    ? sortedTeams.filter((team) =>
+        team.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
+      )
+    : sortedTeams;
+
   const filteredTeams = selectedTeam
-    ? teams.filter((t) => t.name === selectedTeam)
-    : teams;
+    ? searchedTeams.filter((t) => t.name === selectedTeam)
+    : searchedTeams;
 
   // Handle node click in dependency graph
   const handleNodeClick = useCallback(
@@ -150,10 +133,38 @@ function App() {
     blockedBy: [],
   }));
 
-  if (teamsLoading || tasksLoading) {
+  // エラー状態の判定
+  const hasError = teamsError || tasksError;
+  const isLoading = teamsLoading || tasksLoading;
+
+  // リトライハンドラー
+  const handleRetry = useCallback(() => {
+    if (teamsError) refetchTeams();
+    if (tasksError) refetchTasks();
+  }, [teamsError, tasksError, refetchTeams, refetchTasks]);
+
+  // ローディング状態
+  if (isLoading && !hasError) {
     return (
       <Layout connectionStatus={connectionStatus}>
-        <LoadingSpinner />
+        <LoadingSpinner message="データを読み込んでいます..." />
+      </Layout>
+    );
+  }
+
+  // エラー状態
+  if (hasError && !isLoading) {
+    const errorMessage = teamsError || tasksError || 'データの読み込みに失敗しました';
+    const errorType = connectionStatus === 'closed' ? 'network' : 'general';
+
+    return (
+      <Layout connectionStatus={connectionStatus}>
+        <ErrorDisplay
+          message={errorMessage}
+          errorType={errorType}
+          onRetry={handleRetry}
+          retryText="再接続"
+        />
       </Layout>
     );
   }
@@ -164,15 +175,20 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Header with View Tabs and Theme Toggle */}
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
+            <div role="tablist" aria-label="ビュー切り替え" className="flex items-center gap-2">
               {VIEWS.map((view) => {
                 const Icon = view.icon;
+                const isActive = currentView === view.id;
                 return (
                   <button
                     key={view.id}
+                    id={`tab-${view.id}`}
                     onClick={() => setCurrentView(view.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      currentView === view.id
+                    aria-pressed={isActive}
+                    aria-current={isActive ? 'page' : undefined}
+                    role="tab"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out ${
+                      isActive
                         ? 'bg-blue-500 text-white'
                         : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                     }`}
@@ -188,89 +204,152 @@ function App() {
 
           {/* Overview View */}
           {currentView === 'overview' && (
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* Teams Section */}
-              <div className="lg:col-span-3">
+            <div key="overview" role="tabpanel" aria-labelledby="tab-overview" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <>
+              {/* チーム詳細パネル（選択時のみ表示） */}
+              {selectedTeam && selectedTeamDetail && (
                 <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Active Teams</h2>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">{teams.length} teams</span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {filteredTeams.map((team) => (
-                      <TeamCard
-                        key={team.name}
-                        team={team}
-                        onClick={() => setSelectedTeam(selectedTeam === team.name ? null : team.name)}
-                      />
-                    ))}
-                    {filteredTeams.length === 0 && (
-                      <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
-                        No teams found. Create a team in Claude Code to see it here.
-                      </div>
+                  <TeamDetailPanel
+                    team={selectedTeamDetail}
+                    onBack={() => setSelectedTeam(null)}
+                  />
+                </div>
+              )}
+
+              {/* Teams Section - 全幅表示 */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Active Teams</h2>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">{teams.length} teams</span>
+                </div>
+                {/* 検索ボックス (TC-006) */}
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="チーム名を検索..."
+                      className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
+                  {/* 検索結果数 */}
+                  {searchQuery && (
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      {filteredTeams.length} 件の結果
+                    </p>
+                  )}
                 </div>
-
-                {/* Tasks Section */}
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h2>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">{tasks.length} tasks</span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Pending */}
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
-                        Pending ({tasksByStatus.pending.length})
-                      </h3>
-                      <div className="space-y-2">
-                        {tasksByStatus.pending.map((task) => (
-                          <TaskCard key={task.id} task={task} />
-                        ))}
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+                  {filteredTeams.map((team) => (
+                    <TeamCard
+                      key={team.name}
+                      team={team}
+                      onClick={() => setSelectedTeam(selectedTeam === team.name ? null : team.name)}
+                    />
+                  ))}
+                  {filteredTeams.length === 0 && (
+                    <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
+                      {searchQuery ? (
+                        <>
+                          <p className="mb-2">検索結果がありません</p>
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery('')}
+                            className="text-blue-500 hover:text-blue-600 text-sm"
+                          >
+                            検索をクリア
+                          </button>
+                        </>
+                      ) : (
+                        'No teams found. Create a team in Claude Code to see it here.'
+                      )}
                     </div>
-
-                    {/* In Progress */}
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-500" />
-                        In Progress ({tasksByStatus.in_progress.length})
-                      </h3>
-                      <div className="space-y-2">
-                        {tasksByStatus.in_progress.map((task) => (
-                          <TaskCard key={task.id} task={task} />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Completed */}
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-green-500" />
-                        Completed ({tasksByStatus.completed.length})
-                      </h3>
-                      <div className="space-y-2">
-                        {tasksByStatus.completed.map((task) => (
-                          <TaskCard key={task.id} task={task} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
-              {/* Activity Feed */}
-              <div className="lg:col-span-1">
-                <ActivityFeed activities={activities} />
-              </div>
+              {/* Tasks Section - 全幅表示 */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h2>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">{tasks.length} tasks</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Pending */}
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
+                      Pending ({tasksByStatus.pending.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {tasksByStatus.pending.map((task) => (
+                        <TaskCard key={`${task.teamName}-${task.id}`} task={task} />
+                      ))}
+                    </div>
+                  </div>
+
+                      {/* In Progress */}
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          In Progress ({tasksByStatus.in_progress.length})
+                        </h3>
+                        <div className="space-y-2">
+                          {tasksByStatus.in_progress.map((task) => (
+                            <TaskCard key={`${task.teamName}-${task.id}`} task={task} />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Completed */}
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                          Completed ({tasksByStatus.completed.length})
+                        </h3>
+                        <div className="space-y-2">
+                          {tasksByStatus.completed.map((task) => (
+                            <TaskCard key={`${task.teamName}-${task.id}`} task={task} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+            </>
             </div>
           )}
 
           {/* Timeline View */}
           {currentView === 'timeline' && (
-            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+            <div key="timeline" role="tabpanel" aria-labelledby="tab-timeline" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {/* チームセレクター */}
+              <div className="mb-4 flex items-center gap-4">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">チームを選択:</label>
+                <select
+                  value={selectedTeam || ''}
+                  onChange={(e) => setSelectedTeam(e.target.value || null)}
+                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- チームを選択 --</option>
+                  {teams.map((team) => (
+                    <option key={team.name} value={team.name}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
               {selectedTeam ? (
                 <TimelinePanel teamName={selectedTeam} />
               ) : (
@@ -281,12 +360,14 @@ function App() {
                   </div>
                 </div>
               )}
+              </div>
             </div>
           )}
 
           {/* Tasks View (Kanban-style) */}
           {currentView === 'tasks' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div key="tasks" role="tabpanel" aria-labelledby="tab-tasks" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Pending */}
               <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
@@ -295,7 +376,7 @@ function App() {
                 </h3>
                 <div className="space-y-3">
                   {tasksByStatus.pending.map((task) => (
-                    <TaskCard key={task.id} task={task} />
+                    <TaskCard key={`${task.teamName}-${task.id}`} task={task} />
                   ))}
                 </div>
               </div>
@@ -308,7 +389,7 @@ function App() {
                 </h3>
                 <div className="space-y-3">
                   {tasksByStatus.in_progress.map((task) => (
-                    <TaskCard key={task.id} task={task} />
+                    <TaskCard key={`${task.teamName}-${task.id}`} task={task} />
                   ))}
                 </div>
               </div>
@@ -321,16 +402,18 @@ function App() {
                 </h3>
                 <div className="space-y-3">
                   {tasksByStatus.completed.map((task) => (
-                    <TaskCard key={task.id} task={task} />
+                    <TaskCard key={`${task.teamName}-${task.id}`} task={task} />
                   ))}
                 </div>
+              </div>
               </div>
             </div>
           )}
 
           {/* Dependency Graph View */}
           {currentView === 'graphs' && (
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+            <div key="graphs" role="tabpanel" aria-labelledby="tab-graphs" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
                 タスク依存グラフ
               </h2>
@@ -340,12 +423,30 @@ function App() {
                 height={600}
                 onNodeClick={handleNodeClick}
               />
+              </div>
             </div>
           )}
 
           {/* Network Graph View */}
           {currentView === 'network' && (
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+            <div key="network" role="tabpanel" aria-labelledby="tab-network" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {/* チームセレクター */}
+              <div className="mb-4 flex items-center gap-4">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">チームを選択:</label>
+                <select
+                  value={selectedTeam || ''}
+                  onChange={(e) => setSelectedTeam(e.target.value || null)}
+                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- チームを選択 --</option>
+                  {teams.map((team) => (
+                    <option key={team.name} value={team.name}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
                 エージェント通信ネットワーク
               </h2>
@@ -365,6 +466,7 @@ function App() {
                   </div>
                 </div>
               )}
+              </div>
             </div>
           )}
         </div>

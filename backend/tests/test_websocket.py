@@ -10,7 +10,7 @@ T-API-014: ブロードキャスト
 """
 import pytest
 import asyncio
-from httpx import AsyncClient, WebSocketConnectError
+from httpx import AsyncClient
 
 
 @pytest.mark.asyncio

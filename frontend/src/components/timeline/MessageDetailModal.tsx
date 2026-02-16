@@ -13,7 +13,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Copy, X } from 'lucide-react';
 import type { ParsedMessage } from '@/types/message';
 import { getMessageTypeIcon } from '@/types/timeline';
-import { useMessageSelection } from '@/stores/dashboardStore';
+import { useDashboardStore } from '@/stores/dashboardStore';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale/ja';
 
@@ -68,9 +68,10 @@ export const MessageDetailModal: React.FC<MessageDetailModalProps> = ({
   isOpen: propsIsOpen,
   onClose: propsOnClose,
 }) => {
-  // ストアから状態を取得（props が優先）
-  const { selectedMessage: storeMessage, isDetailModalOpen: storeIsOpen, setDetailModalOpen } =
-    useMessageSelection();
+  // 個別セレクターを使用して無限ループを防止
+  const storeMessage = useDashboardStore((state) => state.selectedMessage);
+  const storeIsOpen = useDashboardStore((state) => state.isDetailModalOpen);
+  const setDetailModalOpen = useDashboardStore((state) => state.setDetailModalOpen);
 
   const message = propsMessage ?? storeMessage;
   const isOpen = propsIsOpen ?? storeIsOpen;

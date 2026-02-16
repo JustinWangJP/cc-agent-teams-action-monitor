@@ -573,6 +573,12 @@ async def get_message_network(
                 if agent_name and model_id:
                     agent_models[agent_name] = model_id
 
+    # メッセージがない場合でもチームメンバーをノードに追加
+    # メンバーが agent_stats にいない場合は初期化
+    for agent_name in agent_models.keys():
+        if agent_name not in agent_stats:
+            agent_stats[agent_name] = {"sent": 0, "received": 0, "model": None}
+
     # ノードを作成
     nodes = []
     for agent_name, stats in agent_stats.items():

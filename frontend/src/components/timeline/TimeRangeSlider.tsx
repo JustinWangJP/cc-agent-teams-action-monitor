@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
 import * as Slider from '@radix-ui/react-slider';
 import type { TimeRange } from '@/types/message';
-import { useFilters } from '@/stores/dashboardStore';
+import { useDashboardStore } from '@/stores/dashboardStore';
 import { QUICK_TIME_RANGES, type QuickTimeRange } from '@/types/timeline';
 import { format, differenceInMinutes } from 'date-fns';
 import { ja } from 'date-fns/locale/ja';
@@ -77,7 +77,9 @@ export const TimeRangeSlider: React.FC<TimeRangeSliderProps> = ({
   maxTime,
   onChange,
 }) => {
-  const { timeRange, setTimeRange } = useFilters();
+  // 個別セレクターを使用して無限ループを防止
+  const timeRange = useDashboardStore((state) => state.timeRange);
+  const setTimeRange = useDashboardStore((state) => state.setTimeRange);
   const [activePreset, setActivePreset] = useState<QuickTimeRange | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -246,13 +248,13 @@ export const TimeRangeSlider: React.FC<TimeRangeSliderProps> = ({
             <Slider.Range className="absolute bg-blue-500 rounded-full h-full" />
           </Slider.Track>
 
-          /* 開始サム */
+          {/* 開始サム */}
           <Slider.Thumb
             className="block w-5 h-5 bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-full shadow hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all cursor-grab active:cursor-grabbing"
             aria-label="開始時刻"
           />
 
-          /* 終了サム */
+          {/* 終了サム */}
           <Slider.Thumb
             className="block w-5 h-5 bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-full shadow hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all cursor-grab active:cursor-grabbing"
             aria-label="終了時刻"

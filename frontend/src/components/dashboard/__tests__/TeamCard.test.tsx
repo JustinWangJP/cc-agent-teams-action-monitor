@@ -14,6 +14,7 @@ const mockTeam: TeamSummary = {
   name: 'test-team',
   description: 'Test team description',
   memberCount: 3,
+  taskCount: 5,
   status: 'active',
   lastActivity: '2025-01-15T10:30:00Z',
   leadAgentId: 'claude-sonnet-4@anthropic'

@@ -213,4 +213,5 @@ mcp.json
 start-claude-*.sh
 
 */node_modules/*
+node_modules/*
 .serena/

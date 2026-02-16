@@ -56,12 +56,26 @@ def get_team_inboxes(team_dir: Path) -> dict[str, list]:
     return inboxes
 
 
+def get_team_task_count(team_name: str) -> int:
+    """チームのタスク数を取得するヘルパー関数。
+
+    ~/.claude/tasks/{team_name}/ ディレクトリ内のタスクファイル数を返します。
+
+
+    """
+    tasks_dir = settings.tasks_dir / team_name
+    if tasks_dir.exists() and tasks_dir.is_dir():
+        return sum(1 for f in tasks_dir.glob("*.json") if f.is_file())
+    return 0
+
+
 @router.get("/", response_model=list[TeamSummary])
 async def list_teams():
     """全チーム一覧を取得するエンドポイント。
 
     ~/.claude/teams/ ディレクトリ内の全チームの config.json を読み込み、
     TeamSummary 形式で返します。メンバーがいれば active、いなければ inactive。
+    また、各チームのタスク数も取得します。
 
 
     """
@@ -71,12 +85,15 @@ async def list_teams():
             if team_dir.is_dir() and not team_dir.name.startswith("."):
                 config = get_team_config(team_dir)
                 if config:
+                    team_name = config.get("name", team_dir.name)
                     teams.append(TeamSummary(
-                        name=config.get("name", team_dir.name),
+                        name=team_name,
                         description=config.get("description", ""),
                         memberCount=len(config.get("members", [])),
+                        taskCount=get_team_task_count(team_name),
                         status="active" if config.get("members") else "inactive",
                         leadAgentId=config.get("leadAgentId", ""),
+                        createdAt=config.get("createdAt"),
                     ))
     return teams
 
@@ -303,6 +320,12 @@ async def get_team_network(
                 edge_stats[edge_key]["types"][msg_type] += 1
             else:
                 edge_stats[edge_key]["types"]["other"] += 1
+
+    # メッセージがない場合でもチームメンバーをノードに追加
+    # メンバーが agent_stats にいない場合は初期化
+    for member_name in members.keys():
+        if member_name not in agent_stats:
+            agent_stats[member_name] = {"sent": 0, "received": 0, "total": 0}
 
     # ノードを構築
     nodes: list[AgentNode] = []

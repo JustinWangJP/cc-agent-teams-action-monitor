@@ -17,6 +17,7 @@ const mockTeamsResponse = [
     name: 'team1',
     description: 'Team 1',
     memberCount: 3,
+    taskCount: 5,
     status: 'active',
     lastActivity: '2025-01-15T10:30:00Z',
     leadAgentId: 'agent1@anthropic'
@@ -24,6 +25,7 @@ const mockTeamsResponse = [
   {
     name: 'team2',
     memberCount: 2,
+    taskCount: 3,
     status: 'inactive',
     leadAgentId: 'agent2@anthropic'
   }

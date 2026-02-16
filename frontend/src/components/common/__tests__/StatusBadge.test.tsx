@@ -91,4 +91,40 @@ describe('StatusBadge', () => {
       expect(screen.getByText('in progress')).toBeInTheDocument()
     })
   })
+
+  describe('WebSocket 接続状態 (TC-403)', () => {
+    it('open状態: 赤色のLiveバッジを表示', () => {
+      const { container } = render(<StatusBadge status="open" />)
+      expect(container.querySelector('.bg-red-500')).toBeInTheDocument()
+      expect(screen.getByText('Live')).toBeInTheDocument()
+    })
+
+    it('open状態: 点滅アニメーションを持つ', () => {
+      const { container } = render(<StatusBadge status="open" />)
+      const indicator = container.querySelector('.animate-pulse')
+      expect(indicator).toBeInTheDocument()
+    })
+
+    it('connecting状態: 黄色のConnectingバッジ', () => {
+      render(<StatusBadge status="connecting" />)
+      expect(screen.getByText('Connecting')).toBeInTheDocument()
+    })
+
+    it('closed状態: 灰色のDisconnectedバッジ', () => {
+      const { container } = render(<StatusBadge status="closed" />)
+      expect(container.querySelector('.bg-gray-400')).toBeInTheDocument()
+      expect(screen.getByText('Disconnected')).toBeInTheDocument()
+    })
+
+    it('closed状態: 点滅アニメーションなし', () => {
+      const { container } = render(<StatusBadge status="closed" />)
+      const indicator = container.querySelector('.animate-pulse')
+      expect(indicator).not.toBeInTheDocument()
+    })
+
+    it('showLiveText=falseでLiveテキストを非表示', () => {
+      render(<StatusBadge status="open" showLiveText={false} />)
+      expect(screen.queryByText('Live')).not.toBeInTheDocument()
+    })
+  })
 })

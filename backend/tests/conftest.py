@@ -9,7 +9,7 @@ import pytest
 import asyncio
 from pathlib import Path
 from typing import AsyncGenerator, Generator
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from app.main import app
 
 
@@ -23,7 +23,8 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 
     全てのAPIエンドポイントテストで使用します。
     """
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
 

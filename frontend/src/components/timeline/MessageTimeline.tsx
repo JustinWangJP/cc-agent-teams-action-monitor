@@ -101,7 +101,10 @@ export const MessageTimeline: React.FC<MessageTimelineProps> = ({
   /** グループデータセット */
   const groupsDatasetRef = useRef<DataSet<TimelineGroup, 'id'> | null>(null);
 
-  const { autoScrollTimeline, selectedMessage, setSelectedMessage } = useDashboardStore();
+  // 個別セレクターを使用して無限ループを防止
+  const autoScrollTimeline = useDashboardStore((state) => state.autoScrollTimeline);
+  const selectedMessage = useDashboardStore((state) => state.selectedMessage);
+  const setSelectedMessage = useDashboardStore((state) => state.setSelectedMessage);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
   /** タイマーID（1秒ごとのカレントタイム更新用） */
