@@ -6,7 +6,145 @@
  */
 
 /* ============================================
-   ベーススタイル
+   vis-timeline ベーススタイル（必須）
+   ============================================ */
+
+.vis-timeline {
+  position: relative;
+  border: 1px solid #bfbfbf;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.vis-timeline.vis-timeline-item {
+  position: absolute;
+  color: #1a1a1a;
+  border-color: #97b0f8;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 2px;
+  box-sizing: border-box;
+  padding: 5px;
+}
+
+.vis-panel {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.vis-panel.vis-center,
+.vis-panel.vis-left,
+.vis-panel.vis-right,
+.vis-panel.vis-top,
+.vis-panel.vis-bottom {
+  border: 1px solid #bfbfbf;
+}
+
+.vis-panel.vis-center {
+  border-top-style: none;
+  border-bottom-style: none;
+  overflow: hidden;
+}
+
+.vis-panel.vis-left {
+  border-top-style: none;
+  border-bottom-style: none;
+  border-right-style: none;
+}
+
+.vis-panel.vis-right {
+  border-top-style: none;
+  border-bottom-style: none;
+  border-left-style: none;
+}
+
+.vis-panel.vis-top {
+  border-left-style: none;
+  border-right-style: none;
+}
+
+.vis-panel.vis-bottom {
+  border-left-style: none;
+  border-right-style: none;
+}
+
+.vis-labelset {
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.vis-labelset .vis-label {
+  position: relative;
+  left: 0;
+  top: 0;
+  width: 100%;
+  color: #4d4d4d;
+  box-sizing: border-box;
+  padding: 5px;
+}
+
+.vis-itemset {
+  position: relative;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.vis-item {
+  position: absolute;
+  color: #1a1a1a;
+  border-color: #97b0f8;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 2px;
+  box-sizing: border-box;
+  padding: 5px;
+}
+
+.vis-item.vis-selected {
+  border-color: #ffc200;
+  background-color: #fff785;
+}
+
+.vis-item .vis-item-content {
+  box-sizing: border-box;
+  padding: 5px;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.vis-time-axis {
+  position: relative;
+  overflow: hidden;
+}
+
+.vis-time-axis.vis-foreground {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.vis-time-axis .vis-text {
+  position: absolute;
+  color: #4d4d4d;
+  padding: 3px;
+  overflow: hidden;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.vis-time-axis .vis-grid.vis-minor {
+  border-color: #e5e5e5;
+}
+
+.vis-time-axis .vis-grid.vis-major {
+  border-color: #bfbfbf;
+}
+
+/* ============================================
+   カスタムスタイル（既存）
    ============================================ */
 
 .vis-timeline {
@@ -298,6 +436,54 @@
   outline-offset: 2px;
 }
 
+.dark .vis-timeline:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+/* アイテムのフォーカススタイル強化 */
+.vis-timeline .vis-item:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+.dark .vis-timeline .vis-item:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.3);
+}
+
+/* 高コントラストモード対応 */
+@media (prefers-contrast: high) {
+  .vis-timeline .vis-item {
+    border-width: 2px;
+  }
+
+  .dark .vis-timeline .vis-item {
+    border-width: 2px;
+  }
+
+  .vis-timeline .vis-group .vis-label {
+    font-weight: 700;
+  }
+}
+
+/* 動きの軽減設定対応 */
+@media (prefers-reduced-motion: reduce) {
+  .vis-timeline .vis-item {
+    transition: none;
+  }
+
+  .vis-timeline .vis-item:hover {
+    transform: none;
+  }
+
+  .vis-timeline .vis-item.vis-selected {
+    transition: none;
+  }
+}
+
 /* ============================================
    レスポンシブ対応
    ============================================ */
@@ -315,5 +501,33 @@
 
   .vis-timeline .vis-time-axis .vis-text {
     font-size: 0.625rem;
+  }
+
+  /* モバイルでのフォーカススタイル調整 */
+  .vis-timeline .vis-item:focus-visible {
+    outline-width: 3px;
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.25);
+  }
+
+  .dark .vis-timeline .vis-item:focus-visible {
+    outline-width: 3px;
+    box-shadow: 0 0 0 6px rgba(96, 165, 250, 0.35);
+  }
+}
+
+/* ============================================
+   モバイル表示（768px未満）の改善
+   ============================================ */
+
+@media (max-width: 767px) {
+  /* タイムラインのパディング調整 */
+  .vis-timeline {
+    border-radius: 0.25rem;
+  }
+
+  /* アイテムの最小クリック領域確保 */
+  .vis-timeline .vis-item {
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
   }
 }

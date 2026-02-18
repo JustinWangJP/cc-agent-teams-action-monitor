@@ -1,51 +1,42 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Team, TeamSummary } from '@/types/team';
+import { useDashboardStore } from '@/stores/dashboardStore';
 
 /**
- * 全チーム一覧を取得・管理するカスタムフック。
+ * 全チーム一覧を取得・管理するカスタムフック（React Query版）。
  *
- * /api/teams エンドポイントからチーム一覧を取得し、10秒間隔でポーリングします。
- * ローディング状態、エラー状態、手動再取得機能を提供します。
+ * /api/teams エンドポイントからチーム一覧を取得し、
+ * 設定された間隔でポーリングします。
  *
  * @returns teams - チームサマリー配列
  * @returns loading - ローディング状態
  * @returns error - エラーメッセージ（null 可能）
  * @returns refetch - 手動再取得関数
- * @returns setTeams - チーム状態更新関数
- *
-*/
+ */
 export function useTeams() {
-  const [teams, setTeams] = useState<TeamSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const teamsInterval = useDashboardStore((state) => state.teamsInterval);
 
-  const fetchTeams = useCallback(async () => {
-    try {
-      setLoading(true);
+  const { data: teams = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['teams'],
+    queryFn: async () => {
       const response = await fetch('/api/teams');
       if (!response.ok) throw new Error('Failed to fetch teams');
-      const data = await response.json();
-      setTeams(data);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return response.json() as Promise<TeamSummary[]>;
+    },
+    refetchInterval: teamsInterval,
+    staleTime: 0,
+  });
 
-  useEffect(() => {
-    fetchTeams();
-    // Poll every 10 seconds as fallback
-    const interval = setInterval(fetchTeams, 10000);
-    return () => clearInterval(interval);
-  }, [fetchTeams]);
-
-  return { teams, loading, error, refetch: fetchTeams, setTeams };
+  return {
+    teams,
+    loading: isLoading,
+    error: error?.message || null,
+    refetch,
+  };
 }
 
 /**
- * 特定チームの詳細を取得・管理するカスタムフック。
+ * 特定チームの詳細を取得・管理するカスタムフック（React Query版）。
  *
  * /api/teams/{teamName} エンドポイントからチーム詳細を取得します。
  * チーム名が変更されると自動的に再取得します。
@@ -54,34 +45,22 @@ export function useTeams() {
  * @returns team - チーム詳細データ（null 可能）
  * @returns loading - ローディング状態
  * @returns error - エラーメッセージ（null 可能）
- * @returns setTeam - チーム状態更新関数
- *
-*/
+ */
 export function useTeam(teamName: string) {
-  const [team, setTeam] = useState<Team | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: team = null, isLoading, error } = useQuery({
+    queryKey: ['team', teamName],
+    queryFn: async () => {
+      const response = await fetch(`/api/teams/${teamName}`);
+      if (!response.ok) throw new Error('Failed to fetch team');
+      return response.json() as Promise<Team>;
+    },
+    enabled: !!teamName,
+    staleTime: 0,
+  });
 
-  useEffect(() => {
-    const fetchTeam = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/teams/${teamName}`);
-        if (!response.ok) throw new Error('Failed to fetch team');
-        const data = await response.json();
-        setTeam(data);
-        setError(null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (teamName) {
-      fetchTeam();
-    }
-  }, [teamName]);
-
-  return { team, loading, error, setTeam };
+  return {
+    team,
+    loading: isLoading,
+    error: error?.message || null,
+  };
 }

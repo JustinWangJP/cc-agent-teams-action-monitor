@@ -9,12 +9,14 @@
 'use client';
 
 import { useCallback, useEffect, useState, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import MessageTimeline from './MessageTimeline';
 import TimelineFilters from './TimelineFilters';
 import TimeRangeSlider from './TimeRangeSlider';
 import MessageSearch from './MessageSearch';
 import MessageDetailModal from './MessageDetailModal';
+import { PollingIntervalSelector } from '@/components/common/PollingIntervalSelector';
 import type { TimelineData as TimelineDataType } from '@/types/timeline';
 import type { ParsedMessage } from '@/types/message';
 import { useDashboardStore } from '@/stores/dashboardStore';
@@ -29,14 +31,6 @@ interface TimelinePanelProps {
   teamName: string;
   /** API ベース URL */
   apiBaseUrl?: string;
-}
-
-/**
- * API エラーの型。
- */
-interface ApiError {
-  message: string;
-  status?: number;
 }
 
 /**
@@ -56,9 +50,6 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   teamName,
   apiBaseUrl = '/api',
 }) => {
-  const [data, setData] = useState<TimelineDataType | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
   const [filteredData, setFilteredData] = useState<TimelineDataType | null>(null);
 
   // 初回ロードかどうかを追跡（時間範囲フィルタをスキップするため）
@@ -70,20 +61,25 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   const messageFilter = useDashboardStore((state) => state.messageFilter);
   const searchQuery = useDashboardStore((state) => state.searchQuery);
 
+  // ポーリング間隔設定
+  const inboxInterval = useDashboardStore((state) => state.inboxInterval);
+  const setInboxInterval = useDashboardStore((state) => state.setInboxInterval);
+
   /**
-   * タイムラインデータを取得。
+   * タイムラインデータを取得（React Query版）。
+   * 初回ロード時は時間範囲フィルタなしで全データを取得。
    */
-  const fetchTimelineData = useCallback(async (skipTimeRange = false) => {
-    if (!teamName) return;
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['timeline', teamName, timeRange, messageFilter, searchQuery],
+    queryFn: async () => {
+      if (!teamName) {
+        throw new Error('Team name is required');
+      }
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
       const params = new URLSearchParams();
 
       // 時間範囲パラメータ（初回ロード時はスキップして全データを取得）
-      if (!skipTimeRange) {
+      if (!isInitialLoadRef.current) {
         if (timeRange.start) {
           params.append('start_time', timeRange.start.toISOString());
         }
@@ -121,6 +117,9 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
       const result: TimelineDataType = await response.json();
 
       // 日付変換
+      console.log('[DIAG] Timeline data before conversion:', result.items.length, 'items');
+      console.log('[DIAG] Sample item start:', result.items[0]?.start, typeof result.items[0]?.start);
+
       result.items = result.items.map((item) => ({
         ...item,
         start: new Date(item.start),
@@ -132,55 +131,29 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
           : undefined,
       }));
 
-      setData(result);
-      setFilteredData(result);
+      console.log('[DIAG] Timeline data after conversion:', result.items.length, 'items');
+      console.log('[DIAG] Sample item start after:', result.items[0]?.start, typeof result.items[0]?.start);
 
       // 初回ロード時、データの時間範囲をストアに反映
-      if (skipTimeRange && result.timeRange) {
+      if (isInitialLoadRef.current && result.timeRange) {
         setTimeRange({
           start: new Date(result.timeRange.min),
           end: new Date(result.timeRange.max),
         });
         isInitialLoadRef.current = false;
       }
-    } catch (err) {
-      const apiError: ApiError = {
-        message: err instanceof Error ? err.message : '不明なエラー',
-      };
-      setError(apiError);
-      setData(null);
-      setFilteredData(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [teamName, timeRange, messageFilter, searchQuery, apiBaseUrl, setTimeRange]);
 
-  /**
-   * 初期ロードとチーム変更時にデータ取得。
-   * 初回は時間範囲フィルタなしで全データを取得し、データの時間範囲をストアに反映する。
-   */
+      return result;
+    },
+    refetchInterval: inboxInterval,
+    enabled: !!teamName,
+    staleTime: 0,
+  });
+
+  // フィルタリング後のデータを更新
   useEffect(() => {
-    if (teamName) {
-      isInitialLoadRef.current = true;
-      fetchTimelineData(true);
-    }
-  }, [teamName]);
-
-  /**
-   * フィルター/検索変更時にデータ再取得。
-   * 初回ロード後のみ実行（時間範囲フィルタあり）。
-   */
-  useEffect(() => {
-    // 初回ロード時はスキップ
-    if (isInitialLoadRef.current) return;
-
-    if (teamName && !isLoading) {
-      const timer = setTimeout(() => {
-        fetchTimelineData(false);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [timeRange, messageFilter, searchQuery, teamName, isLoading]);
+    setFilteredData(data ?? null);
+  }, [data]);
 
   /**
    * アイテムクリックハンドラー。
@@ -193,8 +166,8 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
    * リフレッシュハンドラー。
    */
   const handleRefresh = useCallback(() => {
-    fetchTimelineData(false);
-  }, [fetchTimelineData]);
+    refetch();
+  }, [refetch]);
 
   /**
    * フィルター変更ハンドラー。
@@ -233,25 +206,32 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-          💬 メッセージタイムライン
+          メッセージタイムライン
         </h2>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={isLoading}
-          className={clsx(
-            'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
-            'text-slate-700 dark:text-slate-300',
-            'bg-white dark:bg-slate-800',
-            'border border-slate-300 dark:border-slate-700',
-            'hover:bg-slate-50 dark:hover:bg-slate-700',
-            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-            isLoading && 'opacity-50 cursor-not-allowed',
-          )}
-        >
-          <RefreshCw className={clsx('w-4 h-4', isLoading && 'animate-spin')} />
-          更新
-        </button>
+        <div className="flex items-center gap-4">
+          <PollingIntervalSelector
+            value={inboxInterval}
+            onChange={setInboxInterval}
+            label="更新間隔"
+          />
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className={clsx(
+              'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
+              'text-slate-700 dark:text-slate-300',
+              'bg-white dark:bg-slate-800',
+              'border border-slate-300 dark:border-slate-700',
+              'hover:bg-slate-50 dark:hover:bg-slate-700',
+              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+              isLoading && 'opacity-50 cursor-not-allowed',
+            )}
+          >
+            <RefreshCw className={clsx('w-4 h-4', isLoading && 'animate-spin')} />
+            更新
+          </button>
+        </div>
       </div>
 
       {/* 検索 */}

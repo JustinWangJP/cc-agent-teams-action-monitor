@@ -8,10 +8,9 @@
 
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Timeline, type TimelineOptions } from 'vis-timeline/standalone';
-import { DataSet } from 'vis-data/peer';
-import type { TimelineGroup, TimelineData as TimelineDataType } from '@/types/timeline';
+import type { TimelineGroup, TimelineData as TimelineDataType, TimelineItem } from '@/types/timeline';
 import type { ParsedMessage } from '@/types/message';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { format } from 'date-fns';
@@ -91,15 +90,14 @@ export const MessageTimeline: React.FC<MessageTimelineProps> = ({
   error = null,
   onItemClick,
 }) => {
-  /** タイムラインコンテナのDOM参照 */
-  const containerRef = useRef<HTMLDivElement>(null);
   /** Timeline インスタンス */
   const timelineRef = useRef<Timeline | null>(null);
-  /** データセット */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const itemsDatasetRef = useRef<DataSet<any, 'id'> | null>(null);
-  /** グループデータセット */
-  const groupsDatasetRef = useRef<DataSet<TimelineGroup, 'id'> | null>(null);
+  /** コンテナ要素（コールバックrefで管理） */
+  const containerElementRef = useRef<HTMLDivElement | null>(null);
+  /** タイムライン初期化完了フラグ */
+  const [isTimelineReady, setIsTimelineReady] = useState(false);
+  /** 現在のデータを保持 */
+  const currentDataRef = useRef<TimelineDataType | undefined>(undefined);
 
   // 個別セレクターを使用して無限ループを防止
   const autoScrollTimeline = useDashboardStore((state) => state.autoScrollTimeline);
@@ -111,73 +109,185 @@ export const MessageTimeline: React.FC<MessageTimelineProps> = ({
   const timerIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /**
-   * タイムライン初期化。
+   * タイムライン初期化関数。
+   * コールバックrefから呼び出され、DOM要素が確実に存在する時点で実行される。
    */
-  useEffect(() => {
-    if (!containerRef.current) return;
+  const initializeTimeline = useCallback((container: HTMLDivElement | null) => {
+    console.log('[DIAG] initializeTimeline called, container:', container);
 
-    // データセット作成
-    itemsDatasetRef.current = new DataSet<any, 'id'>([]);
-    groupsDatasetRef.current = new DataSet<TimelineGroup, 'id'>([]);
+    // すでに初期化済みの場合はスキップ
+    if (timelineRef.current) {
+      console.log('[DIAG] Timeline already initialized');
+      return;
+    }
 
-    // Timeline 作成
-    timelineRef.current = new Timeline(
-      containerRef.current,
-      itemsDatasetRef.current as any,
-      groupsDatasetRef.current as any,
-      DEFAULT_OPTIONS,
-    );
+    if (!container) {
+      console.log('[DIAG] No container, skipping');
+      return;
+    }
+
+    // コンテナのサイズを確認
+    const rect = container.getBoundingClientRect();
+    console.log('[DIAG] Container size:', { width: rect.width, height: rect.height });
+
+    // サイズが0の場合は初期化を延期
+    if (rect.width === 0 || rect.height === 0) {
+      console.log('[DIAG] Container has zero size, deferring initialization');
+      setTimeout(() => initializeTimeline(container), 100);
+      return;
+    }
+
+    // Timeline 作成（配列を直接使用）
+    try {
+      const initialItems: TimelineItem[] = [];
+      const initialGroups: TimelineGroup[] = [];
+
+      timelineRef.current = new Timeline(
+        container,
+        initialItems,
+        initialGroups,
+        DEFAULT_OPTIONS,
+      );
+      console.log('[DIAG] Timeline instance created:', timelineRef.current);
+    } catch (err) {
+      console.error('[DIAG] Failed to create timeline:', err);
+      return;
+    }
 
     // カレントタイムバーを追加
     timelineRef.current.addCustomTime(new Date(), 'currentTime');
+    console.log('[DIAG] Custom time added');
 
     // アイテムクリックイベント
     timelineRef.current.on('click', (properties) => {
+      console.log('[DIAG] Timeline click:', properties);
       if (properties.item) {
-        const item = itemsDatasetRef.current?.get(properties.item as string);
-        if (item && onItemClick) {
-          onItemClick(item as ParsedMessage);
-          setSelectedMessage(item as ParsedMessage);
+        // アイテムIDからメッセージデータを取得
+        const itemId = properties.item as string;
+        const message = currentDataRef.current?.items.find(i => i.id === itemId)?.data;
+        if (message && onItemClick) {
+          onItemClick(message);
+          setSelectedMessage(message);
         }
       }
     });
 
+    // 初期化完了フラグを設定
+    setIsTimelineReady(true);
+    console.log('[DIAG] Timeline initialization complete');
+
+    // 既存のデータがあれば設定
+    if (currentDataRef.current) {
+      updateTimelineData(currentDataRef.current);
+    }
+
+    // 診断: タイムラインのDOMを確認
+    setTimeout(() => {
+      const timelineElement = container?.querySelector('.vis-timeline');
+      console.log('[DIAG] Timeline DOM element:', timelineElement);
+      if (timelineElement) {
+        const timelineRect = timelineElement.getBoundingClientRect();
+        console.log('[DIAG] Timeline DOM size:', { width: timelineRect.width, height: timelineRect.height });
+      }
+    }, 100);
+  }, [onItemClick, setSelectedMessage]);
+
+  /**
+   * タイムラインデータ更新関数。
+   */
+  const updateTimelineData = useCallback((timelineData: TimelineDataType) => {
+    console.log('[DIAG] Updating timeline data');
+    if (!timelineRef.current) return;
+
+    // アイテムとグループを設定
+    console.log('[DIAG] Setting items:', timelineData.items.length);
+    console.log('[DIAG] Setting groups:', timelineData.groups.length);
+
+    timelineRef.current.setData({
+      items: timelineData.items,
+      groups: timelineData.groups,
+    });
+
+    // 時間範囲を設定
+    if (timelineData.timeRange) {
+      const start = new Date(timelineData.timeRange.min);
+      const end = new Date(timelineData.timeRange.max);
+      timelineRef.current.setWindow(start, end);
+      console.log('[DIAG] Window set:', { start, end });
+    }
+
+    // 強制的に再描画
+    requestAnimationFrame(() => {
+      console.log('[DIAG] Calling redraw');
+      timelineRef.current?.redraw();
+
+      // 診断: アイテム要素を確認
+      const container = containerElementRef.current;
+      const itemElements = container?.querySelectorAll('.vis-item');
+      console.log('[DIAG] Item elements count:', itemElements?.length);
+
+      // 自動スクロールが有効な場合、最新メッセージにスクロール
+      if (autoScrollTimeline && timelineData.items.length > 0) {
+        const lastItem = timelineData.items[timelineData.items.length - 1];
+        const lastTime = new Date(lastItem.start);
+        timelineRef.current?.moveTo(lastTime);
+      }
+    });
+  }, [autoScrollTimeline]);
+
+  /**
+   * コールバックref。
+   * DOM要素がマウントされた時点でタイムラインを初期化する。
+   */
+  const containerCallbackRef = useCallback((node: HTMLDivElement | null) => {
+    console.log('[DIAG] containerCallbackRef called, node:', node);
+    containerElementRef.current = node;
+    if (node) {
+      // 少し遅延させて確実にレンダリングが完了してから初期化
+      setTimeout(() => initializeTimeline(node), 0);
+    }
+  }, [initializeTimeline]);
+
+  /**
+   * クリーンアップ。
+   */
+  useEffect(() => {
     return () => {
+      console.log('[DIAG] Cleaning up timeline');
       timelineRef.current?.destroy();
       timelineRef.current = null;
-      itemsDatasetRef.current = null;
-      groupsDatasetRef.current = null;
+      setIsTimelineReady(false);
     };
-  }, [onItemClick, setSelectedMessage]);
+  }, []);
 
   /**
    * データ更新時の再描画。
    */
   useEffect(() => {
-    if (!data || !timelineRef.current) return;
+    console.log('[DIAG] Data effect triggered, data:', data?.items.length, 'isTimelineReady:', isTimelineReady);
 
-    // アイテム更新
-    itemsDatasetRef.current?.clear();
-    itemsDatasetRef.current?.add(data.items as any);
-
-    // グループ更新
-    groupsDatasetRef.current?.clear();
-    groupsDatasetRef.current?.add(data.groups);
-
-    // 時間範囲を設定
-    if (data.timeRange) {
-      const start = new Date(data.timeRange.min);
-      const end = new Date(data.timeRange.max);
-      timelineRef.current.setWindow(start, end);
+    if (!data) {
+      console.log('[DIAG] No data, skipping');
+      return;
     }
 
-    // 自動スクロールが有効な場合、最新メッセージにスクロール
-    if (autoScrollTimeline && data.items.length > 0) {
-      const lastItem = data.items[data.items.length - 1];
-      const lastTime = new Date(lastItem.start);
-      timelineRef.current.moveTo(lastTime);
+    // データを保持
+    currentDataRef.current = data;
+
+    if (!isTimelineReady || !timelineRef.current) {
+      console.log('[DIAG] Timeline not ready, data will be applied when ready');
+      return;
     }
-  }, [data, autoScrollTimeline]);
+
+    // タイミング問題を解決するために少し遅延させる
+    const timerId = setTimeout(() => {
+      updateTimelineData(data);
+    }, 50);
+
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, [data, isTimelineReady, updateTimelineData]);
 
   /**
    * 1秒ごとにカレントタイムを更新。
@@ -203,7 +313,6 @@ export const MessageTimeline: React.FC<MessageTimelineProps> = ({
    */
   useEffect(() => {
     if (!timelineRef.current || !selectedMessage) return;
-    // selectedMessage に id プロパティがある場合のみ選択
     const msgId = (selectedMessage as any).id;
     if (msgId) {
       timelineRef.current.setSelection(msgId);
@@ -262,10 +371,10 @@ export const MessageTimeline: React.FC<MessageTimelineProps> = ({
       </div>
 
       {/* タイムライン */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 relative overflow-hidden">
         <div
-          ref={containerRef}
-          className="h-full bg-white dark:bg-slate-900"
+          ref={containerCallbackRef}
+          className="absolute inset-0 bg-white dark:bg-slate-900"
           data-testid="message-timeline"
         />
       </div>

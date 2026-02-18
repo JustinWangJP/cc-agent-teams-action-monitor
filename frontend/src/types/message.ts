@@ -4,7 +4,8 @@
  * InboxMessage、ProtocolMessage、ActivityEvent、WebSocketMessage インターフェースを定義し、
  * エージェント間通信とリアルタイム更新を型安全に管理します。
  *
-*/
+ * @module types/message
+ */
 
 /**
  * インボックスメッセージを表すインターフェース。
@@ -77,7 +78,10 @@ export type MessageType =
   | 'message'
   | 'idle_notification'
   | 'shutdown_request'
+  | 'shutdown_response'
   | 'shutdown_approved'
+  | 'plan_approval_request'
+  | 'plan_approval_response'
   | 'task_assignment'
   | 'unknown';
 

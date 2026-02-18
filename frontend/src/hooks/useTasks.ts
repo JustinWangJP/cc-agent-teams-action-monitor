@@ -1,50 +1,42 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Task, TaskSummary } from '@/types/task';
+import { useDashboardStore } from '@/stores/dashboardStore';
 
 /**
- * 全タスク一覧を取得・管理するカスタムフック。
+ * 全タスク一覧を取得・管理するカスタムフック（React Query版）。
  *
- * /api/tasks エンドポイントからタスク一覧を取得し、10秒間隔でポーリングします。
- * ローディング状態、エラー状態、手動再取得機能を提供します。
+ * /api/tasks エンドポイントからタスク一覧を取得し、
+ * 設定された間隔でポーリングします。
  *
  * @returns tasks - タスクサマリー配列
  * @returns loading - ローディング状態
  * @returns error - エラーメッセージ（null 可能）
  * @returns refetch - 手動再取得関数
- * @returns setTasks - タスク状態更新関数
- *
-*/
+ */
 export function useTasks() {
-  const [tasks, setTasks] = useState<TaskSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const tasksInterval = useDashboardStore((state) => state.tasksInterval);
 
-  const fetchTasks = useCallback(async () => {
-    try {
-      setLoading(true);
+  const { data: tasks = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: async () => {
       const response = await fetch('/api/tasks');
       if (!response.ok) throw new Error('Failed to fetch tasks');
-      const data = await response.json();
-      setTasks(data);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return response.json() as Promise<TaskSummary[]>;
+    },
+    refetchInterval: tasksInterval,
+    staleTime: 0,
+  });
 
-  useEffect(() => {
-    fetchTasks();
-    const interval = setInterval(fetchTasks, 10000);
-    return () => clearInterval(interval);
-  }, [fetchTasks]);
-
-  return { tasks, loading, error, refetch: fetchTasks, setTasks };
+  return {
+    tasks,
+    loading: isLoading,
+    error: error?.message || null,
+    refetch,
+  };
 }
 
 /**
- * 特定チームのタスク一覧を取得・管理するカスタムフック。
+ * 特定チームのタスク一覧を取得・管理するカスタムフック（React Query版）。
  *
  * /api/tasks/team/{teamName} エンドポイントからチーム別タスクを取得します。
  * チーム名が変更されると自動的に再取得します。
@@ -53,34 +45,22 @@ export function useTasks() {
  * @returns tasks - タスク詳細配列
  * @returns loading - ローディング状態
  * @returns error - エラーメッセージ（null 可能）
- * @returns setTasks - タスク状態更新関数
- *
-*/
+ */
 export function useTeamTasks(teamName: string) {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: tasks = [], isLoading, error } = useQuery({
+    queryKey: ['tasks', 'team', teamName],
+    queryFn: async () => {
+      const response = await fetch(`/api/tasks/team/${teamName}`);
+      if (!response.ok) throw new Error('Failed to fetch team tasks');
+      return response.json() as Promise<Task[]>;
+    },
+    enabled: !!teamName,
+    staleTime: 0,
+  });
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/tasks/team/${teamName}`);
-        if (!response.ok) throw new Error('Failed to fetch team tasks');
-        const data = await response.json();
-        setTasks(data);
-        setError(null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (teamName) {
-      fetchTasks();
-    }
-  }, [teamName]);
-
-  return { tasks, loading, error, setTasks };
+  return {
+    tasks,
+    loading: isLoading,
+    error: error?.message || null,
+  };
 }

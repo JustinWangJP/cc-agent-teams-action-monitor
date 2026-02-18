@@ -18,6 +18,25 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale/ja';
 
 /**
+ * 安全に日付をフォーマットする関数。
+ * 無効な日付の場合はフォールバック文字列を返す。
+ */
+const safeFormatDate = (timestamp: string | number | Date | undefined): string => {
+  if (!timestamp) return '日時不明';
+
+  try {
+    const date = new Date(timestamp);
+    // 無効な日付かチェック
+    if (isNaN(date.getTime())) {
+      return '無効な日時';
+    }
+    return format(date, 'yyyy-MM-dd HH:mm:ss', { locale: ja });
+  } catch {
+    return '無効な日時';
+  }
+};
+
+/**
  * メッセージ詳細モーダルのプロパティ。
  */
 interface MessageDetailModalProps {
@@ -145,7 +164,7 @@ export const MessageDetailModal: React.FC<MessageDetailModalProps> = ({
               {message.to && <MetaItem label="受信者" value={message.to} />}
               <MetaItem
                 label="時刻"
-                value={format(new Date(message.timestamp), 'yyyy-MM-dd HH:mm:ss', { locale: ja })}
+                value={safeFormatDate(message.timestamp)}
                 icon="🕐"
               />
               <MetaItem
