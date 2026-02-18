@@ -1,8 +1,9 @@
 /**
  * ダッシュボード状態管理ストア。
  *
- * Zustand を使用したグローバル状態管理。
- * 選択状態、フィルター、UI状態を一元管理します。
+ * Zustand を使用してグローバル状態を一元管理します。
+ * 選択状態、フィルター、UI状態、ポーリング間隔を管理し、
+ * ローカルストレージへの永続化機能を提供します。
  *
  * @module stores/dashboardStore
  */
@@ -57,6 +58,19 @@ export interface DashboardState {
   searchQuery: string;
 
   // ====================
+  // ポーリング間隔
+  // ====================
+
+  /** チーム一覧のポーリング間隔（ミリ秒） */
+  teamsInterval: number;
+  /** タスク一覧のポーリング間隔（ミリ秒） */
+  tasksInterval: number;
+  /** インボックスのポーリング間隔（ミリ秒） */
+  inboxInterval: number;
+  /** エージェントメッセージのポーリング間隔（ミリ秒） */
+  messagesInterval: number;
+
+  // ====================
   // UI状態
   // ====================
 
@@ -92,6 +106,15 @@ export interface DashboardState {
   updateMessageFilter: (updates: Partial<MessageFilter>) => void;
   /** 検索クエリを設定 */
   setSearchQuery: (query: string) => void;
+
+  /** チームポーリング間隔を設定 */
+  setTeamsInterval: (ms: number) => void;
+  /** タスクポーリング間隔を設定 */
+  setTasksInterval: (ms: number) => void;
+  /** インボックスポーリング間隔を設定 */
+  setInboxInterval: (ms: number) => void;
+  /** メッセージポーリング間隔を設定 */
+  setMessagesInterval: (ms: number) => void;
 
   /** 詳細モーダルを切り替え */
   toggleDetailModal: () => void;
@@ -135,6 +158,11 @@ const INITIAL_MESSAGE_FILTER: MessageFilter = {
 };
 
 /**
+ * デフォルトポーリング間隔（30秒）。
+ */
+const DEFAULT_POLLING_INTERVAL = 30000;
+
+/**
  * 初期状態。
  */
 const initialState: Omit<
@@ -147,6 +175,10 @@ const initialState: Omit<
   | 'setMessageFilter'
   | 'updateMessageFilter'
   | 'setSearchQuery'
+  | 'setTeamsInterval'
+  | 'setTasksInterval'
+  | 'setInboxInterval'
+  | 'setMessagesInterval'
   | 'toggleDetailModal'
   | 'setDetailModalOpen'
   | 'toggleTaskModal'
@@ -165,6 +197,10 @@ const initialState: Omit<
   timeRange: INITIAL_TIME_RANGE,
   messageFilter: INITIAL_MESSAGE_FILTER,
   searchQuery: '',
+  teamsInterval: DEFAULT_POLLING_INTERVAL,
+  tasksInterval: DEFAULT_POLLING_INTERVAL,
+  inboxInterval: DEFAULT_POLLING_INTERVAL,
+  messagesInterval: DEFAULT_POLLING_INTERVAL,
   isDetailModalOpen: false,
   isTaskModalOpen: false,
   isDarkMode: false,
@@ -178,7 +214,14 @@ const initialState: Omit<
 const STORAGE_KEY = 'dashboard-state';
 
 /**
- * ローカルストレージから状態を読み込み。
+ * ローカルストレージから状態を読み込みます。
+ *
+ * 保存された状態を復元し、Date オブジェクトを正しく再構築します。
+ * エラー時やストレージが利用できない場合は null を返します。
+ *
+ * @returns 復元された状態の部分オブジェクト、または null
+ *
+ * 
  */
 function loadState(): Partial<DashboardState> | null {
   if (typeof window === 'undefined') return null;
@@ -204,7 +247,14 @@ function loadState(): Partial<DashboardState> | null {
 }
 
 /**
- * 状態をローカルストレージに保存。
+ * 状態をローカルストレージに保存します。
+ *
+ * 永続化が必要なプロパティのみを選択して保存します。
+ * ストレージが利用できない場合はサイレントに失敗します。
+ *
+ * @param state - 保存する状態の部分オブジェクト
+ *
+ * 
  */
 function saveState(state: Partial<DashboardState>) {
   if (typeof window === 'undefined') return;
@@ -214,6 +264,10 @@ function saveState(state: Partial<DashboardState>) {
       isDarkMode: state.isDarkMode,
       isSidebarOpen: state.isSidebarOpen,
       autoScrollTimeline: state.autoScrollTimeline,
+      teamsInterval: state.teamsInterval,
+      tasksInterval: state.tasksInterval,
+      inboxInterval: state.inboxInterval,
+      messagesInterval: state.messagesInterval,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   } catch {
@@ -275,6 +329,22 @@ export const useDashboardStore = create<DashboardState>()(
 
       setSearchQuery: (query) =>
         set({ searchQuery: query }, false, 'setSearchQuery'),
+
+      // ====================
+      // ポーリング間隔のアクション
+      // ====================
+
+      setTeamsInterval: (ms) =>
+        set({ teamsInterval: ms }, false, 'setTeamsInterval'),
+
+      setTasksInterval: (ms) =>
+        set({ tasksInterval: ms }, false, 'setTasksInterval'),
+
+      setInboxInterval: (ms) =>
+        set({ inboxInterval: ms }, false, 'setInboxInterval'),
+
+      setMessagesInterval: (ms) =>
+        set({ messagesInterval: ms }, false, 'setMessagesInterval'),
 
       // ====================
       // UI状態のアクション

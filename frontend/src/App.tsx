@@ -7,22 +7,20 @@
  * @module App
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { TeamCard, TeamDetailPanel } from '@/components/dashboard';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorDisplay } from '@/components/common/ErrorDisplay';
-import { TimelinePanel } from '@/components/timeline/TimelinePanel';
+import { PollingIntervalSelector } from '@/components/common/PollingIntervalSelector';
+import { ChatTimelinePanel } from '@/components/chat';
 import { TaskDependencyGraph } from '@/components/graph/TaskDependencyGraph';
 import { AgentNetworkGraph } from '@/components/graph';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
-import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTeams, useTeam } from '@/hooks/useTeams';
 import { useTasks } from '@/hooks/useTasks';
 import { useDashboardStore } from '@/stores/dashboardStore';
-import { TeamSummary } from '@/types/team';
-import { TaskSummary } from '@/types/task';
 import {
   LayoutDashboard,
   MessageSquare,
@@ -45,11 +43,18 @@ const VIEWS = [
 ];
 
 function App() {
-  const { teams, loading: teamsLoading, error: teamsError, refetch: refetchTeams, setTeams } = useTeams();
-  const { tasks, loading: tasksLoading, error: tasksError, refetch: refetchTasks, setTasks } = useTasks();
-  const { lastMessage, connectionStatus } = useWebSocket('dashboard');
+  const { teams, loading: teamsLoading, error: teamsError, refetch: refetchTeams } = useTeams();
+  const { tasks, loading: tasksLoading, error: tasksError, refetch: refetchTasks } = useTasks();
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // ポーリング間隔の取得と設定
+  const teamsInterval = useDashboardStore((state) => state.teamsInterval);
+  const setTeamsInterval = useDashboardStore((state) => state.setTeamsInterval);
+  const tasksInterval = useDashboardStore((state) => state.tasksInterval);
+  const setTasksInterval = useDashboardStore((state) => state.setTasksInterval);
+  const inboxInterval = useDashboardStore((state) => state.inboxInterval);
+  const setInboxInterval = useDashboardStore((state) => state.setInboxInterval);
 
   // 選択されたチームの詳細を取得
   const { team: selectedTeamDetail } = useTeam(selectedTeam || '');
@@ -58,27 +63,6 @@ function App() {
   const currentView = useDashboardStore((state) => state.currentView);
   const setCurrentView = useDashboardStore((state) => state.setCurrentView);
   const setSelectedTask = useDashboardStore((state) => state.setSelectedTask);
-
-  // Handle WebSocket messages
-  useEffect(() => {
-    if (!lastMessage) return;
-
-    if (lastMessage.type === 'team_update' && lastMessage.team) {
-      // Refresh teams list
-      fetch('/api/teams')
-        .then((res) => res.json())
-        .then((data: TeamSummary[]) => setTeams(data))
-        .catch(console.error);
-    }
-
-    if (lastMessage.type === 'task_update' && lastMessage.team) {
-      // Refresh tasks list
-      fetch('/api/tasks')
-        .then((res) => res.json())
-        .then((data: TaskSummary[]) => setTasks(data))
-        .catch(console.error);
-    }
-  }, [lastMessage, setTeams, setTasks]);
 
   // Group tasks by status
   const tasksByStatus = {
@@ -146,7 +130,7 @@ function App() {
   // ローディング状態
   if (isLoading && !hasError) {
     return (
-      <Layout connectionStatus={connectionStatus}>
+      <Layout>
         <LoadingSpinner message="データを読み込んでいます..." />
       </Layout>
     );
@@ -155,13 +139,12 @@ function App() {
   // エラー状態
   if (hasError && !isLoading) {
     const errorMessage = teamsError || tasksError || 'データの読み込みに失敗しました';
-    const errorType = connectionStatus === 'closed' ? 'network' : 'general';
 
     return (
-      <Layout connectionStatus={connectionStatus}>
+      <Layout>
         <ErrorDisplay
           message={errorMessage}
-          errorType={errorType}
+          errorType="general"
           onRetry={handleRetry}
           retryText="再接続"
         />
@@ -170,7 +153,7 @@ function App() {
   }
 
   return (
-    <Layout connectionStatus={connectionStatus}>
+    <Layout>
       <div className="bg-gray-50 dark:bg-slate-900 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Header with View Tabs and Theme Toggle */}
@@ -219,8 +202,15 @@ function App() {
               {/* Teams Section - 全幅表示 */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Active Teams</h2>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">{teams.length} teams</span>
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Active Teams</h2>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{teams.length} teams</span>
+                    <PollingIntervalSelector
+                      value={teamsInterval}
+                      onChange={setTeamsInterval}
+                      label=""
+                    />
+                  </div>
                 </div>
                 {/* 検索ボックス (TC-006) */}
                 <div className="mb-4">
@@ -282,8 +272,15 @@ function App() {
               {/* Tasks Section - 全幅表示 */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h2>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">{tasks.length} tasks</span>
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h2>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{tasks.length} tasks</span>
+                    <PollingIntervalSelector
+                      value={tasksInterval}
+                      onChange={setTasksInterval}
+                      label=""
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Pending */}
@@ -330,43 +327,53 @@ function App() {
             </div>
           )}
 
-          {/* Timeline View */}
+          {/* Timeline View - Chat Style */}
           {currentView === 'timeline' && (
-            <div key="timeline" role="tabpanel" aria-labelledby="tab-timeline" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div key="timeline" role="tabpanel" aria-labelledby="tab-timeline" className="animate-in fade-in slide-in-from-bottom-2 duration-300 h-[calc(100vh-200px)]">
               {/* チームセレクター */}
-              <div className="mb-4 flex items-center gap-4">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">チームを選択:</label>
-                <select
-                  value={selectedTeam || ''}
-                  onChange={(e) => setSelectedTeam(e.target.value || null)}
-                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">-- チームを選択 --</option>
-                  {teams.map((team) => (
-                    <option key={team.name} value={team.name}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">チームを選択:</label>
+                  <select
+                    value={selectedTeam || ''}
+                    onChange={(e) => setSelectedTeam(e.target.value || null)}
+                    className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- チームを選択 --</option>
+                    {teams.map((team) => (
+                      <option key={team.name} value={team.name}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
               {selectedTeam ? (
-                <TimelinePanel teamName={selectedTeam} />
+                <ChatTimelinePanel teamName={selectedTeam} />
               ) : (
-                <div className="flex items-center justify-center h-96">
+                <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 h-[600px] flex items-center justify-center">
                   <div className="text-center text-gray-500 dark:text-gray-400">
                     <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
                     <p>タイムラインを表示するチームを選択してください</p>
                   </div>
                 </div>
               )}
-              </div>
             </div>
           )}
 
           {/* Tasks View (Kanban-style) */}
           {currentView === 'tasks' && (
             <div key="tasks" role="tabpanel" aria-labelledby="tab-tasks" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h2>
+                  <PollingIntervalSelector
+                    value={tasksInterval}
+                    onChange={setTasksInterval}
+                    label="更新間隔"
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Pending */}
               <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
@@ -431,20 +438,27 @@ function App() {
           {currentView === 'network' && (
             <div key="network" role="tabpanel" aria-labelledby="tab-network" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               {/* チームセレクター */}
-              <div className="mb-4 flex items-center gap-4">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">チームを選択:</label>
-                <select
-                  value={selectedTeam || ''}
-                  onChange={(e) => setSelectedTeam(e.target.value || null)}
-                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">-- チームを選択 --</option>
-                  {teams.map((team) => (
-                    <option key={team.name} value={team.name}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">チームを選択:</label>
+                  <select
+                    value={selectedTeam || ''}
+                    onChange={(e) => setSelectedTeam(e.target.value || null)}
+                    className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- チームを選択 --</option>
+                    {teams.map((team) => (
+                      <option key={team.name} value={team.name}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <PollingIntervalSelector
+                  value={inboxInterval}
+                  onChange={setInboxInterval}
+                  label="更新間隔"
+                />
               </div>
               <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">

@@ -1,21 +1,13 @@
-import { StatusBadge } from '@/components/common/StatusBadge';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 
 /**
  * アプリケーションのヘッダーコンポーネント。
  *
- * ロゴ、タイトル、WebSocket 接続状態、テーマ切り替えを表示します。
- * 接続状態は StatusBadge で視覚的に表現されます。
+ * ロゴ、タイトル、テーマ切り替えを表示します。
  *
- * @param props.connectionStatus - WebSocket 接続状態
  * @returns ヘッダー要素
- *
-*/
-interface HeaderProps {
-  connectionStatus: 'connecting' | 'open' | 'closed';
-}
-
-export function Header({ connectionStatus }: HeaderProps) {
+ */
+export function Header() {
   return (
     <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 transition-colors duration-300 ease-in-out">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -29,11 +21,6 @@ export function Header({ connectionStatus }: HeaderProps) {
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 dark:text-gray-400">WebSocket:</span>
-              <StatusBadge status={connectionStatus} />
-            </div>
-            <div className="w-px h-6 bg-gray-300 dark:bg-slate-600" />
             <ThemeToggle size="md" iconOnly />
           </div>
         </div>

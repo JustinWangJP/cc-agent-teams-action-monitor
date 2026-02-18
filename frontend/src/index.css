@@ -33,3 +33,175 @@ body {
 .status-completed {
   @apply bg-green-100 text-green-800;
 }
+
+/* ============================================
+   チャットタイムラインアニメーション
+   ============================================ */
+
+/* タイピングインジケーターのドットアニメーション */
+@keyframes typing-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.animate-typing-dot {
+  animation: typing-dot 1.4s infinite ease-in-out;
+}
+
+/* メッセージバブルのフェードインアニメーション */
+@keyframes message-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-message-fade-in {
+  animation: message-fade-in 0.2s ease-out;
+}
+
+/* 新着メッセージ通知のバウンスアニメーション */
+@keyframes notification-bounce {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-4px);
+  }
+}
+
+.animate-notification-bounce {
+  animation: notification-bounce 2s infinite ease-in-out;
+}
+
+/* スクロールバーのカスタムスタイル */
+.chat-scrollarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scrollarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scrollarea::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.chat-scrollarea::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark .chat-scrollarea::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark .chat-scrollarea::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* ============================================
+   アクセシビリティ改善
+   ============================================ */
+
+/* スクリーンリーダーのみのコンテンツ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* フォーカススタイル強化 */
+*:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.dark *:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+/* 高コントラストモード対応 */
+@media (prefers-contrast: high) {
+  *:focus-visible {
+    outline-width: 3px;
+  }
+}
+
+/* 動きの軽減設定対応 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   モバイル表示対応（768px未満）
+   ============================================ */
+
+@media (max-width: 767px) {
+  /* ダイアログ/モーダルのフルスクリーン表示 */
+  [role="dialog"],
+  [data-radix-portal] > div {
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+
+  /* タッチ操作の最小クリック領域確保（44px） */
+  button,
+  a,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* フォーム要素のサイズ調整 */
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 16px; /* iOSでの自動ズーム防止 */
+  }
+}
+
+/* ============================================
+   ダークモード強化
+   ============================================ */
+
+/* ダークモード時のコントラスト改善 */
+.dark {
+  color-scheme: dark;
+}
+
+/* 深い背景でのテキスト読みやすさ向上 */
+.dark .text-slate-400 {
+  color: #cbd5e1; /* 上げてコントラスト比向上 */
+}
+
+.dark .text-slate-500 {
+  color: #94a3b8;
+}
