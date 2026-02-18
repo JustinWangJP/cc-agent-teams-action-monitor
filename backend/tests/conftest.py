@@ -6,18 +6,22 @@ FastAPI テストクライアント、モックデータ、テスト用ディレ
 @
 """
 import pytest
+import pytest_asyncio
 import asyncio
 from pathlib import Path
 from typing import AsyncGenerator, Generator
 from httpx import AsyncClient, ASGITransport
 from app.main import app
 
+# pytest-asyncio のモードを auto に設定
+pytestmark = pytest.mark.asyncio
+
 
 # テスト用 fixtures ディレクトリ
 TEST_FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
     """FastAPI 非同期テストクライアント。
 

@@ -1,12 +1,12 @@
 /**
- * useTeams フックの単体テスト。
+ * useTeams フックの単体テスト（React Query版）。
  *
  * T-HK-001: データ取得
  * T-HK-002: ローディング状態
- *
-*/
+ */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useTeams, useTeam } from '../useTeams'
 
 // fetch のモック
@@ -31,7 +31,33 @@ const mockTeamsResponse = [
   }
 ]
 
-describe('useTeams', () => {
+// Zustand Store のモック
+vi.mock('../stores/dashboardStore', () => ({
+  useDashboardStore: vi.fn((selector) => {
+    const state = {
+      teamsInterval: 30000,
+      tasksInterval: 30000,
+      inboxInterval: 30000,
+      messagesInterval: 30000,
+    }
+    return selector ? selector(state) : state
+  })
+}))
+
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  })
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+}
+
+describe('useTeams (React Query)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -43,7 +69,9 @@ describe('useTeams', () => {
         json: async () => mockTeamsResponse
       } as Response)
 
-      const { result } = renderHook(() => useTeams())
+      const { result } = renderHook(() => useTeams(), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.teams).toEqual(mockTeamsResponse)
@@ -56,7 +84,9 @@ describe('useTeams', () => {
         json: async () => mockTeamsResponse
       } as Response)
 
-      const { result } = renderHook(() => useTeams())
+      const { result } = renderHook(() => useTeams(), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.teams.length).toBe(2)
@@ -83,7 +113,9 @@ describe('useTeams', () => {
         json: async () => mockTeamsResponse
       } as Response)
 
-      const { result } = renderHook(() => useTeams())
+      const { result } = renderHook(() => useTeams(), {
+        wrapper: createWrapper(),
+      })
 
       expect(result.current.loading).toBe(true)
 
@@ -99,7 +131,9 @@ describe('useTeams', () => {
         ok: false
       } as Response)
 
-      const { result } = renderHook(() => useTeams())
+      const { result } = renderHook(() => useTeams(), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.error).toBe('Failed to fetch teams')
@@ -109,7 +143,9 @@ describe('useTeams', () => {
     it('ネットワークエラー時に error を設定する', async () => {
       vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
 
-      const { result } = renderHook(() => useTeams())
+      const { result } = renderHook(() => useTeams(), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.error).toBe('Network error')
@@ -118,7 +154,7 @@ describe('useTeams', () => {
   })
 })
 
-describe('useTeam', () => {
+describe('useTeam (React Query)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -137,7 +173,9 @@ describe('useTeam', () => {
       json: async () => mockTeam
     } as Response)
 
-    const { result } = renderHook(() => useTeam('team1'))
+    const { result } = renderHook(() => useTeam('team1'), {
+      wrapper: createWrapper(),
+    })
 
     await waitFor(() => {
       expect(result.current.team).toEqual(mockTeam)
@@ -145,7 +183,9 @@ describe('useTeam', () => {
   })
 
   it('teamName が空の場合、API呼び出しを行わない', async () => {
-    const { result } = renderHook(() => useTeam(''))
+    const { result } = renderHook(() => useTeam(''), {
+      wrapper: createWrapper(),
+    })
 
     await waitFor(() => {
       expect(result.current.team).toBeNull()

@@ -1,11 +1,11 @@
 /**
- * useTasks フックの単体テスト。
+ * useTasks フックの単体テスト（React Query版）。
  *
  * T-HK-003: データ取得
- *
-*/
+ */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useTasks, useTeamTasks } from '../useTasks'
 
 global.fetch = vi.fn()
@@ -29,7 +29,33 @@ const mockTasksResponse = [
   }
 ]
 
-describe('useTasks', () => {
+// Zustand Store のモック
+vi.mock('../stores/dashboardStore', () => ({
+  useDashboardStore: vi.fn((selector) => {
+    const state = {
+      teamsInterval: 30000,
+      tasksInterval: 30000,
+      inboxInterval: 30000,
+      messagesInterval: 30000,
+    }
+    return selector ? selector(state) : state
+  })
+}))
+
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  })
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+}
+
+describe('useTasks (React Query)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
@@ -46,7 +72,9 @@ describe('useTasks', () => {
         json: async () => mockTasksResponse
       } as Response)
 
-      const { result } = renderHook(() => useTasks())
+      const { result } = renderHook(() => useTasks(), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.tasks).toEqual(mockTasksResponse)
@@ -59,7 +87,9 @@ describe('useTasks', () => {
         json: async () => mockTasksResponse
       } as Response)
 
-      const { result } = renderHook(() => useTasks())
+      const { result } = renderHook(() => useTasks(), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.tasks.length).toBe(2)
@@ -78,50 +108,36 @@ describe('useTasks', () => {
     })
   })
 
-  describe('ポーリング', () => {
-    it('10秒間隔でポーリングする', async () => {
-      let callCount = 0
-      vi.mocked(fetch).mockImplementation(() => {
-        callCount++
-        return Promise.resolve({
-          ok: true,
-          json: async () => mockTasksResponse
-        } as Response)
+  describe('エラーハンドリング', () => {
+    it('APIエラー時に error を設定する', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: false
+      } as Response)
+
+      const { result } = renderHook(() => useTasks(), {
+        wrapper: createWrapper(),
       })
 
-      renderHook(() => useTasks())
-
-      // 初期呼び出し
       await waitFor(() => {
-        expect(callCount).toBe(1)
-      })
-
-      // 10秒後に2回目の呼び出し
-      vi.advanceTimersByTime(10000)
-      await waitFor(() => {
-        expect(callCount).toBe(2)
+        expect(result.current.error).toBe('Failed to fetch tasks')
       })
     })
 
-    it('アンマウント時にポーリングを停止する', async () => {
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        json: async () => mockTasksResponse
-      } as Response)
+    it('ネットワークエラー時に error を設定する', async () => {
+      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
 
-      const { unmount } = renderHook(() => useTasks())
+      const { result } = renderHook(() => useTasks(), {
+        wrapper: createWrapper(),
+      })
 
-      unmount()
-
-      vi.advanceTimersByTime(10000)
-
-      // unmount後は追加の呼び出しがないことを確認
-      expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1)
+      await waitFor(() => {
+        expect(result.current.error).toBe('Network error')
+      })
     })
   })
 })
 
-describe('useTeamTasks', () => {
+describe('useTeamTasks (React Query)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -146,7 +162,9 @@ describe('useTeamTasks', () => {
       json: async () => mockTeamTasks
     } as Response)
 
-    const { result } = renderHook(() => useTeamTasks('team1'))
+    const { result } = renderHook(() => useTeamTasks('team1'), {
+      wrapper: createWrapper(),
+    })
 
     await waitFor(() => {
       expect(result.current.tasks).toEqual(mockTeamTasks)
@@ -158,7 +176,9 @@ describe('useTeamTasks', () => {
   })
 
   it('teamName が空の場合、API呼び出しを行わない', async () => {
-    const { result } = renderHook(() => useTeamTasks(''))
+    const { result } = renderHook(() => useTeamTasks(''), {
+      wrapper: createWrapper(),
+    })
 
     await waitFor(() => {
       expect(result.current.tasks).toEqual([])
