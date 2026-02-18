@@ -704,7 +704,7 @@ def calculate_total(items: List[Item]) -> float:
  * @param {string} props.userId - ユーザー ID
  * @returns {JSX.Element} レンダリングされたコンポーネント
  *
- * @claude
+ * 
  */
 const UserProfile = ({ userId }: UserProfileProps): JSX.Element => {
 ```
