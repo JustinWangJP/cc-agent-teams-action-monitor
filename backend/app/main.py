@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.api.routes import teams, tasks, websocket, messages
+from app.api.routes import teams, tasks, messages, agents
 from app.services.file_watcher import FileWatcherService
 
 
@@ -53,7 +53,7 @@ app.add_middleware(
 app.include_router(teams.router, prefix="/api/teams", tags=["teams"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(messages.router, prefix="/api", tags=["messages"])
-app.include_router(websocket.router, prefix="/ws", tags=["websocket"])
+app.include_router(agents.router, prefix="/api/teams", tags=["agents"])
 
 
 @app.get("/api/health")

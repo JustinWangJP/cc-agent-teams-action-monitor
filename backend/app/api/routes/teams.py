@@ -30,6 +30,11 @@ def get_team_config(team_dir: Path) -> dict | None:
     指定されたチームディレクトリ内の config.json を読み込み、辞書形式で返します。
     ファイルが存在しない場合は None を返します。
 
+    Args:
+        team_dir: チームディレクトリのパス
+
+    Returns:
+        設定データの辞書、または None
 
     """
     config_path = team_dir / "config.json"
@@ -44,15 +49,32 @@ def get_team_inboxes(team_dir: Path) -> dict[str, list]:
 
     指定されたチームの inboxes/ ディレクトリ内の全 JSON ファイルを読み込み、
     エージェント名をキー、メッセージリストを値とする辞書で返します。
+    読み込みエラーが発生したファイルはログに出力してスキップします。
 
+    Args:
+        team_dir: チームディレクトリのパス
+
+    Returns:
+        エージェント名をキーとするメッセージリストの辞書
 
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     inboxes_dir = team_dir / "inboxes"
     inboxes = {}
     if inboxes_dir.exists():
         for inbox_file in inboxes_dir.glob("*.json"):
-            with open(inbox_file, "r", encoding="utf-8") as f:
-                inboxes[inbox_file.stem] = json.load(f)
+            try:
+                with open(inbox_file, "r", encoding="utf-8") as f:
+                    inboxes[inbox_file.stem] = json.load(f)
+            except (json.JSONDecodeError, IOError) as e:
+                # TC-023: エラーハンドリング - 読み込みエラーをログに出力
+                logger.warning(
+                    f"Failed to read inbox file {inbox_file}: {e}",
+                    extra={"file": str(inbox_file), "error": str(e)}
+                )
+                continue
     return inboxes
 
 
@@ -61,6 +83,11 @@ def get_team_task_count(team_name: str) -> int:
 
     ~/.claude/tasks/{team_name}/ ディレクトリ内のタスクファイル数を返します。
 
+    Args:
+        team_name: チーム名
+
+    Returns:
+        タスクファイル数
 
     """
     tasks_dir = settings.tasks_dir / team_name
@@ -77,6 +104,8 @@ async def list_teams():
     TeamSummary 形式で返します。メンバーがいれば active、いなければ inactive。
     また、各チームのタスク数も取得します。
 
+    Returns:
+        list[TeamSummary]: チーム概要情報のリスト
 
     """
     teams = []
@@ -105,6 +134,14 @@ async def get_team(team_name: str):
     チーム名を指定してチーム設定とメンバーリストを取得し、Team 形式で返します。
     チームまたは設定ファイルが存在しない場合は 404 エラーを返します。
 
+    Args:
+        team_name: 取得対象のチーム名
+
+    Returns:
+        Team: チーム詳細情報
+
+    Raises:
+        HTTPException: チームが存在しない場合 (404)
 
     """
     team_dir = settings.teams_dir / team_name
@@ -133,6 +170,14 @@ async def get_team_inboxes_api(team_name: str):
     指定されたチームの inboxes/ ディレクトリから全エージェントのメッセージを取得し、
     エージェント名をキーとする辞書形式で返します。チーム不存在時は 404 エラー。
 
+    Args:
+        team_name: チーム名
+
+    Returns:
+        dict: エージェント名をキーとするメッセージリストの辞書
+
+    Raises:
+        HTTPException: チームが存在しない場合 (404)
 
     """
     team_dir = settings.teams_dir / team_name
@@ -142,10 +187,44 @@ async def get_team_inboxes_api(team_name: str):
     return get_team_inboxes(team_dir)
 
 
+@router.get("/{team_name}/inboxes/{agent_name}")
+async def get_agent_inbox(team_name: str, agent_name: str):
+    """特定エージェントのインボックスメッセージを取得するエンドポイント。
+
+    指定されたチーム・エージェントのインボックスファイルからメッセージを取得し、
+    JSON形式で返します。チームまたはファイルが存在しない場合は404エラー。
+
+    Args:
+        team_name: チーム名
+        agent_name: エージェント名
+
+    Returns:
+        エージェントのインボックスメッセージリスト
+
+    """
+    team_dir = settings.teams_dir / team_name
+    if not team_dir.exists():
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    inbox_path = team_dir / "inboxes" / f"{agent_name}.json"
+    if not inbox_path.exists():
+        raise HTTPException(status_code=404, detail="Agent inbox not found")
+
+    with open(inbox_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def get_model_color_and_icon(model: str) -> tuple[str, str]:
     """モデルIDから色とアイコンを取得するヘルパー関数。
 
     Claude Code Agent Teams のモデル設定に基づいて視覚的表現を返します。
+    Claude、Kimi、GLM などのモデルに対応しています。
+
+    Args:
+        model: モデルID文字列
+
+    Returns:
+        tuple[str, str]: (色コード, アイコン絵文字) のタプル
 
     """
     model_lower = model.lower()
@@ -174,6 +253,13 @@ def parse_message_type(text: str) -> str:
     """メッセージ本文からプロトコルタイプを推定するヘルパー関数。
 
     JSON-in-JSON 形式のプロトコルメッセージを解析してタイプを判定します。
+    idle_notification、shutdown_request などのタイプを識別します。
+
+    Args:
+        text: メッセージ本文文字列
+
+    Returns:
+        str: 判定されたメッセージタイプ
 
     """
     text = text.strip()
@@ -205,6 +291,12 @@ def get_dominant_type(types: dict[str, int]) -> str:
     """エッジの主要タイプを判定するヘルパー関数。
 
     カウントが最も多いメッセージタイプを返します。
+
+    Args:
+        types: タイプ名をキー、カウントを値とする辞書
+
+    Returns:
+        str: 最も多いタイプ名
 
     """
     return max(types.items(), key=lambda x: x[1])[0] if types else "message"

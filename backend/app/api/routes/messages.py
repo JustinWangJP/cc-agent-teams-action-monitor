@@ -20,6 +20,7 @@ from app.models.network import (
     NetworkMeta,
     NetworkTimeRange,
 )
+from app.models.chat import ChatMessage, ChatMessageList
 
 router = APIRouter()
 
@@ -111,14 +112,58 @@ def get_team_inboxes(team_dir: Path) -> dict[str, list]:
 
     Returns:
         エージェント名をキー、メッセージリストを値とする辞書
+
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     inboxes_dir = team_dir / "inboxes"
     inboxes = {}
     if inboxes_dir.exists():
         for inbox_file in inboxes_dir.glob("*.json"):
-            with open(inbox_file, "r", encoding="utf-8") as f:
-                inboxes[inbox_file.stem] = json.load(f)
+            try:
+                with open(inbox_file, "r", encoding="utf-8") as f:
+                    inboxes[inbox_file.stem] = json.load(f)
+            except (json.JSONDecodeError, IOError) as e:
+                # TC-023: エラーハンドリング - 読み込みエラーをログに出力
+                logger.warning(
+                    f"Failed to read inbox file {inbox_file}: {e}",
+                    extra={"file": str(inbox_file), "error": str(e)}
+                )
+                continue
     return inboxes
+
+
+def safe_parse_timestamp(timestamp_str: str) -> tuple[Optional[datetime], bool]:
+    """ISO 8601形式のタイムスタンプを安全にパースします。
+
+    TC-024: 無効なタイムスタンプの場合はNoneを返し、エラーフラグを設定します。
+
+    Args:
+        timestamp_str: ISO 8601形式のタイムスタンプ文字列
+
+    Returns:
+        (datetimeオブジェクトまたはNone, パース成功ならTrue)
+
+    """
+    if not timestamp_str:
+        return None, False
+    
+    try:
+        # 'Z' サフィックスを '+00:00' に変換
+        normalized = timestamp_str
+        if normalized.endswith("Z"):
+            normalized = normalized[:-1] + "+00:00"
+        return datetime.fromisoformat(normalized), True
+    except (ValueError, AttributeError):
+        # TC-024: 無効なタイムスタンプはログに出力
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(
+            f"Invalid timestamp format: {timestamp_str}",
+            extra={"timestamp": timestamp_str}
+        )
+        return None, False
 
 
 def parse_message_type(text: str) -> MessageType:
@@ -680,3 +725,148 @@ async def get_message_network(
     )
 
     return NetworkData(nodes=nodes, edges=edges, teamName=team_name, meta=meta)
+
+
+@router.get("/teams/{team_name}/messages/chat", response_model=ChatMessageList)
+async def get_chat_messages(
+    team_name: str,
+    start_time: Optional[str] = Query(None, description="開始時刻 (ISO 8601)"),
+    end_time: Optional[str] = Query(None, description="終了時刻 (ISO 8601)"),
+    senders: Optional[str] = Query(None, description="送信者（カンマ区切り）"),
+    types: Optional[str] = Query(None, description="タイプ（カンマ区切り）"),
+    search: Optional[str] = Query(None, description="検索キーワード"),
+    unread_only: bool = Query(False, description="未読のみ"),
+    limit: int = Query(100, description="取得件数上限", ge=1, le=500),
+    offset: int = Query(0, description="オフセット", ge=0),
+):
+    """チャット形式表示用のメッセージを取得する。
+
+    指定されたチームのメッセージをチャット形式で返します。
+    秘密メッセージ（DM）の判定、閲覧可能エージェントの設定を含みます。
+
+    Args:
+        team_name: チーム名
+        start_time: 開始時刻 (ISO 8601形式)
+        end_time: 終了時刻 (ISO 8601形式)
+        senders: 送信者（カンマ区切り）
+        types: メッセージタイプ（カンマ区切り）
+        search: 検索キーワード
+        unread_only: 未読のみ取得するか
+        limit: 取得件数上限 (最大500)
+        offset: オフセット
+
+    Returns:
+        チャットメッセージリスト
+    """
+    team_dir = get_team_dir(team_name)
+    inboxes = get_team_inboxes(team_dir)
+
+    # チーム設定からメンバー情報を取得
+    config_file = team_dir / "config.json"
+    team_members = set()
+    if config_file.exists():
+        with open(config_file, "r", encoding="utf-8") as f:
+            config_data = json.load(f)
+            members = config_data.get("members", [])
+            team_members = {m.get("name") for m in members if m.get("name")}
+
+    # 全メッセージを収集
+    all_messages = []
+    for agent_name, messages in inboxes.items():
+        if isinstance(messages, list):
+            for msg in messages:
+                msg["from"] = msg.get("from", agent_name)
+                msg["inbox_owner"] = agent_name  # 受信者情報
+                all_messages.append(msg)
+
+    # タイムスタンプでソート（昇順）
+    # TC-024: 無効なタイムスタンプを持つメッセージは最後に配置
+    def sort_key(msg: dict) -> tuple:
+        timestamp_str = msg.get("timestamp", "")
+        dt, is_valid = safe_parse_timestamp(timestamp_str)
+        if is_valid and dt:
+            return (0, dt)  # 有効なタイムスタンプは先頭
+        return (1, datetime.now())  # 無効なタイムスタンプは末尾
+    
+    all_messages.sort(key=sort_key)
+
+    # フィルター条件の解析
+    start_dt = datetime.fromisoformat(start_time) if start_time else None
+    end_dt = datetime.fromisoformat(end_time) if end_time else None
+    sender_list = senders.split(",") if senders else None
+
+    type_list = None
+    if types:
+        type_map = {
+            "message": MessageType.MESSAGE,
+            "idle_notification": MessageType.IDLE_NOTIFICATION,
+            "shutdown_request": MessageType.SHUTDOWN_REQUEST,
+            "shutdown_approved": MessageType.SHUTDOWN_APPROVED,
+            "shutdown_response": MessageType.SHUTDOWN_RESPONSE,
+            "plan_approval_request": MessageType.PLAN_APPROVAL_REQUEST,
+            "plan_approval_response": MessageType.PLAN_APPROVAL_RESPONSE,
+            "task_assignment": MessageType.TASK_ASSIGNMENT,
+            "unknown": MessageType.UNKNOWN,
+        }
+        type_list = [type_map[t.strip()] for t in types.split(",") if t.strip() in type_map]
+
+    # フィルタリング適用
+    filtered_messages = filter_messages(
+        messages=all_messages,
+        start_time=start_dt,
+        end_time=end_dt,
+        senders=sender_list,
+        types=type_list,
+        search=search,
+        unread_only=unread_only,
+    )
+
+    # ページネーション適用
+    total_count = len(filtered_messages)
+    has_more = (offset + limit) < total_count
+    paginated_messages = filtered_messages[offset : offset + limit]
+
+    # チャットメッセージに変換
+    chat_messages = []
+    for idx, msg in enumerate(paginated_messages):
+        sender = msg.get("from", "unknown")
+        receiver = msg.get("inbox_owner", "")
+
+        # メッセージタイプを判定
+        msg_type = parse_message_type(msg.get("text", ""))
+
+        # 秘密メッセージ（DM）の判定
+        # 受信者が明確で、チーム全体へのブロードキャストでない場合
+        is_private = False
+        visible_to = []
+
+        # インボックス所有者が受信者として、送信者と1対1のメッセージの場合はDMとみなす
+        if receiver and receiver != sender and receiver in team_members:
+            # 受信者のインボックス内にあるメッセージで、送信者と受信者が特定される場合
+            is_private = True
+            visible_to = [sender, receiver]
+
+        chat_messages.append(
+            ChatMessage(
+                id=f"{sender}-{receiver}-{idx}",
+                from_=sender,
+                to=receiver if receiver != sender else None,
+                text=msg.get("text", ""),
+                summary=msg.get("summary"),
+                # TC-024: 無効なタイムスタンプの場合、有効な値を使用
+                timestamp=safe_parse_timestamp(msg.get("timestamp", ""))[0].isoformat() 
+                    if safe_parse_timestamp(msg.get("timestamp", ""))[0] 
+                    else datetime.now().isoformat(),
+                type=msg_type.value,
+                isPrivate=is_private,
+                visibleTo=visible_to,
+                read=msg.get("read", False),
+                color=msg.get("color"),
+            )
+        )
+
+    return ChatMessageList(
+        messages=chat_messages,
+        count=len(chat_messages),
+        hasMore=has_more,
+    )
