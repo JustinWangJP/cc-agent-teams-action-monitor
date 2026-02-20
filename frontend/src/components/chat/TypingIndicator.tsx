@@ -8,7 +8,7 @@
 
 'use client';
 
-import { memo, useCallback, useState, useEffect } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 
 /**

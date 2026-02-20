@@ -1,7 +1,9 @@
 /**
- * チャットメッセージリストコンポーネント。
+ * チャットメッセージリストコンポーネント（バーチャルスクロール対応版）。
  *
  * メッセージリストの表示とスクロール管理を担当します。
+ * @tanstack/react-virtual を使用して、大量メッセージでも高速に描画します。
+ *
  * スマートスクロール機能：最下部から100px以内の場合のみ自動スクロール。
  *
  * @module components/chat/ChatMessageList
@@ -10,8 +12,10 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDown, ChevronDown } from 'lucide-react';
 import { ChatMessageBubble } from './ChatMessageBubble';
+import { DateSeparator, isSameDate } from './DateSeparator';
 import type { ParsedMessage } from '@/types/message';
 import { clsx } from 'clsx';
 
@@ -50,7 +54,7 @@ const NewMessageNotification = memo<NewMessageNotificationProps>(({ count, onCli
     type="button"
     onClick={onClick}
     className={clsx(
-      'absolute bottom-4 left-1/2 -translate-x-1/2',
+      'absolute bottom-4 left-1/2 -translate-x-1/2 z-20',
       'inline-flex items-center gap-2 px-4 py-2',
       'bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium',
       'rounded-full shadow-lg transition-all duration-200',
@@ -79,7 +83,7 @@ const ScrollToBottomButton = memo<ScrollToBottomButtonProps>(({ onClick, isVisib
     type="button"
     onClick={onClick}
     className={clsx(
-      'absolute bottom-4 right-4',
+      'absolute bottom-4 right-4 z-20',
       'inline-flex items-center justify-center w-10 h-10',
       'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700',
       'text-slate-600 dark:text-slate-400 rounded-full shadow-md',
@@ -140,9 +144,57 @@ const EmptyState = memo<EmptyStateProps>(({ isLoading, error }) => {
 EmptyState.displayName = 'EmptyState';
 
 /**
- * チャットメッセージリストコンポーネント。
+ * 仮想化されたメッセージアイテムコンポーネント。
+ */
+interface VirtualMessageItemProps {
+  message: ParsedMessage;
+  previousMessage?: ParsedMessage;
+  isSelected: boolean;
+  isHighlighted: boolean;
+  searchQuery: string;
+  onMessageClick?: (message: ParsedMessage) => void;
+  index: number;
+  total: number;
+}
+
+const VirtualMessageItem = memo<VirtualMessageItemProps>(
+  ({ message, previousMessage, isSelected, isHighlighted, searchQuery, onMessageClick, index, total }) => {
+    const messageId = `${message.timestamp}-${message.from}`;
+
+    // 前のメッセージと日付が異なる場合はセパレーターを表示
+    const showDateSeparator = !previousMessage || !isSameDate(previousMessage.timestamp, message.timestamp);
+
+    return (
+      <>
+        {showDateSeparator && (
+          <DateSeparator date={new Date(message.timestamp)} />
+        )}
+        <div
+          data-message-id={messageId}
+          aria-setsize={total}
+          aria-posinset={index + 1}
+          className="will-change-transform"
+        >
+          <ChatMessageBubble
+            message={message}
+            isSelected={isSelected}
+            isHighlighted={isHighlighted}
+            searchQuery={searchQuery}
+            onClick={onMessageClick}
+          />
+        </div>
+      </>
+    );
+  }
+);
+
+VirtualMessageItem.displayName = 'VirtualMessageItem';
+
+/**
+ * チャットメッセージリストコンポーネント（バーチャルスクロール対応）。
  *
- * メッセージリストの表示とスクロール管理を行います。
+ * @tanstack/react-virtual を使用して、表示されるメッセージのみをレンダリングします。
+ * これにより、1000件以上のメッセージでもスムーズにスクロールできます。
  *
  * @example
  * ```tsx
@@ -172,6 +224,28 @@ export const ChatMessageList = memo<ChatMessageListProps>(
     const prevMessagesLengthRef = useRef(messages.length);
 
     /**
+     * バーチャルスクロールの設定。
+     *
+     * - estimateSize: 各メッセージの推定高さ（動的に調整されます）
+     * - overscan: スクロール方向に先読みするアイテム数
+     */
+    const virtualizer = useVirtualizer({
+      count: messages.length,
+      getScrollElement: () => viewportRef.current,
+      estimateSize: useCallback(() => 100, []),
+      overscan: 5,
+    });
+
+    /**
+     * 仮想アイテムの高さを取得・キャッシュするコールバック。
+     */
+    const measureElement = useCallback((element: HTMLDivElement | null) => {
+      if (element) {
+        virtualizer.measureElement(element);
+      }
+    }, [virtualizer]);
+
+    /**
      * 最下部から100px以内かどうかを判定。
      */
     const checkIsNearBottom = useCallback(() => {
@@ -188,17 +262,28 @@ export const ChatMessageList = memo<ChatMessageListProps>(
      * 最下部へスクロール。
      */
     const scrollToBottom = useCallback((smooth = true) => {
-      const viewport = viewportRef.current;
-      if (!viewport) return;
+      if (messages.length === 0) return;
 
-      viewport.scrollTo({
-        top: viewport.scrollHeight,
-        behavior: smooth ? 'smooth' : 'instant',
+      // バーチャライザーを使用して最下部へスクロール
+      virtualizer.scrollToIndex(messages.length - 1, {
+        align: 'end',
+        behavior: smooth ? 'smooth' : 'auto',
       });
+
       setIsNearBottom(true);
       setShowNewMessageBadge(false);
       setUnreadCount(0);
-    }, []);
+    }, [virtualizer, messages.length]);
+
+    /**
+     * 指定したインデックスへスクロール。
+     */
+    const scrollToIndex = useCallback((index: number, smooth = true) => {
+      virtualizer.scrollToIndex(index, {
+        align: 'center',
+        behavior: smooth ? 'smooth' : 'auto',
+      });
+    }, [virtualizer]);
 
     /**
      * スクロールイベントハンドラー。
@@ -264,14 +349,17 @@ export const ChatMessageList = memo<ChatMessageListProps>(
      */
     useEffect(() => {
       if (selectedMessageId) {
-        const messageElement = document.querySelector(`[data-message-id="${selectedMessageId}"]`);
-        if (messageElement) {
-          messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const index = messages.findIndex(
+          (m) => `${m.timestamp}-${m.from}` === selectedMessageId
+        );
+        if (index !== -1) {
+          scrollToIndex(index, true);
         }
       }
-    }, [selectedMessageId]);
+    }, [selectedMessageId, messages, scrollToIndex]);
 
     const isEmpty = messages.length === 0;
+    const virtualItems = virtualizer.getVirtualItems();
 
     return (
       <div className="relative h-full">
@@ -285,40 +373,57 @@ export const ChatMessageList = memo<ChatMessageListProps>(
           aria-label="メッセージリスト"
           tabIndex={0}
         >
-          <div className="p-4 space-y-1">
-            {isEmpty ? (
-              <EmptyState isLoading={isLoading} error={error} />
-            ) : (
-              <>
-                {/* スクリーンリーダー向けのメッセージ数通知 */}
-                <div className="sr-only" aria-live="polite" aria-atomic="true">
-                  {messages.length}件のメッセージがあります
-                </div>
-                {messages.map((message, index) => {
+          {isEmpty ? (
+            <EmptyState isLoading={isLoading} error={error} />
+          ) : (
+            <>
+              {/* スクリーンリーダー向けのメッセージ数通知 */}
+              <div className="sr-only" aria-live="polite" aria-atomic="true">
+                {messages.length}件のメッセージがあります
+              </div>
+
+              {/* バーチャルスクロールコンテナ */}
+              <div
+                className="relative w-full"
+                style={{
+                  height: `${virtualizer.getTotalSize()}px`,
+                }}
+              >
+                {virtualItems.map((virtualItem) => {
+                  const message = messages[virtualItem.index];
+                  const previousMessage = virtualItem.index > 0 ? messages[virtualItem.index - 1] : undefined;
+                  if (!message) return null;
+
                   const messageId = `${message.timestamp}-${message.from}`;
-                  const isFirst = index === 0;
-                  const isLast = index === messages.length - 1;
+                  const isSelected = selectedMessageId === messageId;
                   const isHighlighted = highlightedMessageId === messageId;
+
                   return (
                     <div
-                      key={messageId}
-                      data-message-id={messageId}
-                      aria-setsize={messages.length}
-                      aria-posinset={index + 1}
+                      key={virtualItem.key}
+                      data-index={virtualItem.index}
+                      ref={measureElement}
+                      className="absolute w-full top-0 left-0"
+                      style={{
+                        transform: `translateY(${virtualItem.start}px)`,
+                      }}
                     >
-                      <ChatMessageBubble
+                      <VirtualMessageItem
                         message={message}
-                        isSelected={selectedMessageId === messageId}
+                        previousMessage={previousMessage}
+                        isSelected={isSelected}
                         isHighlighted={isHighlighted}
                         searchQuery={searchQuery}
-                        onClick={onMessageClick}
+                        onMessageClick={onMessageClick}
+                        index={virtualItem.index}
+                        total={messages.length}
                       />
                     </div>
                   );
                 })}
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* 新着メッセージ通知 */}

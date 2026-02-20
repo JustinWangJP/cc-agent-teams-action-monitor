@@ -173,9 +173,8 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
       onClick?.(message);
     }, [message, onClick]);
 
-    const handleBookmarkClick = useCallback((e: React.MouseEvent) => {
-      e.stopPropagation(); // メッセージクリックを防止
-    }, []);
+    // ブックマーク機能はBookmarkButton内で完結しているため、
+    // handleBookmarkClickは不要（内部でlocalStorage管理）
 
     return (
       <div
@@ -205,7 +204,6 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
             <BookmarkButton
               messageId={messageId}
               size="sm"
-              onClick={handleBookmarkClick}
             />
           </div>
         )}
