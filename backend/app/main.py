@@ -1,7 +1,7 @@
 """Agent Teams Dashboard の FastAPI アプリケーションエントリーポイント。
 
 FastAPI アプリケーションの作成、CORS ミドルウェア設定、ルーター登録、
-ライフサイクル管理（FileWatcher の開始/停止）を行います。
+ライフサイクル管理（FileWatcher、CacheService の開始/停止）を行います。
 
 """
 from contextlib import asynccontextmanager
@@ -11,26 +11,36 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api.routes import teams, tasks, messages, agents
 from app.services.file_watcher import FileWatcherService
+from app.services.cache_service import start_cache_service, stop_cache_service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """アプリケーションのライフサイクルを管理する非同期コンテキストマネージャー。
 
-    起動時に FileWatcher サービスを開始し、アプリケーション状態に保存します。
-    終了時に FileWatcher を停止し、リソースを解放します。
+    起動時に FileWatcher、CacheService を開始し、アプリケーション状態に保存します。
+    終了時に各サービスを停止し、リソースを解放します。
 
 
     """
-    # Startup: Start file watcher
+    # Startup: Start services
     watcher = FileWatcherService()
     await watcher.start()
     app.state.watcher = watcher
 
+    # キャッシュサービスを開始
+    cache = await start_cache_service(
+        config_ttl=30,  # チーム設定キャッシュ: 30秒
+        inbox_ttl=60,  # インボックスキャッシュ: 60秒
+        cleanup_interval=300,  # クリーンアップ: 5分
+    )
+    app.state.cache = cache
+
     yield
 
-    # Shutdown: Stop file watcher
+    # Shutdown: Stop services
     await watcher.stop()
+    await stop_cache_service()
 
 
 app = FastAPI(

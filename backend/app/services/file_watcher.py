@@ -1,16 +1,18 @@
 """~/.claude/ ディレクトリを監視するファイル監視サービス。
 
 watchdog ライブラリを使用して Claude ディレクトリ内の JSON ファイル変更を検知し、
-ログ出力を行います。（WebSocketブロードキャストは削除済み）
+ログ出力とキャッシュ無効化を行います。
 
 """
 import asyncio
 import logging
 from pathlib import Path
+from typing import Optional
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent, FileCreatedEvent
 
 from app.config import settings
+from app.services.cache_service import get_cache
 
 logger = logging.getLogger(__name__)
 
@@ -70,9 +72,10 @@ class ClaudeFileHandler(FileSystemEventHandler):
             pass  # No event loop running
 
     async def _log_file_change(self, path: str, event_type: str):
-        """ファイル変更をログ出力します。
+        """ファイル変更をログ出力し、キャッシュを無効化します。
 
         パスを解析して変更の種類を判定し、ログに出力します。
+        また、キャッシュサービスが有効な場合は該当するキャッシュを無効化します。
 
         """
         path_obj = Path(path)
@@ -82,6 +85,13 @@ class ClaudeFileHandler(FileSystemEventHandler):
             if "/teams/" in path and "config.json" in path:
                 team_name = path_obj.parent.name
                 logger.info(f"Team config updated: {team_name} ({event_type})")
+                # キャッシュ無効化
+                try:
+                    cache = get_cache()
+                    cache.invalidate_team_config(team_name)
+                except RuntimeError:
+                    # キャッシュサービスが初期化されていない場合は無視
+                    pass
             elif "/teams/" in path and "/inboxes/" in path:
                 # Path structure: ~/.claude/teams/{team_name}/inboxes/{agent_name}.json
                 parts = path_obj.parts
@@ -90,6 +100,13 @@ class ClaudeFileHandler(FileSystemEventHandler):
                     team_name = parts[teams_idx + 1]
                     agent_name = path_obj.stem
                     logger.info(f"Inbox updated: team={team_name}, agent={agent_name} ({event_type})")
+                    # キャッシュ無効化
+                    try:
+                        cache = get_cache()
+                        cache.invalidate_team_inbox(team_name, agent_name)
+                    except RuntimeError:
+                        # キャッシュサービスが初期化されていない場合は無視
+                        pass
                 except (ValueError, IndexError):
                     logger.info(f"Inbox file changed: {path} ({event_type})")
             elif "/tasks/" in path and path.endswith(".json"):
