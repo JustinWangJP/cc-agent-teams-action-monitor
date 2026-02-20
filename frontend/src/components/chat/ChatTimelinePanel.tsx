@@ -16,8 +16,7 @@ import { ChatHeader } from './ChatHeader';
 import { ChatMessageList } from './ChatMessageList';
 import { MessageDetailPanel } from './MessageDetailPanel';
 import { useDashboardStore } from '@/stores/dashboardStore';
-import type { ParsedMessage, MessageType } from '@/types/message';
-import { clsx } from 'clsx';
+import type { ParsedMessage, MessageType, InboxMessage } from '@/types/message';
 
 /**
  * チャットタイムラインパネルのプロパティ。
@@ -73,49 +72,6 @@ function parseMessage(message: any): ParsedMessage {
 }
 
 /**
- * メッセージフィルタリング関数。
- */
-function filterMessages(
-  messages: ParsedMessage[],
-  searchQuery: string,
-  filter: {
-    senders: string[];
-    types: string[];
-    unreadOnly: boolean;
-  }
-): ParsedMessage[] {
-  let filtered = [...messages];
-
-  // 検索クエリによるフィルタリング
-  if (searchQuery) {
-    const query = searchQuery.toLowerCase();
-    filtered = filtered.filter(
-      (m) =>
-        m.from.toLowerCase().includes(query) ||
-        m.text.toLowerCase().includes(query) ||
-        (m.summary && m.summary.toLowerCase().includes(query))
-    );
-  }
-
-  // 送信者フィルター
-  if (filter.senders.length > 0) {
-    filtered = filtered.filter((m) => filter.senders.includes(m.from));
-  }
-
-  // タイプフィルター（parsedTypeで比較）
-  if (filter.types.length > 0) {
-    filtered = filtered.filter((m) => filter.types.includes(m.parsedType));
-  }
-
-  // 未読のみ
-  if (filter.unreadOnly) {
-    filtered = filtered.filter((m) => !m.read);
-  }
-
-  return filtered;
-}
-
-/**
  * チャットタイムラインパネルコンポーネント。
  *
  * @example
@@ -130,29 +86,29 @@ export const ChatTimelinePanel = ({
   teamName,
   apiBaseUrl = '/api',
 }: ChatTimelinePanelProps) => {
-  // ローカル状態
-  const [selectedMessage, setSelectedMessage] = useState<ParsedMessage | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  // ローカル状態（コンポーネント固有のUI状態のみ）
   const [showFilter, setShowFilter] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<MessageType[]>([]);
+  const [selectedSenders, setSelectedSenders] = useState<string[]>([]);
 
   // 検索結果ナビゲーション状態
   const [searchResultIndex, setSearchResultIndex] = useState(-1);
   const searchResultIdsRef = useRef<string[]>([]);
 
-  // ストアから状態を取得
+  // ストアから状態を取得（二重管理を解消）
   const inboxInterval = useDashboardStore((state) => state.inboxInterval);
   const setInboxInterval = useDashboardStore((state) => state.setInboxInterval);
   const messageFilter = useDashboardStore((state) => state.messageFilter);
   const searchQuery = useDashboardStore((state) => state.searchQuery);
-  const storeSelectedMessage = useDashboardStore((state) => state.selectedMessage);
-  const storeIsDetailOpen = useDashboardStore((state) => state.isDetailModalOpen);
-  const setSelectedStoreMessage = useDashboardStore((state) => state.setSelectedMessage);
+  const selectedMessage = useDashboardStore((state) => state.selectedMessage);
+  const isDetailOpen = useDashboardStore((state) => state.isDetailModalOpen);
+  const setSelectedMessage = useDashboardStore((state) => state.setSelectedMessage);
   const setDetailModalOpen = useDashboardStore((state) => state.setDetailModalOpen);
+  const setSearchQuery = useDashboardStore((state) => state.setSearchQuery);
+  const markAsReadFromStore = useDashboardStore((state) => state.markAsRead);
 
-  // ストアの検索クエリを優先
-  const effectiveSearchQuery = searchQuery || localSearchQuery;
+  // 検索クエリはストアを直接使用
+  const effectiveSearchQuery = searchQuery;
 
   /**
    * メッセージタイプフィルター変更ハンドラー。
@@ -164,9 +120,16 @@ export const ChatTimelinePanel = ({
   }, []);
 
   /**
+   * 送信者フィルター変更ハンドラー。
+   */
+  const handleSenderFilterChange = useCallback((senders: string[]) => {
+    setSelectedSenders(senders);
+  }, []);
+
+  /**
    * タイムラインデータを取得（React Query版）。
    */
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['chat-timeline', teamName],
     queryFn: async () => {
       if (!teamName) {
@@ -183,7 +146,8 @@ export const ChatTimelinePanel = ({
 
       // ParsedMessageに変換
       const messages: ParsedMessage[] = (result.items || []).map((item: any) => {
-        const inboxMessage: ParsedMessage = {
+        // parseMessageに渡すベースオブジェクト（InboxMessageとして型付け）
+        const inboxMessage: InboxMessage = {
           from: item.group || item.data?.from || 'unknown',
           text: item.data?.text || item.content || '',
           timestamp: item.start || item.data?.timestamp || new Date().toISOString(),
@@ -194,59 +158,135 @@ export const ChatTimelinePanel = ({
         return parseMessage(inboxMessage);
       });
 
-      return messages;
+        return messages;
     },
     refetchInterval: inboxInterval,
     enabled: !!teamName,
     staleTime: 0,
   });
 
+  // Page Visibility API: タブ非アクティブ時にポーリング間隔を延長
+  // refetchをrefで保持して無限ループを回避
+  const refetchRef = useRef(refetch);
+
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+
+  useEffect(() => {
+    const ACTIVE_INTERVAL = 30000; // 30秒（アクティブ時）
+    const BACKGROUND_INTERVAL = 60000; // 60秒（非アクティブ時）
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setInboxInterval(BACKGROUND_INTERVAL);
+      } else {
+        setInboxInterval(ACTIVE_INTERVAL);
+        // アクティブに戻ったときに即時更新（ref経由で呼び出し）
+        refetchRef.current();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [setInboxInterval]);
+
   /**
-   * フィルタリング済みメッセージ。
+   * 未読メッセージ数を計算（ローカル計算のみ）。
+   * ストアとの同期は行わない（無限ループを防止）。
    */
-  const filteredMessages = useMemo(() => {
-    if (!data) return [];
+  const localUnreadCount = useMemo(() => {
+    if (!data) return 0;
+    return data.filter((m) => !m.read).length;
+  }, [data]);
+
+  /**
+   * 検索・フィルタリング結果（キャッシュ済み）。
+   *
+   * 検索ロジックの重複実行を回避するため、フィルタリングと検索結果ID生成を統一。
+   */
+  const searchResults = useMemo(() => {
+    if (!data) {
+      return { filtered: [], searchIds: [], hasQuery: false };
+    }
 
     // ローカルフィルターとストアフィルターをマージ
     const combinedFilter = {
       ...messageFilter,
       types: selectedTypes.length > 0 ? selectedTypes : messageFilter.types,
+      senders: selectedSenders.length > 0 ? selectedSenders : messageFilter.senders,
     };
 
-    return filterMessages(data, effectiveSearchQuery, combinedFilter);
-  }, [data, effectiveSearchQuery, messageFilter, selectedTypes]);
+    const hasQuery = !!effectiveSearchQuery;
+
+    // フィルタリング実行（検索クエリ以外の条件）
+    let filtered = [...data];
+    if (combinedFilter.senders.length > 0) {
+      filtered = filtered.filter((m) => combinedFilter.senders.includes(m.from));
+    }
+    if (combinedFilter.types.length > 0) {
+      filtered = filtered.filter((m) => combinedFilter.types.includes(m.parsedType));
+    }
+    if (combinedFilter.unreadOnly) {
+      filtered = filtered.filter((m) => !m.read);
+    }
+
+    // 検索クエリがある場合のみ追加フィルタリング
+    let searchIds: string[] = [];
+    if (hasQuery) {
+      const query = effectiveSearchQuery.toLowerCase();
+      const searchFiltered = filtered.filter((m) =>
+        m.from.toLowerCase().includes(query) ||
+        m.text.toLowerCase().includes(query) ||
+        (m.summary && m.summary.toLowerCase().includes(query))
+      );
+      searchIds = searchFiltered.map((m) => `${m.timestamp}-${m.from}`);
+      filtered = searchFiltered;
+    }
+
+    return { filtered, searchIds, hasQuery };
+  }, [data, effectiveSearchQuery, messageFilter, selectedTypes, selectedSenders]);
 
   /**
    * 時刻昇順にソート済みメッセージ。
    */
   const sortedMessages = useMemo(() => {
-    return [...filteredMessages].sort((a, b) => {
+    return [...searchResults.filtered].sort((a, b) => {
       const dateA = new Date(a.timestamp).getTime();
       const dateB = new Date(b.timestamp).getTime();
       return dateA - dateB;
     });
-  }, [filteredMessages]);
+  }, [searchResults.filtered]);
 
   /**
    * 検索に一致するメッセージのIDリスト。
    */
-  const searchResultIds = useMemo(() => {
-    if (!effectiveSearchQuery) return [];
-    const query = effectiveSearchQuery.toLowerCase();
-    return sortedMessages
-      .filter((m) =>
-        m.from.toLowerCase().includes(query) ||
-        m.text.toLowerCase().includes(query) ||
-        (m.summary && m.summary.toLowerCase().includes(query))
-      )
-      .map((m) => `${m.timestamp}-${m.from}`);
-  }, [sortedMessages, effectiveSearchQuery]);
+  const searchResultIds = searchResults.searchIds;
+
+  /**
+   * 送信者オプション（メッセージデータから生成）。
+   */
+  const senderOptions = useMemo(() => {
+    if (!data) return [];
+    // 送信者ごとにメッセージ数を集計
+    const senderMap = new Map<string, number>();
+    for (const message of data) {
+      const count = senderMap.get(message.from) ?? 0;
+      senderMap.set(message.from, count + 1);
+    }
+    // オプション配列に変換
+    return Array.from(senderMap.entries()).map(([sender, count]) => ({
+      value: sender,
+      label: sender,
+      count,
+    }));
+  }, [data]);
 
   // 検索結果が変わったらインデックスをリセット
   useEffect(() => {
-    searchResultIdsRef.current = searchResultIds;
+    searchResultIdsRef.current = searchResults.searchIds;
     setSearchResultIndex(-1);
-  }, [searchResultIds]);
+  }, [searchResults.searchIds]);
 
   /**
    * 現在ハイライトすべきメッセージID。
@@ -262,53 +302,49 @@ export const ChatTimelinePanel = ({
    * 次の検索結果へ移動。
    */
   const handleNextResult = useCallback(() => {
-    if (searchResultIds.length === 0) return;
-    const nextIndex = (searchResultIndex + 1) % searchResultIds.length;
+    if (searchResults.searchIds.length === 0) return;
+    const nextIndex = (searchResultIndex + 1) % searchResults.searchIds.length;
     setSearchResultIndex(nextIndex);
 
     // 該当メッセージをスクロール位置へ
-    const messageId = searchResultIds[nextIndex];
+    const messageId = searchResults.searchIds[nextIndex];
     const element = document.querySelector(`[data-message-id="${messageId}"]`);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [searchResultIndex, searchResultIds]);
+  }, [searchResultIndex, searchResults.searchIds]);
 
   /**
    * 前の検索結果へ移動。
    */
   const handlePrevResult = useCallback(() => {
-    if (searchResultIds.length === 0) return;
-    const prevIndex = searchResultIndex <= 0 ? searchResultIds.length - 1 : searchResultIndex - 1;
+    if (searchResults.searchIds.length === 0) return;
+    const prevIndex = searchResultIndex <= 0 ? searchResults.searchIds.length - 1 : searchResultIndex - 1;
     setSearchResultIndex(prevIndex);
 
     // 該当メッセージをスクロール位置へ
-    const messageId = searchResultIds[prevIndex];
+    const messageId = searchResults.searchIds[prevIndex];
     const element = document.querySelector(`[data-message-id="${messageId}"]`);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [searchResultIndex, searchResultIds]);
+  }, [searchResultIndex, searchResults.searchIds]);
 
   /**
    * メッセージクリックハンドラー。
    */
   const handleMessageClick = useCallback((message: ParsedMessage) => {
     setSelectedMessage(message);
-    setSelectedStoreMessage(message);
-    setIsDetailOpen(true);
     setDetailModalOpen(true);
-  }, [setSelectedStoreMessage, setDetailModalOpen]);
+  }, [setSelectedMessage, setDetailModalOpen]);
 
   /**
    * 詳細パネルを閉じるハンドラー。
    */
   const handleCloseDetail = useCallback(() => {
-    setIsDetailOpen(false);
-    setSelectedMessage(null);
     setDetailModalOpen(false);
-    setSelectedStoreMessage(null);
-  }, [setDetailModalOpen, setSelectedStoreMessage]);
+    setSelectedMessage(null);
+  }, [setDetailModalOpen, setSelectedMessage]);
 
   /**
    * リフレッシュハンドラー。
@@ -318,24 +354,11 @@ export const ChatTimelinePanel = ({
   }, [refetch]);
 
   /**
-   * 検索クエリ変更ハンドラー。
+   * 検索クエリ変更ハンドラー（ストアに直接保存）。
    */
   const handleSearchChange = useCallback((query: string) => {
-    setLocalSearchQuery(query);
-    // ストアにも同期
-    if (searchQuery !== undefined) {
-      // ストアのsearchQueryが使用されている場合は更新
-      // ※ set関数を直接呼ぶと無限ループの可能性があるため注意
-    }
-  }, [searchQuery]);
-
-  // ストアの状態が変更された場合に同期
-  if (storeSelectedMessage !== selectedMessage) {
-    setSelectedMessage(storeSelectedMessage);
-  }
-  if (storeIsDetailOpen !== isDetailOpen) {
-    setIsDetailOpen(storeIsDetailOpen);
-  }
+    setSearchQuery(query);
+  }, [setSearchQuery]);
 
   // チーム名が未指定の場合
   if (!teamName) {
@@ -355,6 +378,8 @@ export const ChatTimelinePanel = ({
       <ChatHeader
         title="💬 メッセージタイムライン"
         messageCount={sortedMessages.length}
+        unreadCount={localUnreadCount}
+        onMarkAsRead={() => teamName && markAsReadFromStore(teamName)}
         searchQuery={effectiveSearchQuery}
         onSearchChange={handleSearchChange}
         searchResultCount={searchResultIds.length}
@@ -363,11 +388,17 @@ export const ChatTimelinePanel = ({
         onNextResult={handleNextResult}
         pollingInterval={inboxInterval}
         onPollingIntervalChange={setInboxInterval}
+        lastUpdateTimestamp={dataUpdatedAt}
         onRefresh={handleRefresh}
         isLoading={isLoading}
         messageTypeFilter={{
           selectedTypes,
           onChange: handleTypeFilterChange,
+        }}
+        senderFilter={{
+          selectedSenders,
+          onChange: handleSenderFilterChange,
+          options: senderOptions,
         }}
         showFilter={showFilter}
         onToggleFilter={() => setShowFilter(!showFilter)}

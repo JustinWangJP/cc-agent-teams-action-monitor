@@ -182,7 +182,6 @@ function App() {
                 );
               })}
             </div>
-            <ThemeToggle />
           </div>
 
           {/* Overview View */}

@@ -16,5 +16,7 @@ export type { ErrorDisplayProps } from './ErrorDisplay';
 export { StatusBadge } from './StatusBadge';
 export type { StatusBadgeProps } from './StatusBadge';
 
-export { PollingIntervalSelector, INTERVAL_OPTIONS } from './PollingIntervalSelector';
-export type { PollingIntervalSelectorProps, PollingIntervalOption } from './PollingIntervalSelector';
+export { PollingIntervalSelector } from './PollingIntervalSelector';
+export type { PollingIntervalSelectorProps } from './PollingIntervalSelector';
+export { INTERVAL_OPTIONS } from './pollingConstants';
+export type { PollingIntervalOption } from './pollingConstants';

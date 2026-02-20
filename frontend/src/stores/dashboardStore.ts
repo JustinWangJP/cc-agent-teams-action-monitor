@@ -47,6 +47,13 @@ export interface DashboardState {
   currentView: ViewType;
 
   // ====================
+  // 未読管理
+  // ====================
+
+  /** チーム別の未読メッセージ数 */
+  unreadCounts: Record<string, number>;
+
+  // ====================
   // フィルター
   // ====================
 
@@ -137,6 +144,19 @@ export interface DashboardState {
   resetFilters: () => void;
   /** すべての状態をリセット */
   reset: () => void;
+
+  // ====================
+  // 未読管理アクション
+  // ====================
+
+  /** 未読カウントを設定 */
+  setUnreadCount: (teamName: string, count: number) => void;
+  /** 未読カウントを増加 */
+  incrementUnread: (teamName: string, amount?: number) => void;
+  /** チームの未読を全て既読にする */
+  markAsRead: (teamName: string) => void;
+  /** 全てのチームの未読をリセット */
+  resetUnreadCounts: () => void;
 }
 
 /**
@@ -189,6 +209,10 @@ const initialState: Omit<
   | 'toggleAutoScroll'
   | 'resetFilters'
   | 'reset'
+  | 'setUnreadCount'
+  | 'incrementUnread'
+  | 'markAsRead'
+  | 'resetUnreadCounts'
 > = {
   selectedTeam: null,
   selectedMessage: null,
@@ -206,6 +230,7 @@ const initialState: Omit<
   isDarkMode: false,
   isSidebarOpen: true,
   autoScrollTimeline: true,
+  unreadCounts: {},
 };
 
 /**
@@ -430,6 +455,43 @@ export const useDashboardStore = create<DashboardState>()(
         ),
 
       // ====================
+      // 未読管理アクション
+      // ====================
+
+      setUnreadCount: (teamName, count) =>
+        set(
+          (state) => ({
+            unreadCounts: { ...state.unreadCounts, [teamName]: count },
+          }),
+          false,
+          'setUnreadCount',
+        ),
+
+      incrementUnread: (teamName, amount = 1) =>
+        set(
+          (state) => ({
+            unreadCounts: {
+              ...state.unreadCounts,
+              [teamName]: (state.unreadCounts[teamName] || 0) + amount,
+            },
+          }),
+          false,
+          'incrementUnread',
+        ),
+
+      markAsRead: (teamName) =>
+        set(
+          (state) => ({
+            unreadCounts: { ...state.unreadCounts, [teamName]: 0 },
+          }),
+          false,
+          'markAsRead',
+        ),
+
+      resetUnreadCounts: () =>
+        set({ unreadCounts: {} }, false, 'resetUnreadCounts'),
+
+      // ====================
       // リセットアクション
       // ====================
 
@@ -518,4 +580,27 @@ export const useCurrentView = () =>
   useDashboardStore((state) => ({
     currentView: state.currentView,
     setCurrentView: state.setCurrentView,
+  }));
+
+/**
+ * セレクターフック: 未読管理のみを取得。
+ */
+export const useUnreadCounts = () =>
+  useDashboardStore((state) => ({
+    unreadCounts: state.unreadCounts,
+    setUnreadCount: state.setUnreadCount,
+    incrementUnread: state.incrementUnread,
+    markAsRead: state.markAsRead,
+    resetUnreadCounts: state.resetUnreadCounts,
+  }));
+
+/**
+ * セレクターフック: 指定したチームの未読数のみを取得。
+ */
+export const useTeamUnreadCount = (teamName: string | null) =>
+  useDashboardStore((state) => ({
+    unreadCount: teamName ? (state.unreadCounts[teamName] ?? 0) : 0,
+    markAsRead: () => {
+      if (teamName) state.markAsRead(teamName);
+    },
   }));

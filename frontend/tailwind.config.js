@@ -28,6 +28,10 @@ export default {
         'dark-secondary': '#1E293B', // slate-800
         'dark-tertiary': '#334155', // slate-700
       }),
+      // カスタムアニメーション
+      animation: {
+        'spin-slow': 'spin 3s linear infinite',
+      },
     },
   },
   plugins: [
