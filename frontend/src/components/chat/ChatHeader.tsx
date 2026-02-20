@@ -8,11 +8,11 @@
 
 'use client';
 
-import { memo } from 'react';
-import { Search, RefreshCw, Filter, ChevronUp, ChevronDown } from 'lucide-react';
+import { memo, useState, useCallback } from 'react';
+import { Search, RefreshCw, Filter, ChevronUp, ChevronDown, Check, Mail } from 'lucide-react';
 import { PollingIntervalSelector } from '@/components/common/PollingIntervalSelector';
 import { MessageTypeFilter, type MessageTypeFilterProps } from './MessageTypeFilter';
-import type { MessageType } from '@/types/message';
+import { SenderFilter, type SenderFilterProps } from './SenderFilter';
 import { clsx } from 'clsx';
 
 /**
@@ -23,6 +23,10 @@ export interface ChatHeaderProps {
   title?: string;
   /** メッセージ数 */
   messageCount?: number;
+  /** 未読メッセージ数 */
+  unreadCount?: number;
+  /** 既読にするハンドラー */
+  onMarkAsRead?: () => void;
   /** 検索クエリ */
   searchQuery?: string;
   /** 検索クエリ変更ハンドラー */
@@ -39,12 +43,16 @@ export interface ChatHeaderProps {
   pollingInterval?: number;
   /** ポーリング間隔変更ハンドラー */
   onPollingIntervalChange?: (interval: number) => void;
+  /** 最後の更新タイムスタンプ（カウントダウン用） */
+  lastUpdateTimestamp?: number;
   /** リフレッシュハンドラー */
   onRefresh?: () => void;
   /** ローディング状態 */
   isLoading?: boolean;
   /** メッセージタイプフィルター */
   messageTypeFilter?: MessageTypeFilterProps;
+  /** 送信者フィルター */
+  senderFilter?: SenderFilterProps;
   /** フィルターを展開するかどうか */
   showFilter?: boolean;
   /** フィルター展開切り替え */
@@ -72,6 +80,8 @@ export const ChatHeader = memo<ChatHeaderProps>(
   ({
     title = '💬 メッセージタイムライン',
     messageCount = 0,
+    unreadCount = 0,
+    onMarkAsRead,
     searchQuery = '',
     onSearchChange,
     searchResultCount = 0,
@@ -80,12 +90,24 @@ export const ChatHeader = memo<ChatHeaderProps>(
     onNextResult,
     pollingInterval = 30000,
     onPollingIntervalChange,
+    lastUpdateTimestamp = Date.now(),
     onRefresh,
     isLoading = false,
     messageTypeFilter,
+    senderFilter,
     showFilter = false,
     onToggleFilter,
   }) => {
+    // 既読処理のアニメーション状態
+    const [isMarkingRead, setIsMarkingRead] = useState(false);
+
+    const handleMarkAsRead = useCallback(() => {
+      if (onMarkAsRead && unreadCount > 0) {
+        setIsMarkingRead(true);
+        onMarkAsRead();
+        setTimeout(() => setIsMarkingRead(false), 1000);
+      }
+    }, [onMarkAsRead, unreadCount]);
     return (
       <div className="flex flex-col gap-3">
         {/* メインタイトルバー */}
@@ -96,14 +118,42 @@ export const ChatHeader = memo<ChatHeaderProps>(
             </h2>
             {messageCount > 0 && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                {messageCount}件のメッセージ
+                {messageCount}件
               </span>
+            )}
+            {/* 未読バッジ */}
+            {unreadCount > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+                  <Mail className="w-3 h-3" />
+                  未読 {unreadCount}件
+                </span>
+                {onMarkAsRead && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAsRead}
+                    disabled={isMarkingRead}
+                    className={clsx(
+                      'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-all',
+                      'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+                      'border border-blue-200 dark:border-blue-800',
+                      'hover:bg-blue-200 dark:hover:bg-blue-900/50',
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                      isMarkingRead && 'opacity-50 cursor-not-allowed'
+                    )}
+                    aria-label="すべて既読にする"
+                  >
+                    <Check className={clsx('w-3 h-3', isMarkingRead && 'animate-pulse')} />
+                    すべて既読
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
           <div className="flex items-center gap-3">
             {/* フィルタートグルボタン */}
-            {messageTypeFilter && onToggleFilter && (
+            {(messageTypeFilter || senderFilter) && onToggleFilter && (
               <button
                 type="button"
                 onClick={onToggleFilter}
@@ -121,9 +171,10 @@ export const ChatHeader = memo<ChatHeaderProps>(
               >
                 <Filter className="w-4 h-4" />
                 フィルター
-                {messageTypeFilter.selectedTypes.length > 0 && (
+                {/* フィルター選択数の合計を表示 */}
+                {(messageTypeFilter?.selectedTypes.length || 0) + (senderFilter?.selectedSenders.length || 0) > 0 && (
                   <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                    {messageTypeFilter.selectedTypes.length}
+                    {(messageTypeFilter?.selectedTypes.length || 0) + (senderFilter?.selectedSenders.length || 0)}
                   </span>
                 )}
               </button>
@@ -135,6 +186,8 @@ export const ChatHeader = memo<ChatHeaderProps>(
                 value={pollingInterval}
                 onChange={onPollingIntervalChange}
                 label="更新間隔"
+                lastUpdateTimestamp={lastUpdateTimestamp}
+                showCountdown={true}
               />
             )}
 
@@ -240,14 +293,29 @@ export const ChatHeader = memo<ChatHeaderProps>(
           </div>
         )}
 
-        {/* メッセージタイプフィルター（展開時のみ表示） */}
-        {showFilter && messageTypeFilter && (
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-            <MessageTypeFilter
-              selectedTypes={messageTypeFilter.selectedTypes}
-              onChange={messageTypeFilter.onChange}
-              options={messageTypeFilter.options}
-            />
+        {/* フィルターセクション（展開時のみ表示） */}
+        {showFilter && (
+          <div className="flex flex-col gap-3">
+            {/* メッセージタイプフィルター */}
+            {messageTypeFilter && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                <MessageTypeFilter
+                  selectedTypes={messageTypeFilter.selectedTypes}
+                  onChange={messageTypeFilter.onChange}
+                  options={messageTypeFilter.options}
+                />
+              </div>
+            )}
+            {/* 送信者フィルター */}
+            {senderFilter && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                <SenderFilter
+                  selectedSenders={senderFilter.selectedSenders}
+                  onChange={senderFilter.onChange}
+                  options={senderFilter.options}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

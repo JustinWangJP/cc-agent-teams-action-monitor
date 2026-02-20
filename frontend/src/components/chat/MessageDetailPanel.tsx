@@ -168,13 +168,18 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
         <Dialog.Overlay className="fixed inset-0 bg-black/20 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 z-40" />
 
         {/* パネルコンテンツ */}
-        <Dialog.Content className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white dark:bg-slate-900 shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right flex flex-col md:max-w-md sm:max-w-full" aria-describedby="message-detail-content">
+        <Dialog.Content className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white dark:bg-slate-900 shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right flex flex-col md:max-w-md sm:max-w-full">
           {/* ヘッダー */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-            <Dialog.Title className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span>{typeIcon}</span>
-              <span>メッセージ詳細</span>
-            </Dialog.Title>
+            <div className="flex flex-col gap-1">
+              <Dialog.Title className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <span>{typeIcon}</span>
+                <span>メッセージ詳細</span>
+              </Dialog.Title>
+              <Dialog.Description className="text-sm text-slate-500 dark:text-slate-400">
+                メッセージの詳細情報を表示します
+              </Dialog.Description>
+            </div>
             <Dialog.Close
               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               onClick={onClose}
