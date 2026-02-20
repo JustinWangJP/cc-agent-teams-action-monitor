@@ -58,11 +58,15 @@ class TimelineData(BaseModel):
     """タイムラインデータのレスポンスモデル。
 
     アイテムリスト、グループリスト、時間範囲を含む完全なタイムラインデータです。
+    ページネーション情報も含みます。
     """
 
     items: list[TimelineItem]
     groups: list[TimelineGroup]
     timeRange: dict[str, str]  # {"min": "ISO", "max": "ISO"}
+    count: int = Field(default=0, description="現在のページのアイテム数")
+    total: int = Field(default=0, description="フィルタ後の総アイテム数")
+    hasMore: bool = Field(default=False, description="さらにアイテムがあるか")
 
 
 class MessageFilter(BaseModel):

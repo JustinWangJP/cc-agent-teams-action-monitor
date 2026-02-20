@@ -104,11 +104,14 @@ def get_team_dir(team_name: str) -> Path:
     return team_dir
 
 
-def get_team_inboxes(team_dir: Path) -> dict[str, list]:
-    """チームの全インボックスファイルを読み込む。
+async def get_team_inboxes(team_dir: Path, team_name: str) -> dict[str, list]:
+    """チームの全インボックスファイルを読み込みます。
+
+    キャッシュサービスが利用可能な場合はキャッシュから取得します。
 
     Args:
         team_dir: チームディレクトリのパス
+        team_name: チーム名
 
     Returns:
         エージェント名をキー、メッセージリストを値とする辞書
@@ -116,7 +119,20 @@ def get_team_inboxes(team_dir: Path) -> dict[str, list]:
     """
     import logging
     logger = logging.getLogger(__name__)
-    
+
+    # キャッシュサービスが利用可能な場合はキャッシュから取得
+    try:
+        from app.services.cache_service import get_cache
+        cache = get_cache()
+        cached_inboxes = await cache.get_team_inboxes(team_dir, team_name)
+        if cached_inboxes:
+            logger.debug(f"Using cached inboxes for team '{team_name}'")
+            return cached_inboxes
+    except RuntimeError:
+        # キャッシュサービスが初期化されていない場合はフォールバック
+        logger.debug("Cache service not available, falling back to file read")
+
+    # フォールバック: ファイルから直接読み込み
     inboxes_dir = team_dir / "inboxes"
     inboxes = {}
     if inboxes_dir.exists():
@@ -359,15 +375,36 @@ async def get_available_models():
     return ModelListResponse(models=MODEL_CONFIGS)
 
 
+@router.get("/cache/stats")
+async def get_cache_stats():
+    """キャッシュ統計情報を取得します。
+
+    キャッシュのヒット率、キャッシュ済みアイテム数などを返します。
+    モニタリングやデバッグに使用します。
+
+    Returns:
+        キャッシュ統計辞書
+    """
+    try:
+        from app.services.cache_service import get_cache
+        cache = get_cache()
+        return cache.get_stats()
+    except RuntimeError:
+        return {"error": "Cache service not initialized"}
+
+
 @router.get("/teams/{team_name}/messages/timeline", response_model=TimelineData)
 async def get_message_timeline(
     team_name: str,
     start_time: Optional[str] = Query(None, description="開始時刻 (ISO 8601)"),
     end_time: Optional[str] = Query(None, description="終了時刻 (ISO 8601)"),
+    since: Optional[str] = Query(None, description="差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)"),
     senders: Optional[str] = Query(None, description="送信者（カンマ区切り）"),
     types: Optional[str] = Query(None, description="タイプ（カンマ区切り）"),
     search: Optional[str] = Query(None, description="検索キーワード"),
     unread_only: bool = Query(False, description="未読のみ"),
+    limit: int = Query(100, description="取得件数上限", ge=1, le=500),
+    offset: int = Query(0, description="オフセット", ge=0),
 ):
     """タイムライン表示用のメッセージを取得する。
 
@@ -378,16 +415,19 @@ async def get_message_timeline(
         team_name: チーム名
         start_time: 開始時刻 (ISO 8601形式)
         end_time: 終了時刻 (ISO 8601形式)
+        since: 差分更新用: 前回取得時刻 (ISO 8601形式)。指定するとこの時刻以降のメッセージのみ返却
         senders: 送信者（カンマ区切り）
         types: メッセージタイプ（カンマ区切り）
         search: 検索キーワード
         unread_only: 未読のみ取得するか
+        limit: 取得件数上限 (最大500)
+        offset: オフセット
 
     Returns:
         タイムラインデータ（アイテム、グループ、時間範囲）
     """
     team_dir = get_team_dir(team_name)
-    inboxes = get_team_inboxes(team_dir)
+    inboxes = await get_team_inboxes(team_dir, team_name)
 
     # 全メッセージを収集
     all_messages = []
@@ -403,6 +443,15 @@ async def get_message_timeline(
     # フィルター条件の解析
     start_dt = datetime.fromisoformat(start_time) if start_time else None
     end_dt = datetime.fromisoformat(end_time) if end_time else None
+
+    # 差分更新: since パラメータが指定された場合、start_time を上書き
+    since_dt = None
+    if since:
+        since_dt, is_valid = safe_parse_timestamp(since)
+        if is_valid and since_dt:
+            # since は start_time より優先（差分更新のため）
+            start_dt = since_dt
+
     sender_list = senders.split(",") if senders else None
 
     type_list = None
@@ -431,9 +480,14 @@ async def get_message_timeline(
         unread_only=unread_only,
     )
 
+    # ページネーション適用
+    total_count = len(filtered_messages)
+    has_more = (offset + limit) < total_count
+    paginated_messages = filtered_messages[offset : offset + limit]
+
     # タイムラインアイテムに変換
     timeline_items = []
-    for idx, msg in enumerate(filtered_messages):
+    for idx, msg in enumerate(paginated_messages):
         msg_type = parse_message_type(msg.get("text", ""))
         timeline_items.append(
             TimelineItem(
@@ -447,11 +501,18 @@ async def get_message_timeline(
             )
         )
 
-    # グループと時間範囲を取得
-    groups = get_unique_senders(filtered_messages)
-    time_range = get_time_range(filtered_messages)
+    # グループと時間範囲を取得（ページネーション後のメッセージベース）
+    groups = get_unique_senders(paginated_messages)
+    time_range = get_time_range(paginated_messages)
 
-    return TimelineData(items=timeline_items, groups=groups, timeRange=time_range)
+    return TimelineData(
+        items=timeline_items,
+        groups=groups,
+        timeRange=time_range,
+        count=len(paginated_messages),
+        total=total_count,
+        hasMore=has_more,
+    )
 
 
 @router.get("/teams/{team_name}/messages")
@@ -459,6 +520,7 @@ async def get_messages(
     team_name: str,
     start_time: Optional[str] = Query(None, description="開始時刻 (ISO 8601)"),
     end_time: Optional[str] = Query(None, description="終了時刻 (ISO 8601)"),
+    since: Optional[str] = Query(None, description="差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)"),
     senders: Optional[str] = Query(None, description="送信者（カンマ区切り）"),
     types: Optional[str] = Query(None, description="タイプ（カンマ区切り）"),
     search: Optional[str] = Query(None, description="検索キーワード"),
@@ -472,6 +534,7 @@ async def get_messages(
         team_name: チーム名
         start_time: 開始時刻 (ISO 8601形式)
         end_time: 終了時刻 (ISO 8601形式)
+        since: 差分更新用: 前回取得時刻 (ISO 8601形式)。指定するとこの時刻以降のメッセージのみ返却
         senders: 送信者（カンマ区切り）
         types: メッセージタイプ（カンマ区切り）
         search: 検索キーワード
@@ -481,7 +544,7 @@ async def get_messages(
         メッセージリスト
     """
     team_dir = get_team_dir(team_name)
-    inboxes = get_team_inboxes(team_dir)
+    inboxes = await get_team_inboxes(team_dir, team_name)
 
     # 全メッセージを収集
     all_messages = []
@@ -497,6 +560,14 @@ async def get_messages(
     # フィルター条件の解析
     start_dt = datetime.fromisoformat(start_time) if start_time else None
     end_dt = datetime.fromisoformat(end_time) if end_time else None
+
+    # 差分更新: since パラメータが指定された場合、start_time を上書き
+    if since:
+        since_dt, is_valid = safe_parse_timestamp(since)
+        if is_valid and since_dt:
+            # since は start_time より優先（差分更新のため）
+            start_dt = since_dt
+
     sender_list = senders.split(",") if senders else None
 
     type_list = None
@@ -548,7 +619,7 @@ async def get_message_network(
         ネットワークデータ（ノード、エッジ、メタ情報）
     """
     team_dir = get_team_dir(team_name)
-    inboxes = get_team_inboxes(team_dir)
+    inboxes = await get_team_inboxes(team_dir, team_name)
 
     # モデル設定をマップ化
     model_config_map = {config.id: config for config in MODEL_CONFIGS}
@@ -732,6 +803,7 @@ async def get_chat_messages(
     team_name: str,
     start_time: Optional[str] = Query(None, description="開始時刻 (ISO 8601)"),
     end_time: Optional[str] = Query(None, description="終了時刻 (ISO 8601)"),
+    since: Optional[str] = Query(None, description="差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)"),
     senders: Optional[str] = Query(None, description="送信者（カンマ区切り）"),
     types: Optional[str] = Query(None, description="タイプ（カンマ区切り）"),
     search: Optional[str] = Query(None, description="検索キーワード"),
@@ -748,6 +820,7 @@ async def get_chat_messages(
         team_name: チーム名
         start_time: 開始時刻 (ISO 8601形式)
         end_time: 終了時刻 (ISO 8601形式)
+        since: 差分更新用: 前回取得時刻 (ISO 8601形式)。指定するとこの時刻以降のメッセージのみ返却
         senders: 送信者（カンマ区切り）
         types: メッセージタイプ（カンマ区切り）
         search: 検索キーワード
@@ -759,7 +832,7 @@ async def get_chat_messages(
         チャットメッセージリスト
     """
     team_dir = get_team_dir(team_name)
-    inboxes = get_team_inboxes(team_dir)
+    inboxes = await get_team_inboxes(team_dir, team_name)
 
     # チーム設定からメンバー情報を取得
     config_file = team_dir / "config.json"
@@ -793,6 +866,14 @@ async def get_chat_messages(
     # フィルター条件の解析
     start_dt = datetime.fromisoformat(start_time) if start_time else None
     end_dt = datetime.fromisoformat(end_time) if end_time else None
+
+    # 差分更新: since パラメータが指定された場合、start_time を上書き
+    if since:
+        since_dt, is_valid = safe_parse_timestamp(since)
+        if is_valid and since_dt:
+            # since は start_time より優先（差分更新のため）
+            start_dt = since_dt
+
     sender_list = senders.split(",") if senders else None
 
     type_list = None
