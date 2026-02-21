@@ -2,16 +2,17 @@
  * チャットメッセージバブルコンポーネント。
  *
  * 個別メッセージをチャット形式の吹き出しで表示します。
+ * ParsedMessage（inbox 由来）と UnifiedTimelineEntry（session 由来）の両方に対応します。
  *
  * @module components/chat/ChatMessageBubble
  */
 
 'use client';
 
-import { memo, useCallback, type ReactNode } from 'react';
+import { memo, useCallback, useState, type ReactNode } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { ja } from 'date-fns/locale/ja';
-import type { ParsedMessage } from '@/types/message';
+import type { ParsedMessage, UnifiedTimelineEntry, FileChangeInfo } from '@/types/message';
+import { getMessageTypeConfig, getMessageTypeColorClass } from '@/types/message';
 import { clsx } from 'clsx';
 import { BookmarkButton } from './BookmarkButton';
 import { AgentStatusIndicator } from './AgentStatusIndicator';
@@ -19,71 +20,156 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 /**
+ * 統合メッセージ型。
+ *
+ * ParsedMessage または UnifiedTimelineEntry のいずれか。
+ */
+export type TimelineMessage = ParsedMessage | UnifiedTimelineEntry;
+
+/**
+ * UnifiedTimelineEntry かどうかを判定する型ガード。
+ */
+function isUnifiedTimelineEntry(message: TimelineMessage): message is UnifiedTimelineEntry {
+  return 'source' in message && 'parsedType' in message;
+}
+
+/**
  * メッセージタイプに対応するアイコンを取得。
  *
- * 設計書に基づいたアイコン割り当て:
- * - message: 💬 (gray)
- * - task_assignment: 📋 (blue)
- * - idle_notification: 💤 (gray)
- * - shutdown_request: 🛑 (red)
- * - shutdown_response: ✅ (green)
- * - shutdown_approved: ✔️ (green)
- * - plan_approval_request: 📄 (purple)
- * - plan_approval_response: 📝 (purple)
+ * MESSAGE_TYPE_CONFIG からアイコンを取得。
  */
 const getMessageTypeIcon = (type: string): string => {
-  const icons: Record<string, string> = {
-    message: '💬',
-    idle_notification: '💤',
-    shutdown_request: '🛑',
-    shutdown_response: '✅',
-    plan_approval_request: '📄',
-    plan_approval_response: '📝',
-    task_assignment: '📋',
-    shutdown_approved: '✔️',
-  };
-  return icons[type] || '💬';
+  return getMessageTypeConfig(type as any).icon;
 };
 
 /**
  * メッセージタイプに対応する色クラスを取得。
  *
- * 設計書に基づいた色割り当て:
- * - message: gray
- * - task_assignment: blue
- * - idle_notification: gray
- * - shutdown_request: red
- * - shutdown_response: green
- * - shutdown_approved: green
- * - plan_approval_request: purple
- * - plan_approval_response: purple
+ * MESSAGE_TYPE_CONFIG から色クラスを取得。
  */
-const getMessageTypeColorClass = (type: string): string => {
-  const colorClasses: Record<string, string> = {
-    message: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200',
-    task_assignment: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-    idle_notification: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
-    shutdown_request: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    shutdown_response: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-    shutdown_approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-    plan_approval_request: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-    plan_approval_response: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-  };
-  return colorClasses[type] || colorClasses.message;
+const getMessageTypeColorClassLocal = (type: string): string => {
+  return getMessageTypeColorClass(type as any);
 };
 
 /**
  * メッセージタイプに対応する表示用サマリーと詳細を生成。
  *
  * プロトコルメッセージの解析を行い、適切な表示テキストを返す。
+ * ParsedMessage と UnifiedTimelineEntry の両方に対応します。
  *
- * @param message パース済みメッセージ
+ * @param message タイムラインメッセージ
  * @returns summary（一覧表示用）と detail（詳細表示用、オプション）
  */
-const getMessageDisplayText = (message: ParsedMessage): { summary: string; detail?: string } => {
-  const { parsedType, parsedData, text, summary: msgSummary } = message;
+const getMessageDisplayText = (message: TimelineMessage): { summary: string; detail?: string } => {
+  // 共通プロパティを取得
+  const parsedType = isUnifiedTimelineEntry(message) ? message.parsedType : message.parsedType;
+  const parsedData = isUnifiedTimelineEntry(message) ? message.parsedData : message.parsedData;
+  const msgSummary = isUnifiedTimelineEntry(message) ? message.summary : message.summary;
+  const content = isUnifiedTimelineEntry(message) ? message.content : message.text;
 
-  // プロトコルメッセージの場合
+  // UnifiedTimelineEntry の場合
+  if (isUnifiedTimelineEntry(message)) {
+    const { details } = message;
+
+    // session 由来のエントリ
+    if (message.source === 'session') {
+      switch (parsedType) {
+        case 'thinking':
+          return {
+            summary: '思考中...',
+            detail: details?.thinking || content,
+          };
+        case 'tool_use':
+          return {
+            summary: `ツール使用: ${details?.toolName || '不明'}`,
+            detail: content,
+          };
+        case 'file_change':
+          return {
+            summary: `${details?.files?.length || 0}件のファイル変更`,
+            detail: content,
+          };
+        case 'user_message':
+          return {
+            summary: content.slice(0, 50) + (content.length > 50 ? '...' : ''),
+            detail: content,
+          };
+        case 'assistant_message':
+          return {
+            summary: msgSummary || (content.slice(0, 50) + (content.length > 50 ? '...' : '')),
+            detail: content,
+          };
+        default:
+          return {
+            summary: msgSummary || content,
+            detail: content,
+          };
+      }
+    }
+
+    // inbox 由来のエントリ（UnifiedTimelineEntry として）
+    if (parsedData && typeof parsedData === 'object') {
+      const data = parsedData as Record<string, unknown>;
+
+      switch (parsedType) {
+        case 'task_assignment':
+          return {
+            summary: (data.subject as string) || msgSummary || 'タスク割り当て',
+            detail: (data.description as string) || undefined,
+          };
+
+        case 'task_completed':
+          return {
+            summary: `タスク完了: ${data.taskId || ''}`,
+            detail: data.content as string | undefined,
+          };
+
+        case 'idle_notification': {
+          const reason = data.idleReason as string;
+          if (reason === 'available') {
+            return { summary: '指示待機中' };
+          }
+          return { summary: `アイドル: ${reason || '理由不明'}` };
+        }
+
+        case 'shutdown_request':
+          return {
+            summary: 'シャットダウン要求',
+            detail: (data.reason as string) || undefined,
+          };
+
+        case 'shutdown_response': {
+          const approve = data.approve as boolean;
+          return {
+            summary: approve ? 'シャットダウン応答: 承認' : 'シャットダウン応答: 却下',
+          };
+        }
+
+        case 'plan_approval_request':
+          return {
+            summary: 'プラン承認要求',
+            detail: (data.reason as string) || undefined,
+          };
+
+        case 'plan_approval_response': {
+          const planApprove = data.approve as boolean;
+          return {
+            summary: planApprove ? 'プラン承認: 承認' : 'プラン承認: 修正要求',
+          };
+        }
+
+        default:
+          break;
+      }
+    }
+
+    return {
+      summary: msgSummary || content,
+      detail: msgSummary ? content : undefined,
+    };
+  }
+
+  // ParsedMessage（既存の inbox メッセージ）の場合
   if (parsedData && typeof parsedData === 'object') {
     const data = parsedData as unknown as Record<string, unknown>;
 
@@ -136,10 +222,9 @@ const getMessageDisplayText = (message: ParsedMessage): { summary: string; detai
     }
   }
 
-  // 通常メッセージまたは不明なタイプ
   return {
-    summary: msgSummary || text || 'メッセージ',
-    detail: msgSummary ? text : undefined,
+    summary: msgSummary || content || 'メッセージ',
+    detail: msgSummary ? content : undefined,
   };
 };
 
@@ -223,7 +308,8 @@ const safeFormatDate = (timestamp: string | number | Date | undefined): string =
     if (isNaN(date.getTime())) {
       return '無効な日時';
     }
-    return formatDistanceToNow(date, { addSuffix: true, locale: ja });
+    // ja ロケールが読み込まれていない場合はデフォルトを使用
+    return formatDistanceToNow(date, { addSuffix: true });
   } catch {
     return '無効な日時';
   }
@@ -311,17 +397,150 @@ const MarkdownRenderer = memo<MarkdownRendererProps>(({ content, className }) =>
 MarkdownRenderer.displayName = 'MarkdownRenderer';
 
 /**
+ * Session 由来の詳細表示コンポーネント。
+ *
+ * UnifiedTimelineEntry の details フィールドを表示します。
+ * thinking、ファイル変更、ツール使用などの詳細情報を折りたたみ可能で表示します。
+ */
+interface SessionDetailsProps {
+  details?: UnifiedTimelineEntry['details'];
+  parsedType: string;
+}
+
+const SessionDetails = memo<SessionDetailsProps>(({ details, parsedType }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (!details) return null;
+
+  // 折りたたみ可能な詳細を持つタイプ
+  const hasExpandableContent =
+    details.thinking ||
+    (details.files && details.files.length > 0) ||
+    details.toolName;
+
+  if (!hasExpandableContent) return null;
+
+  return (
+    <div className="mt-2 space-y-2 text-sm">
+      {/* thinking ブロック */}
+      {details.thinking && (
+        <details
+          className="bg-slate-100 dark:bg-slate-800 rounded p-2 group/details"
+          open={isExpanded}
+          onToggle={(e) => setIsExpanded((e.target as HTMLDetailsElement).open)}
+        >
+          <summary className="cursor-pointer text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 select-none">
+            <span className="inline-flex items-center gap-1">
+              💭 思考プロセス
+              <span className="text-xs opacity-50 group-open/details:rotate-90 transition-transform">▶</span>
+            </span>
+          </summary>
+          <pre className="mt-2 whitespace-pre-wrap text-xs text-slate-700 dark:text-slate-300">
+            {details.thinking}
+          </pre>
+        </details>
+      )}
+
+      {/* ファイル変更 */}
+      {details.files && details.files.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {details.files.map((file, i) => (
+            <FileChangeBadge key={i} file={file} />
+          ))}
+        </div>
+      )}
+
+      {/* ツール使用 */}
+      {details.toolName && (
+        <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded">
+          <span>🔧</span>
+          <span className="font-medium">{details.toolName}</span>
+          {details.toolInput && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            >
+              {isExpanded ? '▲' : '▼'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ツール入力（展開時） */}
+      {details.toolInput && isExpanded && (
+        <pre className="bg-slate-100 dark:bg-slate-800 p-2 rounded text-xs overflow-x-auto">
+          {JSON.stringify(details.toolInput, null, 2)}
+        </pre>
+      )}
+    </div>
+  );
+});
+
+SessionDetails.displayName = 'SessionDetails';
+
+/**
+ * ファイル変更バッジコンポーネント。
+ *
+ * 個別のファイル変更を操作種別アイコン付きで表示します。
+ */
+interface FileChangeBadgeProps {
+  file: FileChangeInfo;
+}
+
+const FileChangeBadge = memo<FileChangeBadgeProps>(({ file }) => {
+  const operationConfig: Record<FileChangeInfo['operation'], { icon: string; label: string; class: string }> = {
+    read: {
+      icon: '📖',
+      label: '読み取り',
+      class: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+    },
+    created: {
+      icon: '✨',
+      label: '作成',
+      class: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    },
+    modified: {
+      icon: '✏️',
+      label: '変更',
+      class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    },
+    deleted: {
+      icon: '🗑️',
+      label: '削除',
+      class: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    },
+  };
+
+  const config = operationConfig[file.operation];
+
+  return (
+    <span
+      className={clsx(
+        'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs',
+        config.class
+      )}
+      title={`${config.label}: ${file.path}`}
+    >
+      <span>{config.icon}</span>
+      <span className="max-w-[200px] truncate">{file.path}</span>
+    </span>
+  );
+});
+
+FileChangeBadge.displayName = 'FileChangeBadge';
+
+/**
  * チャットメッセージバブルのプロパティ。
  */
 export interface ChatMessageBubbleProps {
-  /** メッセージデータ */
-  message: ParsedMessage;
+  /** メッセージデータ（ParsedMessage または UnifiedTimelineEntry） */
+  message: TimelineMessage;
   /** ハイライト表示（検索結果など） */
   isHighlighted?: boolean;
   /** 検索クエリ（テキストハイライト用） */
   searchQuery?: string;
   /** クリックハンドラー */
-  onClick?: (message: ParsedMessage) => void;
+  onClick?: (message: TimelineMessage) => void;
   /** 選択中のメッセージかどうか */
   isSelected?: boolean;
   /** ブックマーク機能を有効にするかどうか */
@@ -332,6 +551,7 @@ export interface ChatMessageBubbleProps {
  * チャットメッセージバブルコンポーネント。
  *
  * 個別メッセージを吹き出し形式で表示します。
+ * ParsedMessage（inbox 由来）と UnifiedTimelineEntry（session 由来）の両方に対応します。
  *
  * @example
  * ```tsx
@@ -346,8 +566,14 @@ export interface ChatMessageBubbleProps {
 export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
   ({ message, isHighlighted = false, searchQuery = '', onClick, isSelected = false, showBookmark = true }) => {
     const colors = getAgentColor(message.from);
-    const typeIcon = getMessageTypeIcon(message.parsedType);
-    const typeColorClass = getMessageTypeColorClass(message.parsedType);
+
+    // UnifiedTimelineEntry か ParsedMessage かに応じて処理を分岐
+    const parsedType = isUnifiedTimelineEntry(message)
+      ? message.parsedType
+      : message.parsedType;
+
+    const typeIcon = getMessageTypeIcon(parsedType);
+    const typeColorClass = getMessageTypeColorClassLocal(parsedType);
     const initials = getInitials(message.from);
     const formattedTime = safeFormatDate(message.timestamp);
 
@@ -472,6 +698,13 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
                   <p className="whitespace-pre-wrap">{messageDetail}</p>
                 )}
               </div>
+            )}
+            {/* session 由来の詳細情報を表示 */}
+            {isUnifiedTimelineEntry(message) && message.source === 'session' && (
+              <SessionDetails
+                details={message.details}
+                parsedType={message.parsedType}
+              />
             )}
           </div>
         </div>
