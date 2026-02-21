@@ -218,7 +218,8 @@ class TimelineService:
                             # since パラメータが指定されている場合はタイムスタンプでフィルタ
                             if since:
                                 entry_timestamp = mapped.get("timestamp", "")
-                                if entry_timestamp <= since:
+                                # timestamp が None または空文字列の場合はフィルタ対象外（含める）
+                                if entry_timestamp and entry_timestamp <= since:
                                     continue  # since 以前のエンティティはスキップ
                             entries.append(mapped)
                     except (orjson.JSONDecodeError, ValueError):
@@ -241,7 +242,8 @@ class TimelineService:
 
         """
         # 基本的なフィールドをマッピング
-        content = msg.get("content", "")
+        # text または content フィールドを使用
+        content = msg.get("text") or msg.get("content", "")
         from_ = msg.get("from", "")
 
         # 構造化メッセージをパース試行
@@ -307,20 +309,33 @@ class TimelineService:
         """
         entry_type = entry.get("type")
 
+        # ツール使用エントリはスキップ
+        if entry_type == "tool_use":
+            return None
+
         # タイプマッピング（entry_type が None の場合は "unknown" を使用）
         type_mapping = {
             "user": "user_message",
             "assistant": "assistant_message",
             "thinking": "thinking",
-            "tool_use": "tool_use",
             "file-history-snapshot": "file_change",
         }
 
         parsed_type = "unknown" if entry_type is None else type_mapping.get(entry_type, "unknown")
 
         # エージェント名を推定（セッションでは送信者情報が限定的）
-        # 通常はリードエージェント（team-lead）のアクティビティ
-        from_ = entry.get("role", "assistant")
+        # message.role を優先、なければ entry.role を使用
+        # assistant の場合はモデル名を含めて「AI Assistant (model)」形式にする
+        message = entry.get("message", {})
+        role = message.get("role", entry.get("role", "assistant"))
+        if role == "assistant":
+            model = message.get("model")
+            # モデルが特定できない場合はエントリを除外
+            if not model or model == "unknown":
+                return None
+            from_ = f"AI Assistant ({model})"
+        else:
+            from_ = role
 
         # タイムスタンプ
         timestamp = entry.get("timestamp")
@@ -331,21 +346,48 @@ class TimelineService:
         content = ""
         details = None
 
+        # 古い形式（entry.content が文字列）のフォールバック
+        raw_content = entry.get("content")
+        if isinstance(raw_content, str) and raw_content:
+            content = raw_content
+        elif isinstance(raw_content, list) and raw_content:
+            # content が配列の場合は message.content と同様に処理
+            message["content"] = raw_content
+
         if entry_type == "user":
-            content = entry.get("content", "")
+            # content がまだ空の場合のみ message.content を処理
+            if not content:
+                # message.content を取得（文字列またはリスト）
+                user_content = message.get("content", "")
+                if isinstance(user_content, str):
+                    content = user_content
+                elif isinstance(user_content, list):
+                    # リスト形式の場合、テキストブロックのみを結合（tool_result は除外）
+                    text_parts = []
+                    for block in user_content:
+                        if isinstance(block, dict):
+                            block_type = block.get("type")
+                            if block_type == "text":
+                                text_parts.append(block.get("text", ""))
+                    content = "\n".join(text_parts) if text_parts else ""
 
         elif entry_type == "assistant":
-            # 複数のブロックを持つ可能性がある
-            blocks = entry.get("content", [])
+            # message.content を取得（リスト形式）
+            blocks = message.get("content", [])
             if isinstance(blocks, list):
+                # テキストブロックと thinking ブロックのみを結合（tool_use は除外）
+                text_parts = []
+
                 for block in blocks:
                     block_type = block.get("type")
                     if block_type == "text":
-                        content = block.get("text", "")
-                        break  # 最初のテキストブロックを使用
-                    elif block_type == "tool_use":
-                        content = f"Tool: {block.get('name', 'unknown')}"
-                        break
+                        text_parts.append(block.get("text", ""))
+                    elif block_type == "thinking":
+                        thinking_text = block.get('thinking', '')
+                        text_parts.append(f"💭 {thinking_text}")
+
+                # テキストを結合
+                content = "\n".join(text_parts) if text_parts else ""
 
         elif entry_type == "thinking":
             content = "思考中..."
@@ -370,10 +412,23 @@ class TimelineService:
 
             # fileChanges が辞書形式かリスト形式かを判定
             if isinstance(file_changes, dict):
-                # 辞書形式：{path: {operation, version}}
+                # 辞書形式：{path: {backupFileName, version, backupTime}} または {path: {operation, version}}
                 for path, change_info in file_changes.items():
                     if isinstance(change_info, dict):
-                        operation = change_info.get("operation", "read")
+                        # operation フィールドがない場合、backupFileName と version から推論
+                        operation = change_info.get("operation")
+                        if operation is None:
+                            # operation を推論
+                            backup_file_name = change_info.get("backupFileName")
+                            version = change_info.get("version", 1)
+                            
+                            if backup_file_name is None and version == 1:
+                                operation = "created"
+                            elif backup_file_name is not None:
+                                operation = "modified"
+                            else:
+                                operation = "read"
+                        
                         version = change_info.get("version")
                         files_list.append({
                             "path": path,
@@ -381,11 +436,24 @@ class TimelineService:
                             "version": version,
                         })
             elif isinstance(file_changes, list):
-                # リスト形式：[{path, operation, version}]
+                # リスト形式：[{path, operation, version}] または [{path, backupFileName, version, backupTime}]
                 for change_info in file_changes:
                     if isinstance(change_info, dict):
                         path = change_info.get("path", "")
-                        operation = change_info.get("operation", "read")
+                        
+                        # operation フィールドがない場合、backupFileName と version から推論
+                        operation = change_info.get("operation")
+                        if operation is None:
+                            backup_file_name = change_info.get("backupFileName")
+                            version = change_info.get("version", 1)
+                            
+                            if backup_file_name is None and version == 1:
+                                operation = "created"
+                            elif backup_file_name is not None:
+                                operation = "modified"
+                            else:
+                                operation = "read"
+                        
                         version = change_info.get("version")
                         if path:
                             files_list.append({
@@ -444,3 +512,18 @@ class TimelineService:
 
         """
         return parse_structured_message(text)
+
+    def team_exists(self, team_name: str) -> bool:
+        """チームが存在するか確認します。
+
+        チームの config.json が存在するかどうかで判定します。
+
+        Args:
+            team_name: チーム名
+
+        Returns:
+            チームが存在する場合は True、そうでない場合は False
+
+        """
+        config_path = self.claude_dir / "teams" / team_name / "config.json"
+        return config_path.exists()

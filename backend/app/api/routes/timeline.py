@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 
 from app.services.timeline_service import TimelineService
@@ -75,7 +75,7 @@ def _get_timeline_service() -> TimelineService:
 @router.get("/{team_name}/history", response_model=UnifiedTimelineResponse)
 async def get_timeline_history(
     team_name: str,
-    limit: int = Query(100, ge=1, le=500, description="最大取得件数"),
+    limit: int = Query(100, ge=1, le=10000, description="最大取得件数"),
     types: Optional[str] = Query(None, description="カンマ区切りでタイプ指定（例: message,thinking,tool_use）"),
     before_event_id: Optional[str] = Query(None, description="このイベントIDより古いエントリを取得（ページネーション用）")
 ):
@@ -99,6 +99,10 @@ async def get_timeline_history(
     """
     service = _get_timeline_service()
 
+    # チーム存在チェック
+    if not service.team_exists(team_name):
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+
     # inbox メッセージとセッションログを並行して取得
     inbox_messages = await service.load_inbox_messages(team_name)
     session_entries = await service.load_session_entries(team_name)
@@ -115,8 +119,9 @@ async def get_timeline_history(
         ]
 
     # timestamp が None のエントリを除外してからソート
+    # content が空文字列のエントリも除外
     # タイムスタンプが同じ場合は ID でソートして順序を安定させる
-    all_entries = [e for e in all_entries if e.get("timestamp") is not None]
+    all_entries = [e for e in all_entries if e.get("timestamp") is not None and e.get("content")]
     all_entries.sort(
         key=lambda x: (x.get("timestamp", ""), x.get("id", "")),
         reverse=True
@@ -184,6 +189,10 @@ async def get_timeline_updates(
     """
     service = _get_timeline_service()
 
+    # チーム存在チェック
+    if not service.team_exists(team_name):
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+
     # 新規セッションエントリを取得
     session_entries = await service.load_session_entries_since(team_name, since)
 
@@ -202,7 +211,8 @@ async def get_timeline_updates(
     all_entries = inbox_messages + session_entries
 
     # timestamp が None のエントリを除外してからソート
-    all_entries = [e for e in all_entries if e.get("timestamp") is not None]
+    # content が空文字列のエントリも除外
+    all_entries = [e for e in all_entries if e.get("timestamp") is not None and e.get("content")]
     all_entries.sort(
         key=lambda x: x.get("timestamp", ""),
         reverse=True
@@ -252,6 +262,10 @@ async def get_file_changes(
 
     """
     service = _get_timeline_service()
+
+    # チーム存在チェック
+    if not service.team_exists(team_name):
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
 
     # セッションエントリからファイル変更を抽出
     session_entries = await service.load_session_entries(team_name)
