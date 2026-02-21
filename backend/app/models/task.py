@@ -22,7 +22,7 @@ class Task(BaseModel):
     subject: str
     description: Optional[str] = ""
     activeForm: str = ""
-    status: str  # pending, in_progress, completed, deleted
+    status: str  # pending, in_progress, completed, deleted, stopped
     owner: Optional[str] = None
     blocks: list[str] = []
     blockedBy: list[str] = []

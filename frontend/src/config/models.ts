@@ -102,20 +102,28 @@ export const MODEL_CONFIGS: ModelConfigs = {
 };
 
 /**
- * モデルIDからモデル設定を取得するユーティリティ関数。
+ * モデルIDからモデル設定を取得するユーティリティ関数です。
  *
- * @param modelId - モデルID
- * @returns モデル設定（存在しない場合はデフォルト設定）
+ * MODEL_CONFIGS 辞書から指定されたモデルIDの設定を検索し返します。
+ * 存在しないIDの場合はデフォルト設定を返します。
+ *
+ * @param modelId - モデルID（例: 'claude-sonnet-4-6', 'gpt-4o'）
+ * @returns モデル設定オブジェクト（id, name, provider, description）
+ *
  */
 export function getModelConfig(modelId: string): ModelConfig {
   return MODEL_CONFIGS[modelId] || MODEL_CONFIGS['default'];
 }
 
 /**
- * モデルプロバイダ別のモデルIDリストを取得するユーティリティ関数。
+ * 指定されたプロバイダが提供するモデルIDのリストを取得します。
  *
- * @param provider - プロバイダ名
- * @returns モデルID配列
+ * MODEL_CONFIGS を走査し、指定されたプロバイダに属する
+ * すべてのモデルIDを配列で返します。
+ *
+ * @param provider - プロバイダ名（例: 'anthropic', 'openai', 'google'）
+ * @returns モデルIDの配列
+ *
  */
 export function getModelIdsByProvider(provider: string): string[] {
   return Object.values(MODEL_CONFIGS)

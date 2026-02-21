@@ -62,6 +62,17 @@ function parseMessage(message: any): ParsedMessage {
     }
   }
 
+  // receiverフィールドを受信者として使用
+  // 優先順位: テキスト内のto > receiver > 未設定
+  if (!to && message.receiver) {
+    to = message.receiver;
+  }
+
+  // 送信者と受信者が同じ場合はtoをundefinedに（矢印なし表示）
+  if (to === message.from) {
+    to = undefined;
+  }
+
   return {
     ...message,
     parsedType,
@@ -105,7 +116,6 @@ export const ChatTimelinePanel = ({
   const setSelectedMessage = useDashboardStore((state) => state.setSelectedMessage);
   const setDetailModalOpen = useDashboardStore((state) => state.setDetailModalOpen);
   const setSearchQuery = useDashboardStore((state) => state.setSearchQuery);
-  const markAsReadFromStore = useDashboardStore((state) => state.markAsRead);
 
   // 検索クエリはストアを直接使用
   const effectiveSearchQuery = searchQuery;
@@ -146,16 +156,18 @@ export const ChatTimelinePanel = ({
 
       // ParsedMessageに変換
       const messages: ParsedMessage[] = (result.items || []).map((item: any) => {
-        // parseMessageに渡すベースオブジェクト（InboxMessageとして型付け）
-        const inboxMessage: InboxMessage = {
+        // APIレスポンスのitemを直接parseMessageに渡す
+        // receiverフィールドを含めて処理するため、InboxMessage型ではなくanyを使用
+        return parseMessage({
           from: item.group || item.data?.from || 'unknown',
           text: item.data?.text || item.content || '',
           timestamp: item.start || item.data?.timestamp || new Date().toISOString(),
           color: item.data?.color,
           read: item.data?.read ?? true,
           summary: item.data?.summary,
-        };
-        return parseMessage(inboxMessage);
+          // receiverまたはinbox_ownerを受信者として渡す
+          receiver: item.receiver || item.data?.inbox_owner,
+        });
       });
 
         return messages;
@@ -191,14 +203,6 @@ export const ChatTimelinePanel = ({
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [setInboxInterval]);
 
-  /**
-   * 未読メッセージ数を計算（ローカル計算のみ）。
-   * ストアとの同期は行わない（無限ループを防止）。
-   */
-  const localUnreadCount = useMemo(() => {
-    if (!data) return 0;
-    return data.filter((m) => !m.read).length;
-  }, [data]);
 
   /**
    * 検索・フィルタリング結果（キャッシュ済み）。
@@ -226,9 +230,6 @@ export const ChatTimelinePanel = ({
     }
     if (combinedFilter.types.length > 0) {
       filtered = filtered.filter((m) => combinedFilter.types.includes(m.parsedType));
-    }
-    if (combinedFilter.unreadOnly) {
-      filtered = filtered.filter((m) => !m.read);
     }
 
     // 検索クエリがある場合のみ追加フィルタリング
@@ -378,8 +379,6 @@ export const ChatTimelinePanel = ({
       <ChatHeader
         title="💬 メッセージタイムライン"
         messageCount={sortedMessages.length}
-        unreadCount={localUnreadCount}
-        onMarkAsRead={() => teamName && markAsReadFromStore(teamName)}
         searchQuery={effectiveSearchQuery}
         onSearchChange={handleSearchChange}
         searchResultCount={searchResultIds.length}

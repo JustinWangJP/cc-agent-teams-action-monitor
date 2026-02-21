@@ -208,9 +208,14 @@ __marimo__/
 
 #Ignore Claude Code related files.
 mcp.json
-.claude/
 .agents/
 start-claude-*.sh
+
+# .claude/ directory - except skills/teamworks
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/teamworks/
 
 */node_modules/*
 node_modules/*

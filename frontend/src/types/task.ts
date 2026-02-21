@@ -17,7 +17,7 @@ export interface Task {
   subject: string;
   description?: string;
   activeForm: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'deleted';
+  status: 'pending' | 'in_progress' | 'completed' | 'deleted' | 'stopped';
   owner?: string;
   blocks: string[];
   blockedBy: string[];
@@ -34,7 +34,7 @@ export interface Task {
 export interface TaskSummary {
   id: string;
   subject: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'deleted';
+  status: 'pending' | 'in_progress' | 'completed' | 'deleted' | 'stopped';
   owner?: string;
   blockedCount: number;
   teamName?: string;

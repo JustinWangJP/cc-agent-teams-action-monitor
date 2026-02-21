@@ -31,9 +31,15 @@ export function TeamCard({
   showModels = false,
   className = ''
 }: TeamCardProps) {
+  // 停止状態のスタイル判定
+  const isStopped = team.status === 'stopped';
+  const borderClass = isStopped
+    ? 'border-gray-400 dark:border-gray-600 opacity-70'
+    : 'border-primary-500 dark:border-primary-400';
+
   return (
     <div
-      className={`bg-white dark:bg-slate-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-all cursor-pointer border-l-4 border-primary-500 dark:border-primary-400 ${className}`}
+      className={`bg-white dark:bg-slate-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-all cursor-pointer border-l-4 ${borderClass} ${className}`}
       onClick={onClick}
     >
       <div className="flex justify-between items-start mb-3">

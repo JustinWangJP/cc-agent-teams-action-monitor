@@ -195,10 +195,14 @@ export const MESSAGE_TYPES: { value: TimelineMessageType; label: string; icon: s
 ];
 
 /**
- * メッセージタイプに対応するCSSクラス名を取得する関数。
+ * メッセージタイプに対応するタイムラインアイテムのCSSクラス名を取得します。
+ *
+ * 各メッセージタイプ（message, idle_notification, shutdown系など）に
+ * 対応するCSSクラス名を返します。スタイリングの分離に使用されます。
  *
  * @param type メッセージタイプ
- * @returns CSSクラス名
+ * @returns CSSクラス名（例: 'timeline-item-message'）
+ *
  */
 export function getTimelineItemClass(type: TimelineMessageType): string {
   const classMap: Record<TimelineMessageType, string> = {
@@ -215,10 +219,14 @@ export function getTimelineItemClass(type: TimelineMessageType): string {
 }
 
 /**
- * メッセージタイプに対応するアイコンを取得する関数。
+ * メッセージタイプに対応する絵文字アイコンを取得します。
+ *
+ * 各メッセージタイプに割り当てられた絵文字アイコンを返します。
+ * 未定義タイプの場合はデフォルトの❓を返します。
  *
  * @param type メッセージタイプ
- * @returns アイコン文字列
+ * @returns 絵文字アイコン（例: '💬', '💤', '🛑' など）
+ *
  */
 export function getMessageTypeIcon(type: TimelineMessageType): string {
   const iconMap: Record<TimelineMessageType, string> = {
@@ -235,10 +243,14 @@ export function getMessageTypeIcon(type: TimelineMessageType): string {
 }
 
 /**
- * メッセージタイプに対応するラベルを取得する関数。
+ * メッセージタイプに対応する日本語ラベルを取得します。
+ *
+ * UI表示用に各メッセージタイプを日本語で表現したラベルを返します。
+ * フィルターや凡例表示などで使用されます。
  *
  * @param type メッセージタイプ
- * @returns ラベル文字列
+ * @returns 日本語ラベル（例: 'メッセージ', 'アイドル通知' など）
+ *
  */
 export function getMessageTypeLabel(type: TimelineMessageType): string {
   const labelMap: Record<TimelineMessageType, string> = {

@@ -15,9 +15,6 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorDisplay } from '@/components/common/ErrorDisplay';
 import { PollingIntervalSelector } from '@/components/common/PollingIntervalSelector';
 import { ChatTimelinePanel } from '@/components/chat';
-import { TaskDependencyGraph } from '@/components/graph/TaskDependencyGraph';
-import { AgentNetworkGraph } from '@/components/graph';
-import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { useTeams, useTeam } from '@/hooks/useTeams';
 import { useTasks } from '@/hooks/useTasks';
 import { useDashboardStore } from '@/stores/dashboardStore';
@@ -25,8 +22,6 @@ import {
   LayoutDashboard,
   MessageSquare,
   ListTodo,
-  GitBranch,
-  Network,
   Search,
   X,
 } from 'lucide-react';
@@ -38,8 +33,6 @@ const VIEWS = [
   { id: 'overview' as const, label: '概要', icon: LayoutDashboard },
   { id: 'timeline' as const, label: 'タイムライン', icon: MessageSquare },
   { id: 'tasks' as const, label: 'タスク', icon: ListTodo },
-  { id: 'graphs' as const, label: '依存グラフ', icon: GitBranch },
-  { id: 'network' as const, label: '通信ネットワーク', icon: Network },
 ];
 
 function App() {
@@ -47,14 +40,15 @@ function App() {
   const { tasks, loading: tasksLoading, error: tasksError, refetch: refetchTasks } = useTasks();
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  // タスクビュー用のフィルター状態
+  const [taskTeamFilter, setTaskTeamFilter] = useState<string>('all');
+  const [taskSearchQuery, setTaskSearchQuery] = useState('');
 
   // ポーリング間隔の取得と設定
   const teamsInterval = useDashboardStore((state) => state.teamsInterval);
   const setTeamsInterval = useDashboardStore((state) => state.setTeamsInterval);
   const tasksInterval = useDashboardStore((state) => state.tasksInterval);
   const setTasksInterval = useDashboardStore((state) => state.setTasksInterval);
-  const inboxInterval = useDashboardStore((state) => state.inboxInterval);
-  const setInboxInterval = useDashboardStore((state) => state.setInboxInterval);
 
   // 選択されたチームの詳細を取得
   const { team: selectedTeamDetail } = useTeam(selectedTeam || '');
@@ -62,13 +56,31 @@ function App() {
   // 個別のセレクターを使用して無限レンダリングを防ぐ
   const currentView = useDashboardStore((state) => state.currentView);
   const setCurrentView = useDashboardStore((state) => state.setCurrentView);
-  const setSelectedTask = useDashboardStore((state) => state.setSelectedTask);
 
   // Group tasks by status
   const tasksByStatus = {
     pending: tasks.filter((t) => t.status === 'pending'),
     in_progress: tasks.filter((t) => t.status === 'in_progress'),
     completed: tasks.filter((t) => t.status === 'completed'),
+  };
+
+  // タスクフィルタリング（チームフィルタ + 検索）
+  const filteredTasks = tasks.filter((task) => {
+    // チームフィルタ
+    const matchesTeam = taskTeamFilter === 'all' || task.teamName === taskTeamFilter;
+    // 検索（件名・担当者）
+    const searchLower = taskSearchQuery.toLowerCase().trim();
+    const matchesSearch = !searchLower ||
+      task.subject.toLowerCase().includes(searchLower) ||
+      (task.owner && task.owner.toLowerCase().includes(searchLower));
+    return matchesTeam && matchesSearch;
+  });
+
+  // フィルタ済みタスクをステータス別にグループ化
+  const filteredTasksByStatus = {
+    pending: filteredTasks.filter((t) => t.status === 'pending'),
+    in_progress: filteredTasks.filter((t) => t.status === 'in_progress'),
+    completed: filteredTasks.filter((t) => t.status === 'completed'),
   };
 
   // チームを作成日時順（新しい順）にソート (TC-002)
@@ -89,33 +101,6 @@ function App() {
   const filteredTeams = selectedTeam
     ? searchedTeams.filter((t) => t.name === selectedTeam)
     : searchedTeams;
-
-  // Handle node click in dependency graph
-  const handleNodeClick = useCallback(
-    (node: { id: string; taskId: string }) => {
-      const task = tasks.find((t) => t.id === node.taskId);
-      if (task) {
-        setSelectedTask({
-          id: task.id,
-          subject: task.subject,
-          status: task.status,
-          activeForm: '',
-          description: '',
-          blocks: [],
-          blockedBy: [],
-          owner: task.owner,
-          teamName: task.teamName,
-        });
-      }
-    },
-    [tasks, setSelectedTask]
-  );
-
-  // Convert TaskSummary to format expected by TaskDependencyGraph
-  const tasksForGraph = tasks.map((t) => ({
-    ...t,
-    blockedBy: [],
-  }));
 
   // エラー状態の判定
   const hasError = teamsError || tasksError;
@@ -363,27 +348,115 @@ function App() {
           {/* Tasks View (Kanban-style) */}
           {currentView === 'tasks' && (
             <div key="tasks" role="tabpanel" aria-labelledby="tab-tasks" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h2>
-                  <PollingIntervalSelector
-                    value={tasksInterval}
-                    onChange={setTasksInterval}
-                    label="更新間隔"
-                  />
+              {/* ヘッダーセクション */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tasks</h2>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {filteredTasks.length} / {tasks.length} 件
+                    </span>
+                    <PollingIntervalSelector
+                      value={tasksInterval}
+                      onChange={setTasksInterval}
+                      label="更新間隔"
+                    />
+                  </div>
+                </div>
+
+                {/* フィルターコントロール */}
+                <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                  {/* チームフィルタ */}
+                  <div className="flex-1 sm:max-w-xs">
+                    <label htmlFor="task-team-filter" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      チームフィルタ
+                    </label>
+                    <select
+                      id="task-team-filter"
+                      value={taskTeamFilter}
+                      onChange={(e) => setTaskTeamFilter(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="all">全チーム</option>
+                      {teams.map((team) => (
+                        <option key={team.name} value={team.name}>
+                          {team.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* タスク検索 */}
+                  <div className="flex-1 sm:max-w-xs">
+                    <label htmlFor="task-search" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      件名・担当者で検索
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        id="task-search"
+                        type="text"
+                        value={taskSearchQuery}
+                        onChange={(e) => setTaskSearchQuery(e.target.value)}
+                        placeholder="件名や担当者を検索..."
+                        className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {taskSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setTaskSearchQuery('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          aria-label="検索をクリア"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* フィルタ解除ボタン */}
+                  {(taskTeamFilter !== 'all' || taskSearchQuery) && (
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTaskTeamFilter('all');
+                          setTaskSearchQuery('');
+                        }}
+                        className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        フィルタを解除
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 機能説明 */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-blue-800 dark:text-blue-300">
+                    <span className="font-medium">タスクについて:</span>
+                    タスクはエージェントチームの作業単位です。チームフィルタや検索で特定のタスクを見つけられます。
+                  </p>
                 </div>
               </div>
+
+              {/* カンバンボード */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Pending */}
               <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-gray-400" />
-                  Pending ({tasksByStatus.pending.length})
+                  Pending ({filteredTasksByStatus.pending.length})
                 </h3>
                 <div className="space-y-3">
-                  {tasksByStatus.pending.map((task) => (
+                  {filteredTasksByStatus.pending.map((task) => (
                     <TaskCard key={`${task.teamName}-${task.id}`} task={task} />
                   ))}
+                  {filteredTasksByStatus.pending.length === 0 && (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+                      タスクがありません
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -391,12 +464,17 @@ function App() {
               <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-blue-500" />
-                  In Progress ({tasksByStatus.in_progress.length})
+                  In Progress ({filteredTasksByStatus.in_progress.length})
                 </h3>
                 <div className="space-y-3">
-                  {tasksByStatus.in_progress.map((task) => (
+                  {filteredTasksByStatus.in_progress.map((task) => (
                     <TaskCard key={`${task.teamName}-${task.id}`} task={task} />
                   ))}
+                  {filteredTasksByStatus.in_progress.length === 0 && (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+                      タスクがありません
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -404,81 +482,19 @@ function App() {
               <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-green-500" />
-                  Completed ({tasksByStatus.completed.length})
+                  Completed ({filteredTasksByStatus.completed.length})
                 </h3>
                 <div className="space-y-3">
-                  {tasksByStatus.completed.map((task) => (
+                  {filteredTasksByStatus.completed.map((task) => (
                     <TaskCard key={`${task.teamName}-${task.id}`} task={task} />
                   ))}
+                  {filteredTasksByStatus.completed.length === 0 && (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+                      タスクがありません
+                    </p>
+                  )}
                 </div>
               </div>
-              </div>
-            </div>
-          )}
-
-          {/* Dependency Graph View */}
-          {currentView === 'graphs' && (
-            <div key="graphs" role="tabpanel" aria-labelledby="tab-graphs" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                タスク依存グラフ
-              </h2>
-              <TaskDependencyGraph
-                tasks={tasksForGraph}
-                width={1100}
-                height={600}
-                onNodeClick={handleNodeClick}
-              />
-              </div>
-            </div>
-          )}
-
-          {/* Network Graph View */}
-          {currentView === 'network' && (
-            <div key="network" role="tabpanel" aria-labelledby="tab-network" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {/* チームセレクター */}
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">チームを選択:</label>
-                  <select
-                    value={selectedTeam || ''}
-                    onChange={(e) => setSelectedTeam(e.target.value || null)}
-                    className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">-- チームを選択 --</option>
-                    {teams.map((team) => (
-                      <option key={team.name} value={team.name}>
-                        {team.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <PollingIntervalSelector
-                  value={inboxInterval}
-                  onChange={setInboxInterval}
-                  label="更新間隔"
-                />
-              </div>
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                エージェント通信ネットワーク
-              </h2>
-              {selectedTeam ? (
-                <AgentNetworkGraph
-                  teamName={selectedTeam}
-                  width={1100}
-                  height={600}
-                  onNodeClick={(node) => console.log('Selected agent:', node)}
-                  onNodeHover={(node) => console.log('Hover agent:', node)}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-96">
-                  <div className="text-center text-gray-500 dark:text-gray-400">
-                    <Network className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>通信ネットワークを表示するチームを選択してください</p>
-                  </div>
-                </div>
-              )}
               </div>
             </div>
           )}

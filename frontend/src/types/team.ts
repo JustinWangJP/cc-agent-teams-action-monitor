@@ -60,7 +60,7 @@ export interface TeamSummary {
   memberCount: number;
   /** チームに関連するタスク数 */
   taskCount: number;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'stopped';
   lastActivity?: string;
   leadAgentId: string;
   /** 作成日時（Unixタイムスタンプ、ソート用） */

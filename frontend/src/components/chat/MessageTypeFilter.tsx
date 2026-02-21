@@ -30,7 +30,7 @@ export const DEFAULT_TYPE_OPTIONS: MessageTypeOption[] = [
   { value: 'idle_notification', label: 'アイドル通知', icon: '💤' },
   { value: 'shutdown_request', label: 'シャットダウン要求', icon: '🛑' },
   { value: 'shutdown_response', label: 'シャットダウン応答', icon: '✅' },
-  { value: 'shutdown_approved', label: 'シャットダウン承認', icon: '✅' },
+  { value: 'shutdown_approved', label: 'シャットダウン了承', icon: '✅' },
   { value: 'plan_approval_request', label: 'プラン承認要求', icon: '📋' },
   { value: 'plan_approval_response', label: 'プラン承認応答', icon: '✅' },
   { value: 'task_assignment', label: 'タスク割り当て', icon: '📝' },

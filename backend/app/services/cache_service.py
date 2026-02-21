@@ -25,11 +25,29 @@ class CacheEntry:
     """
 
     def __init__(self, value: Any, ttl_seconds: int):
+        """キャッシュエントリを初期化します。
+
+        指定された値とTTLから有効期限を計算して保存します。
+
+        Args:
+            value: キャッシュする値
+            ttl_seconds: 有効期限（秒）
+
+
+        """
         self.value = value
         self.expires_at = datetime.now() + timedelta(seconds=ttl_seconds)
 
     def is_expired(self) -> bool:
-        """有効期限が切れているか判定します。"""
+        """キャッシュエントリの有効期限が切れているかどうかを判定します。
+
+        現在時刻と有効期限を比較して、期限切れの場合はTrueを返します。
+
+        Returns:
+            期限切れの場合はTrue、有効な場合はFalse
+
+
+        """
         return datetime.now() > self.expires_at
 
 
@@ -45,6 +63,18 @@ class TeamCache:
     """
 
     def __init__(self, team_name: str, config_ttl: int = 30, inbox_ttl: int = 60):
+        """チームキャッシュを初期化します。
+
+        指定されたチーム名でキャッシュを作成し、設定用とインボックス用の
+        TTLを個別に設定可能です。
+
+        Args:
+            team_name: キャッシュ対象のチーム名
+            config_ttl: チーム設定のTTL（秒）。デフォルト30秒
+            inbox_ttl: インボックスのTTL（秒）。デフォルト60秒
+
+
+        """
         self.team_name = team_name
         self.config_ttl = config_ttl
         self.inbox_ttl = inbox_ttl
@@ -123,7 +153,13 @@ class CacheService:
         logger.info("CacheService stopped")
 
     async def _cleanup_loop(self):
-        """定期的に期限切れキャッシュをクリーンアップします。"""
+        """定期的に期限切れキャッシュをクリーンアップする非同期ループ。
+
+        cleanup_interval 間隔で _cleanup_expired を呼び出し、
+        メモリ使用量を最適化します。キャンセルされるまで継続します。
+
+
+        """
         while True:
             try:
                 await asyncio.sleep(self.cleanup_interval)
@@ -134,7 +170,14 @@ class CacheService:
                 logger.error(f"Error in cleanup loop: {e}")
 
     def _cleanup_expired(self):
-        """期限切れのキャッシュエントリを削除します。"""
+        """期限切れのキャッシュエントリを削除してメモリを解放します。
+
+        全チームの設定キャッシュとインボックスキャッシュを走査し、
+        is_expired() が True を返すエントリを削除します。
+        また、空になったチームキャッシュも削除します。
+
+
+        """
         now = datetime.now()
         removed_count = 0
 
@@ -166,7 +209,19 @@ class CacheService:
             logger.debug(f"Cleaned up {removed_count} expired cache entries")
 
     def _get_or_create_team_cache(self, team_name: str) -> TeamCache:
-        """チームキャッシュを取得または作成します。"""
+        """チームキャッシュを取得、存在しない場合は新規作成します。
+
+        指定されたチーム名の TeamCache インスタンスを内部辞書から検索し、
+        見つからない場合は新しく作成して登録します。
+
+        Args:
+            team_name: 取得または作成するチーム名
+
+        Returns:
+            指定されたチームの TeamCache インスタンス
+
+
+        """
         if team_name not in self._teams:
             self._teams[team_name] = TeamCache(
                 team_name=team_name,

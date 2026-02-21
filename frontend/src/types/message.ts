@@ -15,6 +15,7 @@
  */
 export interface InboxMessage {
   from: string;
+  to?: string;
   text: string;
   summary?: string;
   timestamp: string;
@@ -86,6 +87,99 @@ export type MessageType =
   | 'unknown';
 
 /**
+ * メッセージタイプ別の表示データ。
+ */
+export interface MessageDisplayData {
+  /** 一覧表示用の短いテキスト */
+  summary: string;
+  /** 詳細パネル用の長いテキスト */
+  detail?: string;
+  /** アイコン絵文字 */
+  icon: string;
+  /** Tailwind色クラス（背景色とテキスト色） */
+  colorClass: string;
+}
+
+/**
+ * メッセージタイプ別の表示データを生成する関数です。
+ *
+ * プロトコルメッセージの種類に応じて、適切なサマリー、詳細、アイコン、
+ * 色クラスを返します。未定義タイプはデフォルトのメッセージ表示になります。
+ *
+ * @param data - パース済みのメッセージデータ（Record形式）
+ * @returns メッセージタイプに応じた表示データ（summary, detail, icon, colorClass）
+ *
+ */
+export const renderMessageByType = (data: Record<string, unknown>): MessageDisplayData => {
+  const type = data.type as string;
+
+  switch (type) {
+    case 'task_assignment':
+      return {
+        summary: data.subject as string || 'タスク割り当て',
+        detail: data.description as string,
+        icon: '📋',
+        colorClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      };
+
+    case 'idle_notification': {
+      const reason = data.idleReason as string;
+      return {
+        summary: reason === 'available' ? '指示待機中' : `アイドル: ${reason || '理由不明'}`,
+        icon: '💤',
+        colorClass: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
+      };
+    }
+
+    case 'shutdown_request':
+      return {
+        summary: 'シャットダウン要求',
+        detail: data.reason as string,
+        icon: '🛑',
+        colorClass: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+      };
+
+    case 'shutdown_response':
+      return {
+        summary: `シャットダウン応答: ${(data.approve as boolean) ? '承認' : '却下'}`,
+        detail: data.content as string,
+        icon: '✅',
+        colorClass: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      };
+
+    case 'shutdown_approved':
+      return {
+        summary: 'シャットダウン了承済み',
+        icon: '✔️',
+        colorClass: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      };
+
+    case 'plan_approval_request':
+      return {
+        summary: 'プラン承認要求',
+        detail: data.reason as string,
+        icon: '📄',
+        colorClass: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      };
+
+    case 'plan_approval_response':
+      return {
+        summary: `プラン承認: ${(data.approve as boolean) ? '承認' : '修正要求'}`,
+        detail: data.content as string,
+        icon: '📝',
+        colorClass: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      };
+
+    default:
+      return {
+        summary: (data.summary as string) || (data.text as string) || 'メッセージ',
+        icon: '💬',
+        colorClass: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300',
+      };
+  }
+};
+
+/**
  * パース済みメッセージを表すインターフェース。
  *
  * InboxMessage を拡張し、プロトコルメッセージのパース結果を追加します。
@@ -112,8 +206,6 @@ export interface MessageFilter {
   receivers: string[];
   /** メッセージタイプでフィルタ（空配列で全タイプ） */
   types: MessageType[];
-  /** 未読のみを表示 */
-  unreadOnly: boolean;
 }
 
 /**

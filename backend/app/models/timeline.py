@@ -40,6 +40,7 @@ class TimelineItem(BaseModel):
     type: Literal["box", "point"] = "box"
     className: str = "timeline-item"
     group: str  # 送信者名
+    receiver: Optional[str] = None  # 受信者名（インボックス所有者）
     data: dict  # 元メッセージデータ
 
 

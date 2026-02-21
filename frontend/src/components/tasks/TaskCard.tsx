@@ -21,33 +21,41 @@ export function TaskCard({ task }: TaskCardProps) {
     in_progress: 'border-l-blue-500',
     completed: 'border-l-green-500',
     deleted: 'border-l-red-500',
+    stopped: 'border-l-gray-500',
   };
 
   return (
     <div className={`bg-white rounded-lg shadow p-4 border-l-4 ${statusColors[task.status] || 'border-l-gray-400'}`}>
-      <div className="flex justify-between items-start">
-        <h4 className="font-medium text-gray-900 text-sm">{task.subject}</h4>
+      <div className="flex justify-between items-start mb-3">
+        <h4 className="font-medium text-gray-900 text-sm flex-1 pr-2">{task.subject}</h4>
         <StatusBadge status={task.status} size="sm" />
       </div>
-      <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-        <span>#{task.id}</span>
+
+      {/* チーム名と担当者を目立たせる */}
+      <div className="flex items-center gap-2 mb-2">
         {task.teamName && (
-          <span className="text-primary-600">{task.teamName}</span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+            {task.teamName}
+          </span>
+        )}
+        {task.owner && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+            {task.owner}
+          </span>
         )}
       </div>
-      {task.blockedCount > 0 && (
-        <div className="mt-2 text-xs text-amber-600 flex items-center gap-1">
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          Blocked by {task.blockedCount}
-        </div>
-      )}
-      {task.owner && (
-        <div className="mt-2 text-xs text-gray-500">
-          Owner: {task.owner}
-        </div>
-      )}
+
+      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+        <span className="font-mono">#{task.id}</span>
+        {task.blockedCount > 0 && (
+          <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Blocked by {task.blockedCount}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

@@ -71,7 +71,7 @@ const renderMessageByType = (data: Record<string, unknown>): MessageDisplayData 
     case 'idle_notification':
       const reason = data.idleReason as string;
       return {
-        summary: reason === 'available' ? 'アクティブに復帰' : `アイドル: ${reason || '理由不明'}`,
+        summary: reason === 'available' ? '指示待機中' : `アイドル: ${reason || '理由不明'}`,
         icon: '💤',
         colorClass: 'bg-gray-100 text-gray-800',
       };
@@ -93,7 +93,7 @@ const renderMessageByType = (data: Record<string, unknown>): MessageDisplayData 
 
     case 'shutdown_approved':
       return {
-        summary: 'シャットダウン承認済み',
+        summary: 'シャットダウン了承済み',
         icon: '✔️',
         colorClass: 'bg-green-100 text-green-800',
       };

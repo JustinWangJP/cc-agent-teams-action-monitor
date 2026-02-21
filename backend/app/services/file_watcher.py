@@ -27,6 +27,13 @@ class ClaudeFileHandler(FileSystemEventHandler):
     """
 
     def __init__(self):
+        """ファイルイベントハンドラーを初期化します。
+
+        デバウンスタスクを管理するための辞書を初期化します。
+        各ファイルパスに対して最大1つの保留中タスクを保持します。
+
+
+        """
         self._debounce_tasks: dict[str, asyncio.Task] = {}
 
     def on_modified(self, event):
@@ -62,6 +69,13 @@ class ClaudeFileHandler(FileSystemEventHandler):
 
         # Create new task with debounce
         async def log_after_debounce():
+            """デバウンス後にファイル変更をログ出力する内部関数。
+
+            500ms 待機した後、実際のログ出力とキャッシュ無効化を実行します。
+            待機中に同一パスの新しいイベントが発生した場合はキャンセルされます。
+
+
+            """
             await asyncio.sleep(0.5)  # 500ms debounce
             await self._log_file_change(path, event_type)
 
@@ -133,6 +147,13 @@ class FileWatcherService:
     """
 
     def __init__(self):
+        """ファイル監視サービスを初期化します。
+
+        watchdog.Observer インスタンスを作成しますが、
+        実際の監視は start() メソッドで開始されます。
+
+
+        """
         self.observer = Observer()
 
     async def start(self):

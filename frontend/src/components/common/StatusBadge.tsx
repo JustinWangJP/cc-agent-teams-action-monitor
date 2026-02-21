@@ -25,6 +25,8 @@ export function StatusBadge({ status, size = 'sm', showLiveText = true }: Status
     in_progress: 'bg-blue-500',
     completed: 'bg-green-500',
     deleted: 'bg-red-500',
+    stopped: 'bg-gray-500',
+    inactive: 'bg-gray-400',
     connecting: 'bg-yellow-500',
     open: 'bg-red-500',
     closed: 'bg-gray-400',

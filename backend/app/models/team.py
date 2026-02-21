@@ -64,7 +64,7 @@ class TeamSummary(BaseModel):
     description: Optional[str] = ""
     memberCount: int
     taskCount: int = 0  # チームに関連するタスク数
-    status: str  # active, inactive
+    status: str  # active, inactive, stopped
     lastActivity: Optional[datetime] = None
     leadAgentId: str
     createdAt: Optional[int] = None  # 作成日時（Unixタイムスタンプ、ソート用）

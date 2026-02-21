@@ -56,7 +56,6 @@ describe('dashboardStore', () => {
       expect(state.messageFilter.senders).toEqual([]);
       expect(state.messageFilter.receivers).toEqual([]);
       expect(state.messageFilter.types).toEqual([]);
-      expect(state.messageFilter.unreadOnly).toBe(false);
     });
   });
 
@@ -140,7 +139,6 @@ describe('dashboardStore', () => {
         senders: ['agent-1', 'agent-2'],
         receivers: [],
         types: ['message'] as ('message' | 'idle_notification' | 'shutdown_request' | 'shutdown_approved' | 'task_assignment' | 'unknown')[],
-        unreadOnly: true,
       };
 
       useDashboardStore.getState().setMessageFilter(newFilter);
@@ -151,12 +149,11 @@ describe('dashboardStore', () => {
     it('updateMessageFilter でフィルターを部分的に更新できること', () => {
       const initialFilter = useDashboardStore.getState().messageFilter;
 
-      useDashboardStore.getState().updateMessageFilter({ unreadOnly: true });
+      useDashboardStore.getState().updateMessageFilter({ senders: ['agent-1'] });
 
       const updatedFilter = useDashboardStore.getState().messageFilter;
-      expect(updatedFilter.unreadOnly).toBe(true);
+      expect(updatedFilter.senders).toEqual(['agent-1']);
       // 他のフィールドは変更されていない
-      expect(updatedFilter.senders).toEqual(initialFilter.senders);
       expect(updatedFilter.receivers).toEqual(initialFilter.receivers);
       expect(updatedFilter.types).toEqual(initialFilter.types);
     });
@@ -170,14 +167,14 @@ describe('dashboardStore', () => {
     it('resetFilters で全てのフィルターをリセットできること', () => {
       // 先にフィルターを変更
       useDashboardStore.getState().setSearchQuery('test');
-      useDashboardStore.getState().updateMessageFilter({ unreadOnly: true });
+      useDashboardStore.getState().updateMessageFilter({ senders: ['agent-1'] });
 
       // リセット
       useDashboardStore.getState().resetFilters();
 
       const state = useDashboardStore.getState();
       expect(state.searchQuery).toBe('');
-      expect(state.messageFilter.unreadOnly).toBe(false);
+      expect(state.messageFilter.senders).toEqual([]);
     });
   });
 
