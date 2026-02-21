@@ -17,7 +17,7 @@ import { ChatMessageList } from './ChatMessageList';
 import { MessageDetailPanel } from './MessageDetailPanel';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import type { TimelineMessage } from './ChatMessageBubble';
-import type { ParsedMessage, MessageType } from '@/types/message';
+import type { ParsedMessage, ExtendedParsedType, UnifiedTimelineEntry } from '@/types/message';
 
 /**
  * チャットタイムラインパネルのプロパティ。
@@ -100,8 +100,9 @@ export const ChatTimelinePanel = ({
 }: ChatTimelinePanelProps) => {
   // ローカル状態（コンポーネント固有のUI状態のみ）
   const [showFilter, setShowFilter] = useState(false);
-  const [selectedTypes, setSelectedTypes] = useState<MessageType[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<ExtendedParsedType[]>([]);
   const [selectedSenders, setSelectedSenders] = useState<string[]>([]);
+  const [displayLimit, setDisplayLimit] = useState<'500' | 'all'>('500');
 
   // 検索結果ナビゲーション状態
   const [searchResultIndex, setSearchResultIndex] = useState(-1);
@@ -124,7 +125,7 @@ export const ChatTimelinePanel = ({
   /**
    * メッセージタイプフィルター変更ハンドラー。
    */
-  const handleTypeFilterChange = useCallback((types: MessageType[]) => {
+  const handleTypeFilterChange = useCallback((types: ExtendedParsedType[]) => {
     setSelectedTypes(types);
     // ストアのフィルターも更新
     // messageFilter.types = types;
@@ -138,40 +139,62 @@ export const ChatTimelinePanel = ({
   }, []);
 
   /**
-   * タイムラインデータを取得（React Query版）。
+   * タイムラインデータを取得（統合タイムラインAPI版）。
    */
   const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery({
-    queryKey: ['chat-timeline', teamName],
-    queryFn: async () => {
+    queryKey: ['unified-timeline', teamName, displayLimit],
+    queryFn: async (): Promise<TimelineMessage[]> => {
       if (!teamName) {
         throw new Error('Team name is required');
       }
 
-      const response = await fetch(`${apiBaseUrl}/teams/${teamName}/messages/timeline`);
+      // 統合タイムラインAPIを使用
+      // displayLimit が 'all' の場合は10000件、それ以外は500件
+      const limit = displayLimit === 'all' ? 10000 : 500;
+      const response = await fetch(`${apiBaseUrl}/timeline/${encodeURIComponent(teamName)}/history?limit=${limit}`);
 
       if (!response.ok) {
         throw new Error(`API エラー: ${response.status} ${response.statusText}`);
       }
 
-      const result = await response.json();
+      const result = {
+        items: [],
+        last_timestamp: '',
+      };
 
-      // ParsedMessageに変換
-      const messages: ParsedMessage[] = (result.items || []).map((item: any) => {
-        // APIレスポンスのitemを直接parseMessageに渡す
-        // receiverフィールドを含めて処理するため、InboxMessage型ではなくanyを使用
-        return parseMessage({
-          from: item.group || item.data?.from || 'unknown',
-          text: item.data?.text || item.content || '',
-          timestamp: item.start || item.data?.timestamp || new Date().toISOString(),
-          color: item.data?.color,
-          read: item.data?.read ?? true,
-          summary: item.data?.summary,
-          // receiverまたはinbox_ownerを受信者として渡す
-          receiver: item.receiver || item.data?.inbox_owner,
-        });
+      try {
+        const json = await response.json();
+        result.items = json.items || [];
+        result.last_timestamp = json.last_timestamp || '';
+      } catch (e) {
+        // JSONパースエラーの場合は空の配列を返す
+        console.warn('Failed to parse timeline response:', e);
+      }
+
+      // UnifiedTimelineEntry[] を TimelineMessage[] に変換
+      const messages: TimelineMessage[] = result.items.map((item: UnifiedTimelineEntry) => {
+        // inbox 由来のエントリは ParsedMessage に変換
+        if (item.source === 'inbox') {
+          return parseMessage({
+            from: item.from_,
+            text: item.content,
+            timestamp: item.timestamp,
+            color: item.color,
+            read: item.read ?? true,
+            summary: item.summary,
+            to: item.to ?? undefined,
+          });
+        }
+        // session 由来のエントリは UnifiedTimelineEntry をそのまま返す
+        // from_ -> from, content -> text にマッピング
+        return {
+          ...item,
+          from: item.from_,
+          text: item.content,
+        };
       });
 
-        return messages;
+      return messages;
     },
     refetchInterval: inboxInterval,
     enabled: !!teamName,
@@ -211,14 +234,15 @@ export const ChatTimelinePanel = ({
    * 検索ロジックの重複実行を回避するため、フィルタリングと検索結果ID生成を統一。
    */
   const searchResults = useMemo(() => {
-    if (!data) {
+    if (!data || !Array.isArray(data)) {
       return { filtered: [], searchIds: [], hasQuery: false };
     }
 
     // ローカルフィルターとストアフィルターをマージ
+    // ストアの types は MessageType[] だが、ExtendedParsedType[] として扱う
     const combinedFilter = {
       ...messageFilter,
-      types: selectedTypes.length > 0 ? selectedTypes : messageFilter.types,
+      types: selectedTypes.length > 0 ? selectedTypes : (messageFilter.types as ExtendedParsedType[]),
       senders: selectedSenders.length > 0 ? selectedSenders : messageFilter.senders,
     };
 
@@ -227,21 +251,23 @@ export const ChatTimelinePanel = ({
     // フィルタリング実行（検索クエリ以外の条件）
     let filtered = [...data];
     if (combinedFilter.senders.length > 0) {
-      filtered = filtered.filter((m) => combinedFilter.senders.includes(m.from));
+      filtered = filtered.filter((m) => m?.from && combinedFilter.senders.includes(m.from));
     }
     if (combinedFilter.types.length > 0) {
-      filtered = filtered.filter((m) => combinedFilter.types.includes(m.parsedType));
+      filtered = filtered.filter((m) => m?.parsedType && combinedFilter.types.includes(m.parsedType as ExtendedParsedType));
     }
 
     // 検索クエリがある場合のみ追加フィルタリング
     let searchIds: string[] = [];
     if (hasQuery) {
       const query = effectiveSearchQuery.toLowerCase();
-      const searchFiltered = filtered.filter((m) =>
-        m.from.toLowerCase().includes(query) ||
-        m.text.toLowerCase().includes(query) ||
-        (m.summary && m.summary.toLowerCase().includes(query))
-      );
+      const searchFiltered = filtered.filter((m) => {
+        if (!m) return false;
+        const fromMatch = m.from?.toLowerCase().includes(query) ?? false;
+        const textMatch = m.text?.toLowerCase().includes(query) ?? false;
+        const summaryMatch = m.summary?.toLowerCase().includes(query) ?? false;
+        return fromMatch || textMatch || summaryMatch;
+      });
       searchIds = searchFiltered.map((m) => `${m.timestamp}-${m.from}`);
       filtered = searchFiltered;
     }
@@ -253,6 +279,9 @@ export const ChatTimelinePanel = ({
    * 時刻昇順にソート済みメッセージ。
    */
   const sortedMessages = useMemo(() => {
+    if (!searchResults.filtered || !Array.isArray(searchResults.filtered)) {
+      return [];
+    }
     return [...searchResults.filtered].sort((a, b) => {
       const dateA = new Date(a.timestamp).getTime();
       const dateB = new Date(b.timestamp).getTime();
@@ -269,10 +298,11 @@ export const ChatTimelinePanel = ({
    * 送信者オプション（メッセージデータから生成）。
    */
   const senderOptions = useMemo(() => {
-    if (!data) return [];
+    if (!data || !Array.isArray(data)) return [];
     // 送信者ごとにメッセージ数を集計
     const senderMap = new Map<string, number>();
     for (const message of data) {
+      if (!message?.from) continue;
       const count = senderMap.get(message.from) ?? 0;
       senderMap.set(message.from, count + 1);
     }
@@ -376,6 +406,38 @@ export const ChatTimelinePanel = ({
 
   return (
     <div className="flex flex-col h-full gap-4">
+      {/* 表示件数選択 */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-slate-600 dark:text-slate-400">表示件数:</span>
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => setDisplayLimit('500')}
+            className={`px-3 py-1 text-sm rounded-md transition-colors ${
+              displayLimit === '500'
+                ? 'bg-blue-500 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+            }`}
+          >
+            500件
+          </button>
+          <button
+            type="button"
+            onClick={() => setDisplayLimit('all')}
+            className={`px-3 py-1 text-sm rounded-md transition-colors ${
+              displayLimit === 'all'
+                ? 'bg-blue-500 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+            }`}
+          >
+            全量
+          </button>
+        </div>
+        <span className="text-xs text-slate-500 dark:text-slate-500">
+          （{sortedMessages.length}件表示中）
+        </span>
+      </div>
+
       {/* ヘッダー */}
       <ChatHeader
         title="💬 メッセージタイムライン"

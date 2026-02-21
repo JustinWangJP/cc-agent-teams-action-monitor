@@ -10,7 +10,6 @@
 'use client';
 
 import { memo, useCallback, useState, type ReactNode } from 'react';
-import { formatDistanceToNow } from 'date-fns';
 import type { ParsedMessage, UnifiedTimelineEntry, FileChangeInfo } from '@/types/message';
 import { getMessageTypeConfig, getMessageTypeColorClass } from '@/types/message';
 import { clsx } from 'clsx';
@@ -231,7 +230,7 @@ const getMessageDisplayText = (message: TimelineMessage): { summary: string; det
 /**
  * エージェント名から一意の色を生成。
  */
-const getAgentColor = (agentName: string): { bg: string; text: string; border: string } => {
+const getAgentColor = (agentName: string | undefined): { bg: string; text: string; border: string } => {
   // 事前定義された色マッピング
   const colorMap: Record<string, { bg: string; text: string; border: string }> = {
     'team-lead': {
@@ -256,8 +255,10 @@ const getAgentColor = (agentName: string): { bg: string; text: string; border: s
     },
   };
 
+  const name = agentName || 'unknown';
+
   return (
-    colorMap[agentName] || {
+    colorMap[name] || {
       bg: 'bg-gray-100 dark:bg-gray-900/30',
       text: 'text-gray-800 dark:text-gray-300',
       border: 'border-gray-200 dark:border-gray-800',
@@ -268,7 +269,8 @@ const getAgentColor = (agentName: string): { bg: string; text: string; border: s
 /**
  * エージェント名の頭文字を取得。
  */
-const getInitials = (name: string): string => {
+const getInitials = (name: string | undefined): string => {
+  if (!name) return '??';
   const parts = name.split(/[-_]/);
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -305,8 +307,7 @@ const highlightText = (text: string, query: string): ReactNode => {
  * @returns フォーマットされた日時文字列
  */
 const safeFormatDate = (
-  timestamp: string | number | Date | undefined,
-  showAbsolute: boolean = false
+  timestamp: string | number | Date | undefined
 ): string => {
   if (!timestamp) return '日時不明';
 
@@ -316,30 +317,25 @@ const safeFormatDate = (
       return '無効な日時';
     }
 
-    // 絶対時刻を表示する場合
-    if (showAbsolute) {
-      return date.toLocaleString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-    }
-
-    // ja ロケールが読み込まれていない場合はデフォルトを使用
-    return formatDistanceToNow(date, { addSuffix: true });
+    // 常に具体的な時刻を表示
+    return date.toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
   } catch {
     return '無効な日時';
   }
 };
 
 /**
- * 絶対時刻と相対時刻の両方を表示する関数。
+ * 具体的な時刻を表示する関数。
  *
  * @param timestamp - タイムスタンプ
- * @returns フォーマットされた日時文字列（絶対時刻 + 相対時刻）
+ * @returns フォーマットされた日時文字列
  */
 const formatFullDate = (timestamp: string | number | Date | undefined): string => {
   if (!timestamp) return '日時不明';
@@ -350,17 +346,14 @@ const formatFullDate = (timestamp: string | number | Date | undefined): string =
       return '無効な日時';
     }
 
-    const absolute = date.toLocaleString('ja-JP', {
+    return date.toLocaleString('ja-JP', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
+      second: '2-digit',
     });
-
-    const relative = formatDistanceToNow(date, { addSuffix: true });
-
-    return `${absolute} (${relative})`;
   } catch {
     return '無効な日時';
   }
@@ -694,7 +687,9 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
     showAbsoluteTime = false,
     showMetadata = false,
   }) => {
-    const colors = getAgentColor(message.from);
+    // fromフィールドがundefinedの場合の安全対策
+    const safeFrom = message.from || 'Unknown';
+    const colors = getAgentColor(safeFrom);
 
     // UnifiedTimelineEntry か ParsedMessage かに応じて処理を分岐
     const parsedType = isUnifiedTimelineEntry(message)
@@ -703,15 +698,15 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
 
     const typeIcon = getMessageTypeIcon(parsedType);
     const typeColorClass = getMessageTypeColorClassLocal(parsedType);
-    const initials = getInitials(message.from);
-    const formattedTime = safeFormatDate(message.timestamp, showAbsoluteTime);
+    const initials = getInitials(safeFrom);
+    const formattedTime = safeFormatDate(message.timestamp);
 
     // メッセージ表示用テキストを生成（タイプ別ロジック）
     const { summary: messageSummary, detail: messageDetail } = getMessageDisplayText(message);
     const messageText = messageSummary;
 
     // メッセージID（ブックマーク用）
-    const messageId = `${message.timestamp}-${message.from}`;
+    const messageId = `${message.timestamp}-${safeFrom}`;
 
     // メタデータの抽出
     const metadata = isUnifiedTimelineEntry(message) && message.source === 'session'
@@ -745,7 +740,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
             handleClick();
           }
         }}
-        aria-label={`${message.from}からのメッセージ: ${messageText.slice(0, 50)}${messageText.length > 50 ? '...' : ''}`}
+        aria-label={`${safeFrom}からのメッセージ: ${messageText.slice(0, 50)}${messageText.length > 50 ? '...' : ''}`}
         aria-pressed={isSelected}
       >
         {/* ブックマークボタン（オーバーレイ） */}
@@ -768,7 +763,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
               colors.border,
               'border-2'
             )}
-            title={message.from}
+            title={safeFrom}
           >
             {initials}
           </div>
@@ -787,7 +782,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
           <div className="flex items-center gap-2 mb-1">
             {/* 送信者→受信者の表示 */}
             <span className={clsx('text-sm font-medium', colors.text)}>
-              {searchQuery ? highlightText(message.from, searchQuery) : message.from}
+              {searchQuery ? highlightText(safeFrom, searchQuery) : safeFrom}
             </span>
             {message.to && message.to !== 'all' && (
               <>
