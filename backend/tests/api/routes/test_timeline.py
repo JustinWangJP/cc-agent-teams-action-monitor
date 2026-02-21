@@ -163,10 +163,10 @@ class TestTimelineAPI:
         # 存在しないチーム
         response = client.get("/api/timeline/non-existent-team/history")
 
-        # 空の結果が返る（エラーにはならない）
-        assert response.status_code == 200
+        # 404 Not Found が返る
+        assert response.status_code == 404
         data = response.json()
-        assert len(data["items"]) == 0
+        assert "not found" in data["detail"].lower()
 
     def test_timeline_entry_structure(self, client, mock_claude_dir):
         """タイムラインエントリの構造をテストします."""

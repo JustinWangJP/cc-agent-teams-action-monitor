@@ -180,3 +180,56 @@ class TestAgentStatusService:
         assert service.get_status_label("waiting") == "待ち状態"
         assert service.get_status_label("completed") == "完了"
         assert service.get_status_label("error") == "エラー"
+
+    @pytest.mark.asyncio
+    async def test_infer_agent_status_error_long_inactivity(self):
+        """TC-007-04: 長時間無活動によるエラー状態推論をテストします."""
+        service = AgentStatusService()
+
+        agent_name = "backend-developer"
+        # 30分以上前のタイムスタンプ（ERROR_THRESHOLD_SECONDS = 30 * 60）
+        old_time = datetime.now(timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        messages = [
+            {
+                "to": agent_name,
+                "timestamp": old_time.isoformat().replace("+00:00", "Z")
+            }
+        ]
+        tasks = []
+
+        result = await service.infer_agent_status(agent_name, messages, tasks)
+
+        assert result["status"] == "error"
+
+    @pytest.mark.asyncio
+    async def test_extract_session_info_with_model(self):
+        """TC-007-10: セッションログからのモデル名抽出をテストします."""
+        service = AgentStatusService()
+
+        agent_name = "backend-developer"
+        session_entries = [
+            {
+                "parsed_type": "assistant_message",
+                "details": {
+                    "model": "claude-opus-4-6"
+                }
+            },
+            {
+                "parsed_type": "tool_use",
+                "details": {
+                    "files": [
+                        {"path": "/path/to/file1.py"},
+                        {"path": "/path/to/file2.ts"}
+                    ]
+                }
+            }
+        ]
+
+        result = await service._extract_session_info(agent_name, session_entries)
+
+        assert result["model"] == "claude-opus-4-6"
+        assert len(result["touched_files"]) == 2
+        assert "/path/to/file1.py" in result["touched_files"]
+        assert "/path/to/file2.ts" in result["touched_files"]
