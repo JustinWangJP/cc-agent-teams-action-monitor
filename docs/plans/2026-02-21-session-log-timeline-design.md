@@ -553,8 +553,298 @@ export function TimelineEntry({ entry, onToggleExpand }: TimelineEntryProps) {
 
 ---
 
-## 11. 変更履歴
+## 11. タスク一覧
+
+### 11.1 依存関係図
+
+```
+Phase 1: セッションログ統合
+├── #1 TimelineService 実装（バックエンド）
+│   ├── #2 統合タイムラインAPI実装 [blocked by #1]
+│   └── #6 構造化メッセージパーサー強化 [blocked by #1]
+│
+├── #3 タイムライン型定義追加（フロントエンド）
+│   └── #5 TimelineEntry コンポーネント実装 [blocked by #3, #4]
+│
+└── #4 useTimelinePolling フック実装
+    └── #5 TimelineEntry コンポーネント実装 [blocked by #3, #4]
+
+Phase 3: エージェント状態詳細化
+└── #7 エージェント状態推論ロジック実装 [blocked by #6]
+    ├── #8 拡張エージェントカード実装 [blocked by #3, #7]
+    └── #9 タスク進捗トラッキング実装 [blocked by #1, #7]
+
+Phase 5: ファイル変更監視
+└── #10 ファイル変更監視パネル実装 [blocked by #1, #2]
+```
+
+### 11.2 タスク詳細
+
+#### #1: Phase 1 - TimelineService 実装（バックエンド）
+
+**優先度**: P0
+**状態**: pending
+
+**概要**:
+`backend/app/services/timeline_service.py` を新規作成し、統合タイムラインサービスを実装する。
+
+**タスク内容**:
+1. `TimelineService` クラスを作成
+2. 以下のメソッドを実装:
+   - `load_inbox_messages(team_name)` - inbox メッセージ読み込み
+   - `load_session_entries(team_name)` - セッションログ読み込み
+   - `load_session_entries_since(team_name, since)` - 差分読み込み
+   - `_map_inbox_message(msg, recipient)` - inbox → タイムライン形式変換
+   - `_map_session_entry(entry)` - セッション → タイムライン形式変換
+   - `_parse_structured_message(text)` - 構造化メッセージパース
+
+**完了条件**:
+- 全メソッドが実装されている
+- ユニットテストが通る
+
+---
+
+#### #2: Phase 1 - 統合タイムラインAPI実装（バックエンド）
+
+**優先度**: P0
+**状態**: pending
+**依存**: #1
+
+**概要**:
+`backend/app/api/routes/timeline.py` を新規作成し、統合タイムラインAPIを実装する。
+
+**タスク内容**:
+1. `/api/timeline/{team_name}/history` エンドポイント実装
+   - inbox + セッションログを統合
+   - タイプフィルタ対応
+   - 件数制限対応
+
+2. `/api/timeline/{team_name}/updates` エンドポイント実装
+   - since パラメータで差分取得
+   - lastTimestamp 返却
+
+3. ルーターを main.py に登録
+
+**完了条件**:
+- 両エンドポイントが動作する
+- curl で動作確認できる
+
+---
+
+#### #3: Phase 1 - タイムライン型定義追加（フロントエンド）
+
+**優先度**: P0
+**状態**: pending
+
+**概要**:
+フロントエンドに統合タイムライン用の型定義を追加する。
+
+**タスク内容**:
+1. `frontend/src/types/timeline.ts` を更新:
+   - `TimelineSource` 型定義
+   - `TimelineEntryType` 型定義
+   - `TimelineEntry` インターフェース
+   - `FileChangeInfo` インターフェース
+   - `ENTRY_TYPE_CONFIG` 設定オブジェクト
+
+**完了条件**:
+- 型定義がエラーなくコンパイルできる
+- TypeScript の型チェックが通る
+
+---
+
+#### #4: Phase 1 - useTimelinePolling フック実装（フロントエンド）
+
+**優先度**: P0
+**状態**: pending
+
+**概要**:
+`frontend/src/hooks/useTimelinePolling.ts` を新規作成し、ポーリングフックを実装する。
+
+**タスク内容**:
+1. 初期履歴読み込み機能
+2. ポーリングによる差分更新機能
+3. 状態管理（entries, isLoading, error）
+4. lastTimestamp による差分取得
+
+**設定**:
+- デフォルトポーリング間隔: 2000ms
+- 最大エントリ数: 500件
+
+**完了条件**:
+- フックが正常に動作する
+- エントリが正しくマージされる
+
+---
+
+#### #5: Phase 1 - TimelineEntry コンポーネント実装（フロントエンド）
+
+**優先度**: P0
+**状態**: pending
+**依存**: #3, #4
+
+**概要**:
+統合タイムライン用のエントリコンポーネントを実装する。
+
+**タスク内容**:
+1. `frontend/src/components/timeline/TimelineEntry.tsx` を更新:
+   - アイコン表示（タイプ別）
+   - タイムスタンプ表示
+   - タイトル・サマリー表示
+   - 展開/折りたたみ機能
+
+2. EntryDetails サブコンポーネント:
+   - thinking 内容表示
+   - ファイル変更一覧表示
+   - ツール使用情報表示
+
+**完了条件**:
+- 各タイプが正しく表示される
+- 展開/折りたたみが動作する
+
+---
+
+#### #6: Phase 2 - 構造化メッセージパーサー強化（バックエンド）
+
+**優先度**: P1
+**状態**: pending
+**依存**: #1
+
+**概要**:
+構造化メッセージ（JSON-in-JSON）のパーサーを強化し、タイプ別の解析を実装する。
+
+**タスク内容**:
+1. `_parse_structured_message` メソッドを強化:
+   - task_assignment: taskId, subject 抽出
+   - task_completed: taskId 抽出
+   - idle_notification: idleReason, summary 抽出
+   - shutdown_request/approved: 判定
+
+2. マッピング関数の更新:
+   - 各タイプに応じた title, summary 生成
+   - taskId → taskSubject 解決
+
+**完了条件**:
+- 全メッセージタイプが正しくパースされる
+- テストケースが通る
+
+---
+
+#### #7: Phase 3 - エージェント状態推論ロジック実装（バックエンド）
+
+**優先度**: P1
+**状態**: pending
+**依存**: #6
+
+**概要**:
+エージェントの状態を inbox メッセージとタスクから推論するロジックを実装する。
+
+**タスク内容**:
+1. `AgentStatusService` クラスを新規作成:
+   - `infer_agent_status(agent, messages, tasks)` メソッド
+   - 状態遷移: idle → active → working → completed
+
+2. 状態推論ルール:
+   - idle_notification 受信 → idle
+   - タスク in_progress → working
+   - 全タスク completed → completed
+   - メッセージ送信 → active
+
+3. プログレス計算:
+   - 完了タスク数 / 担当タスク数
+
+**完了条件**:
+- 状態が正しく推論される
+- プログレスが計算される
+
+---
+
+#### #8: Phase 3 - 拡張エージェントカード実装（フロントエンド）
+
+**優先度**: P1
+**状態**: pending
+**依存**: #3, #7
+
+**概要**:
+エージェントカードに詳細情報を表示するコンポーネントを実装する。
+
+**タスク内容**:
+1. `frontend/src/components/dashboard/AgentStatusCard.tsx` を更新:
+   - プログレスバー表示（0-100%）
+   - 現在タスク表示
+   - 最終活動時刻表示
+   - 使用モデル表示
+   - 関連ファイル一覧
+
+2. ステータスアイコン/色:
+   - idle: 💤 黄色
+   - active: 🟢 緑色
+   - working: 🔵 青色
+   - completed: ✅ 緑色
+   - error: ❌ 赤色
+
+**完了条件**:
+- 拡張情報が表示される
+- ステータスに応じたアイコン/色が表示される
+
+---
+
+#### #9: Phase 4 - タスク進捗トラッキング実装
+
+**優先度**: P1
+**状態**: pending
+**依存**: #1, #7
+
+**概要**:
+タスクの進捗を追跡し、詳細情報を表示する機能を実装する。
+
+**タスク内容**:
+1. バックエンド:
+   - タスク API に進捗情報を追加
+   - activeForm フィールド活用
+   - 関連ファイル情報の追加
+
+2. フロントエンド:
+   - タスクカードにプログレスバー表示
+   - activeForm 表示（「今何をしているか」）
+   - 担当者へのリンク
+   - 依存関係のパスハイライト
+
+**完了条件**:
+- タスク進捗が表示される
+- activeForm が表示される
+
+---
+
+#### #10: Phase 5 - ファイル変更監視パネル実装
+
+**優先度**: P2
+**状態**: pending
+**依存**: #1, #2
+
+**概要**:
+プロジェクトファイルの変更をリアルタイム監視・表示するパネルを実装する。
+
+**タスク内容**:
+1. バックエンド:
+   - `file-history-snapshot` からのファイル抽出
+   - エージェント紐付け（セッションから推論）
+   - `/api/file-changes/{team_name}` エンドポイント
+
+2. フロントエンド:
+   - `FileChangesPanel` コンポーネント作成
+   - ファイルパス・操作種別（作成/編集/削除）表示
+   - フィルター機能（ディレクトリ/拡張子）
+
+**完了条件**:
+- ファイル変更がリアルタイム表示される
+- フィルターが動作する
+
+---
+
+## 12. 変更履歴
 
 | 日付 | 版 | 変更内容 |
 |------|-----|---------|
 | 2026-02-21 | 1.0 | 初版作成 |
+| 2026-02-21 | 1.1 | タスク一覧セクション追加 |
