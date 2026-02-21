@@ -84,7 +84,134 @@ export type MessageType =
   | 'plan_approval_request'
   | 'plan_approval_response'
   | 'task_assignment'
+  | 'task_completed'
   | 'unknown';
+
+/**
+ * タイムラインのデータソース。
+ *
+ * inbox: エージェント間のメッセージ（既存）
+ * session: セッションログ（.jsonl）由来のエントリ（新規）
+ */
+export type TimelineSource = 'inbox' | 'session';
+
+/**
+ * 拡張メッセージタイプ。
+ *
+ * inbox 由来の既存タイプに加え、session 由来のタイプを含む統合タイムライン用。
+ */
+export type ExtendedParsedType =
+  // inbox 由来（既存）
+  | 'message'
+  | 'idle_notification'
+  | 'shutdown_request'
+  | 'shutdown_response'
+  | 'plan_approval_request'
+  | 'plan_approval_response'
+  | 'task_assignment'
+  | 'task_completed'
+  // session 由来（新規）
+  | 'user_message'
+  | 'assistant_message'
+  | 'thinking'
+  | 'tool_use'
+  | 'file_change';
+
+/**
+ * ファイル変更情報。
+ */
+export interface FileChangeInfo {
+  /** ファイルパス */
+  path: string;
+  /** 操作種別 */
+  operation: 'created' | 'modified' | 'deleted' | 'read';
+  /** ファイルバージョン（省略可能） */
+  version?: number;
+}
+
+/**
+ * ファイル変更エントリ（監視パネル用）。
+ *
+ * セッションログから抽出したファイル変更情報。
+ */
+export interface FileChangeEntry {
+  /** エントリID */
+  id: string;
+  /** ファイル変更情報 */
+  file: FileChangeInfo;
+  /** タイムスタンプ */
+  timestamp: string;
+  /** 関連エージェント（推定） */
+  agent?: string;
+  /** セッションID */
+  sessionId?: string;
+}
+
+/**
+ * ファイル変更フィルター条件。
+ */
+export interface FileChangeFilter {
+  /** 操作種別でフィルタ（空配列で全て） */
+  operations: FileChangeInfo['operation'][];
+  /** ディレクトリでフィルタ（空配列で全て） */
+  directories: string[];
+  /** 拡張子でフィルタ（空配列で全て、"."なしで指定） */
+  extensions: string[];
+  /** エージェントでフィルタ（空配列で全て） */
+  agents: string[];
+}
+
+/**
+ * 統合タイムラインエントリ。
+ *
+ * inbox メッセージと session ログを統合したタイムラインエントリ。
+ * 既存の ParsedMessage と互換性を保ちつつ、session 由来の詳細情報を追加。
+ */
+export interface UnifiedTimelineEntry {
+  /** エントリID（一意識別子） */
+  id: string;
+  /** コンテンツ本文 */
+  content: string;
+  /** ParsedMessage 互換のための text プロパティ（content と同じ値） */
+  text: string;
+  /** 送信者 */
+  from: string;
+  /** 受信者（省略可能） */
+  to?: string;
+  /** タイムスタンプ（ISO 8601形式） */
+  timestamp: string;
+  /** 表示色（省略可能） */
+  color?: string;
+  /** 既読フラグ */
+  read?: boolean;
+  /** サマリー（省略可能） */
+  summary?: string;
+
+  // 拡張フィールド
+  /** データソース（inbox | session） */
+  source: TimelineSource;
+  /** パースされたメッセージタイプ */
+  parsedType: ExtendedParsedType;
+  /** パースされたデータ（省略可能） */
+  parsedData?: Record<string, unknown>;
+
+  // session 由来の詳細情報
+  /** 詳細情報（session 由来のエントリに含まれる） */
+  details?: {
+    /** 思考プロセス（thinking タイプ） */
+    thinking?: string;
+    /** ファイル変更一覧 */
+    files?: FileChangeInfo[];
+    /** 関連タスクID */
+    taskId?: string;
+    /** タスク件名 */
+    taskSubject?: string;
+    /** ツール名 */
+    toolName?: string;
+    /** ツール入力 */
+    toolInput?: unknown;
+  };
+}
 
 /**
  * メッセージタイプ別の表示データ。
@@ -218,4 +345,129 @@ export interface TimeRange {
   start: Date;
   /** 終了時刻 */
   end: Date;
+}
+
+/**
+ * メッセージタイプ別設定。
+ *
+ * 統合タイムラインで使用する各タイプのアイコン、色、ラベルを定義。
+ */
+export interface MessageTypeConfig {
+  /** アイコン絵文字 */
+  icon: string;
+  /** 色（HEX） */
+  color: string;
+  /** 表示ラベル */
+  label: string;
+}
+
+/**
+ * メッセージタイプ別の設定マップ。
+ *
+ * inbox 由来と session 由来の両方のタイプ設定を含む。
+ */
+export const MESSAGE_TYPE_CONFIG: Record<ExtendedParsedType, MessageTypeConfig> = {
+  // inbox 由来
+  message: {
+    icon: '💬',
+    color: '#6b7280',
+    label: 'メッセージ',
+  },
+  task_assignment: {
+    icon: '📋',
+    color: '#3b82f6',
+    label: 'タスク割り当て',
+  },
+  task_completed: {
+    icon: '✅',
+    color: '#10b981',
+    label: 'タスク完了',
+  },
+  idle_notification: {
+    icon: '💤',
+    color: '#f59e0b',
+    label: 'アイドル通知',
+  },
+  shutdown_request: {
+    icon: '🔌',
+    color: '#ef4444',
+    label: 'シャットダウン要求',
+  },
+  shutdown_response: {
+    icon: '✓',
+    color: '#22c55e',
+    label: 'シャットダウン応答',
+  },
+  plan_approval_request: {
+    icon: '📝',
+    color: '#8b5cf6',
+    label: 'プラン承認要求',
+  },
+  plan_approval_response: {
+    icon: '✅',
+    color: '#22c55e',
+    label: 'プラン承認応答',
+  },
+  // session 由来
+  user_message: {
+    icon: '👤',
+    color: '#3b82f6',
+    label: 'ユーザーメッセージ',
+  },
+  assistant_message: {
+    icon: '🤖',
+    color: '#8b5cf6',
+    label: 'AI応答',
+  },
+  thinking: {
+    icon: '💭',
+    color: '#9ca3af',
+    label: '思考',
+  },
+  tool_use: {
+    icon: '🔧',
+    color: '#06b6d4',
+    label: 'ツール使用',
+  },
+  file_change: {
+    icon: '📁',
+    color: '#06b6d4',
+    label: 'ファイル変更',
+  },
+};
+
+/**
+ * メッセージタイプ設定を取得するヘルパー関数。
+ *
+ * @param type - メッセージタイプ
+ * @returns 該当する設定（未定義タイプの場合はデフォルト値を返す）
+ */
+export function getMessageTypeConfig(type: ExtendedParsedType): MessageTypeConfig {
+  return MESSAGE_TYPE_CONFIG[type] || {
+    icon: '❓',
+    color: '#6b7280',
+    label: '不明',
+  };
+}
+
+/**
+ * メッセージタイプ設定から Tailwind CSS クラスを生成するヘルパー関数。
+ *
+ * @param type - メッセージタイプ
+ * @returns Tailwind CSS クラス文字列（背景色とテキスト色）
+ */
+export function getMessageTypeColorClass(type: ExtendedParsedType): string {
+  const config = getMessageTypeConfig(type);
+  const colorMap: Record<string, string> = {
+    '#6b7280': 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300',
+    '#3b82f6': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    '#10b981': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    '#f59e0b': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    '#ef4444': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    '#22c55e': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    '#8b5cf6': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+    '#9ca3af': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
+    '#06b6d4': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
+  };
+  return colorMap[config.color] || colorMap['#6b7280'];
 }
