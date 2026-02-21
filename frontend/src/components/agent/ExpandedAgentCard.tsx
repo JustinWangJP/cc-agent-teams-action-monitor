@@ -10,9 +10,9 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { memo } from 'react';
-import { File, Folder, X } from 'lucide-react';
+import { File, Folder } from 'lucide-react';
 import { clsx } from 'clsx';
-import type { AgentStatus } from '@/types/agent';
+import type { AgentStatus, AgentStatusType } from '@/types/agent';
 import { getAgentStatusConfig, getProgressColorClass } from '@/types/agent';
 
 /**
@@ -127,6 +127,13 @@ export const ExpandedAgentCard = memo<ExpandedAgentCardProps>(
             <p className="text-sm text-slate-700 dark:text-slate-300 truncate" title={taskInfo}>
               {taskInfo}
             </p>
+            {/* activeForm: 進行中の作業内容 */}
+            {agent.activeForm && (
+              <div className="mt-2 flex items-start gap-2 text-xs text-blue-600 dark:text-blue-400">
+                <span className="flex-shrink-0">🔄</span>
+                <span className="italic">{agent.activeForm}</span>
+              </div>
+            )}
           </div>
 
           {/* タスク統計 */}
@@ -215,17 +222,13 @@ export const AgentStatusIndicator = memo<AgentStatusIndicatorProps>(
     };
 
     return (
-      <div className="relative inline-flex items-center">
-        {/* ステータスインジケーター */}
+      <div className="relative inline-flex items-center" title={`${statusConfig.label} (${progress}%)`}>
+        {/* ステータスインジケーター - progressColorClassを使用 */}
         <div
           className={clsx(
             'rounded-full',
             sizeClasses[size],
-            status === 'idle' && 'bg-yellow-400',
-            status === 'active' && 'bg-green-500',
-            status === 'working' && 'bg-blue-500',
-            status === 'completed' && 'bg-green-500',
-            status === 'error' && 'bg-red-500'
+            progressColorClass
           )}
         />
         {/* 作業中の場合はパルスアニメーション */}

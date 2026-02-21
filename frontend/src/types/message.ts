@@ -42,16 +42,24 @@ export interface ProtocolMessage {
  * アクティビティイベントを表すインターフェース。
  *
  * イベントID、タイプ、チーム名、エージェント名、コンテンツ、タイムスタンプを持ちます。
- * message/task_update/member_join/member_leave のタイプを取ります。
+ * message/task_update/member_join/member_leave/session_event のタイプを取ります。
+ *
+ * セッションログ統合により session_event タイプを追加。
  */
 export interface ActivityEvent {
   id: string;
-  type: 'message' | 'task_update' | 'member_join' | 'member_leave';
+  type: 'message' | 'task_update' | 'member_join' | 'member_leave' | 'session_event';
   teamName: string;
   agentName: string;
   content: string;
   timestamp: string;
   metadata?: Record<string, unknown>;
+  /** セッション由来の追加情報（session_event タイプの場合） */
+  sessionData?: {
+    sessionId: string;
+    parsedType: ExtendedParsedType;
+    details?: ParsedEvent['details'];
+  };
 }
 
 /**
@@ -94,6 +102,73 @@ export type MessageType =
  * session: セッションログ（.jsonl）由来のエントリ（新規）
  */
 export type TimelineSource = 'inbox' | 'session';
+
+/**
+ * セッションログエントリの基本型。
+ *
+ * ~/.claude/projects 配下の .jsonl ファイルから読み込まれる生のセッションログエントリ。
+ */
+export interface SessionEvent {
+  /** エントリタイプ */
+  type: 'user' | 'assistant' | 'thinking' | 'tool_use' | 'file_change' | 'system' | 'progress';
+  /** タイムスタンプ */
+  timestamp?: string;
+  /** セッションID */
+  sessionId?: string;
+  /** メッセージ内容（text形式の場合） */
+  content?: string;
+  /** メッセージ内容（delta形式の場合） */
+  delta?: { text?: string; type?: string };
+  /** 思考プロセス（thinkingタイプ） */
+  thinking?: string;
+  /** ツール使用情報（tool_useタイプ） */
+  toolUse?: {
+    name: string;
+    input?: unknown;
+    result?: unknown;
+  };
+  /** ファイル変更情報（file_changeタイプ） */
+  fileChange?: {
+    path: string;
+    operation: 'created' | 'modified' | 'deleted' | 'read';
+    version?: number;
+  };
+  /** その他のデータ */
+  [key: string]: unknown;
+}
+
+/**
+ * パース済みセッションイベント。
+ *
+ * SessionEvent を解析し、タイムライン表示用に変換したもの。
+ */
+export interface ParsedEvent {
+  /** パースされたタイプ */
+  parsedType: ExtendedParsedType;
+  /** 表示用コンテンツ */
+  content: string;
+  /** 送信者（推定） */
+  from: string;
+  /** タイムスタンプ */
+  timestamp: string;
+  /** セッションID */
+  sessionId: string;
+  /** 詳細情報 */
+  details?: {
+    /** 思考プロセス */
+    thinking?: string;
+    /** ファイル変更一覧 */
+    files?: FileChangeInfo[];
+    /** 関連タスクID */
+    taskId?: string;
+    /** タスク件名 */
+    taskSubject?: string;
+    /** ツール名 */
+    toolName?: string;
+    /** ツール入力 */
+    toolInput?: unknown;
+  };
+}
 
 /**
  * 拡張メッセージタイプ。
@@ -212,6 +287,14 @@ export interface UnifiedTimelineEntry {
     toolInput?: unknown;
   };
 }
+
+/**
+ * 統合タイムラインアイテム。
+ *
+ * UnifiedTimelineEntry のエイリアス。
+ * タスク割り当てで指定された型名との互換性のため。
+ */
+export type UnifiedTimelineItem = UnifiedTimelineEntry;
 
 /**
  * メッセージタイプ別の表示データ。
@@ -470,4 +553,17 @@ export function getMessageTypeColorClass(type: ExtendedParsedType): string {
     '#06b6d4': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
   };
   return colorMap[config.color] || colorMap['#6b7280'];
+}
+
+/**
+ * 統合タイムラインAPIレスポンス。
+ *
+ * ChatTimelinePanel パターンに準拠したレスポンス形式。
+ * items 配列と最後のタイムスタンプを含む。
+ */
+export interface UnifiedTimelineResponse {
+  /** タイムラインエントリ配列 */
+  items: UnifiedTimelineEntry[];
+  /** 最後のエントリのタイムスタンプ（差分取得用） */
+  lastTimestamp: string;
 }

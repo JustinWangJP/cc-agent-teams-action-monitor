@@ -10,7 +10,7 @@
 
 import { memo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { File, Folder, Link2, ChevronDown } from 'lucide-react';
+import { File, Folder, ArrowRight, Lock } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { TaskWithProgress } from '@/types/task';
 
@@ -24,6 +24,8 @@ export interface ExpandedTaskCardProps {
   onClick?: () => void;
   /** 担当者へのリンクを有効にするかどうか */
   enableOwnerLink?: boolean;
+  /** タイムライン連携: タイムラインフィルタハンドラー */
+  onTimelineFilter?: (taskId: string) => void;
   /** 追加のクラス名 */
   className?: string;
 }
@@ -68,7 +70,7 @@ function getProgressColorClass(status: TaskWithProgress['status'], progress: num
  * ```
  */
 export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
-  ({ task, onClick, enableOwnerLink = true, className = '' }) => {
+  ({ task, onClick, enableOwnerLink = true, onTimelineFilter, className = '' }) => {
     const progressColorClass = getProgressColorClass(task.status, task.progress);
 
     // ステータスボーダー色
@@ -116,6 +118,20 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
               )}>
                 {statusLabels[task.status]}
               </span>
+              {/* タイムライン連携ボタン */}
+              {onTimelineFilter && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTimelineFilter(task.id);
+                  }}
+                  className="text-xs px-2 py-0.5 rounded bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                  title="タイムラインでこのタスクに関連するアクティビティを表示"
+                >
+                  🔗 タイムライン
+                </button>
+              )}
             </div>
             <h4 className="font-medium text-slate-900 dark:text-slate-100 text-sm">
               {task.subject}
@@ -181,11 +197,61 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
           </div>
           {task.blockedCount > 0 && (
             <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
-              <Link2 className="w-3 h-3" />
+              <Lock className="w-3 h-3" />
               Blocked by {task.blockedCount}
             </span>
           )}
         </div>
+
+        {/* サブタスク状態（依存関係） */}
+        {(task.blocks?.length ?? 0) > 0 || (task.blockedBy?.length ?? 0) > 0 ? (
+          <details className="group/details mb-3">
+            <summary className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 select-none">
+              <span>🔗 依存関係</span>
+              <span className="group-open/details:rotate-90 transition-transform">▶</span>
+            </summary>
+            <div className="mt-2 space-y-2 text-xs">
+              {/* blockedBy: このタスクをブロックしているタスク */}
+              {task.blockedBy && task.blockedBy.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 mb-1">
+                    <Lock className="w-3 h-3" />
+                    <span className="font-medium">ブロック中 (以下のタスクの完了を待機)</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 pl-4">
+                    {task.blockedBy.map((taskId) => (
+                      <span
+                        key={taskId}
+                        className="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded"
+                      >
+                        #{taskId}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* blocks: このタスクがブロックしているタスク */}
+              {task.blocks && task.blocks.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 mb-1">
+                    <ArrowRight className="w-3 h-3" />
+                    <span className="font-medium">ブロックしている (このタスク完了後に開始)</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 pl-4">
+                    {task.blocks.map((taskId) => (
+                      <span
+                        key={taskId}
+                        className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded"
+                      >
+                        #{taskId}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </details>
+        ) : null}
 
         {/* 関連ファイル */}
         {task.relatedFiles && task.relatedFiles.length > 0 && (

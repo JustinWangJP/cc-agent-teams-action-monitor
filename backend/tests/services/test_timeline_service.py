@@ -394,3 +394,251 @@ class TestTimelineService:
         assert result is not None
         assert result["type"] == "plan_approval_response"
         assert result["summary"] == "プラン却下"
+
+    @pytest.mark.asyncio
+    async def test_map_session_entry_file_history_snapshot_single(self):
+        """ファイル変更履歴（単一ファイル）のマッピングをテストします."""
+        service = TimelineService()
+
+        entry = {
+            "type": "file-history-snapshot",
+            "fileChanges": {
+                "/path/to/file.py": {
+                    "operation": "modified",
+                    "version": 5
+                }
+            },
+            "timestamp": "2026-02-21T10:00:00Z"
+        }
+
+        result = service._map_session_entry(entry)
+
+        assert result is not None
+        assert result["parsed_type"] == "file_change"
+        assert result["content"] == "ファイル変更: /path/to/file.py"
+        assert result["color"] == "#0891b2"
+        assert result["source"] == "session"
+        assert len(result["details"]["files"]) == 1
+        assert result["details"]["files"][0]["path"] == "/path/to/file.py"
+        assert result["details"]["files"][0]["operation"] == "modified"
+        assert result["details"]["files"][0]["version"] == 5
+
+    @pytest.mark.asyncio
+    async def test_map_session_entry_file_history_snapshot_multiple(self):
+        """ファイル変更履歴（複数ファイル）のマッピングをテストします."""
+        service = TimelineService()
+
+        entry = {
+            "type": "file-history-snapshot",
+            "fileChanges": {
+                "/path/to/file1.py": {
+                    "operation": "created",
+                    "version": 1
+                },
+                "/path/to/file2.py": {
+                    "operation": "read",
+                    "version": 2
+                },
+                "/path/to/file3.py": {
+                    "operation": "deleted",
+                    "version": 3
+                }
+            },
+            "timestamp": "2026-02-21T10:00:00Z"
+        }
+
+        result = service._map_session_entry(entry)
+
+        assert result is not None
+        assert result["parsed_type"] == "file_change"
+        assert result["content"] == "3 ファイル変更"
+        assert result["color"] == "#0891b2"
+        assert len(result["details"]["files"]) == 3
+
+        # ファイル情報の検証
+        files = result["details"]["files"]
+        assert files[0]["path"] == "/path/to/file1.py"
+        assert files[0]["operation"] == "created"
+        assert files[1]["path"] == "/path/to/file2.py"
+        assert files[1]["operation"] == "read"
+        assert files[2]["path"] == "/path/to/file3.py"
+        assert files[2]["operation"] == "deleted"
+
+    @pytest.mark.asyncio
+    async def test_map_session_entry_file_history_snapshot_empty(self):
+        """空のファイル変更履歴のマッピングをテストします."""
+        service = TimelineService()
+
+        entry = {
+            "type": "file-history-snapshot",
+            "fileChanges": {},
+            "timestamp": "2026-02-21T10:00:00Z"
+        }
+
+        result = service._map_session_entry(entry)
+
+        assert result is not None
+        assert result["parsed_type"] == "file_change"
+        assert result["content"] == "0 ファイル変更"
+        assert len(result["details"]["files"]) == 0
+
+    @pytest.mark.asyncio
+    async def test_load_session_entries_with_file_history(self, tmp_path):
+        """ファイル変更履歴を含むセッションログの読み込みをテストします."""
+        # テスト用ディレクトリ構造を作成
+        teams_dir = tmp_path / "teams"
+        teams_dir.mkdir()
+        projects_dir = tmp_path / "projects"
+        projects_dir.mkdir()
+
+        team_name = "test-team"
+        team_dir = teams_dir / team_name
+        team_dir.mkdir()
+
+        # config.json を作成
+        lead_session_id = "test-session-123"
+        cwd = "/Users/test/project"
+        project_hash = "-" + cwd.lstrip("/").replace("/", "-")
+
+        config = {
+            "leadSessionId": lead_session_id,
+            "members": [{"cwd": cwd}]
+        }
+        config_file = team_dir / "config.json"
+        config_file.write_text(json.dumps(config))
+
+        # セッションファイルを作成
+        session_file = projects_dir / project_hash / f"{lead_session_id}.jsonl"
+        session_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # JSONL 形式で書き込み（file-history-snapshot を含む）
+        entries = [
+            '{"type": "user", "content": "Hello", "timestamp": "2026-02-21T10:00:00Z"}',
+            '{"type": "file-history-snapshot", "fileChanges": {"/path/to/file.py": {"operation": "modified", "version": 1}}, "timestamp": "2026-02-21T10:00:01Z"}',
+            '{"type": "thinking", "thinking": "Let me think", "timestamp": "2026-02-21T10:00:02Z"}',
+        ]
+        session_file.write_text("\n".join(entries))
+
+        # テスト実行
+        service = TimelineService(claude_dir=tmp_path)
+        result = await service.load_session_entries(team_name)
+
+        assert len(result) == 3
+        assert result[0]["parsed_type"] == "user_message"
+        assert result[1]["parsed_type"] == "file_change"
+        assert result[1]["content"] == "ファイル変更: /path/to/file.py"
+        assert result[2]["parsed_type"] == "thinking"
+
+    @pytest.mark.asyncio
+    async def test_map_inbox_message_file_change(self):
+        """ファイル変更構造化メッセージのマッピングをテストします."""
+        service = TimelineService()
+
+        msg = {
+            "content": '{"type": "file_change", "files": ["/path/to/file.py"], "operation": "modified"}',
+            "from": "agent",
+            "timestamp": "2026-02-21T10:00:00Z",
+            "read": True
+        }
+
+        result = service._map_inbox_message(msg, "recipient")
+
+        assert result is not None
+        assert result["parsed_type"] == "file_change"
+        assert result["summary"] == "ファイルmodified: /path/to/file.py"
+        assert result["color"] == "#0891b2"
+
+    @pytest.mark.asyncio
+    async def test_map_inbox_message_error(self):
+        """エラー構造化メッセージのマッピングをテストします."""
+        service = TimelineService()
+
+        msg = {
+            "content": '{"type": "error", "errorType": "ValidationError", "errorMessage": "Invalid input"}',
+            "from": "agent",
+            "timestamp": "2026-02-21T10:00:00Z",
+            "read": True
+        }
+
+        result = service._map_inbox_message(msg, "recipient")
+
+        assert result is not None
+        assert result["parsed_type"] == "error"
+        assert result["summary"] == "エラー: ValidationError"
+        assert result["color"] == "#dc2626"
+
+    @pytest.mark.asyncio
+    async def test_map_inbox_message_file_change_multiple(self):
+        """複数ファイル変更構造化メッセージのマッピングをテストします."""
+        service = TimelineService()
+
+        msg = {
+            "content": '{"type": "file_change", "files": ["/a.py", "/b.py"], "operation": "created"}',
+            "from": "agent",
+            "timestamp": "2026-02-21T10:00:00Z",
+            "read": True
+        }
+
+        result = service._map_inbox_message(msg, "recipient")
+
+        assert result is not None
+        assert result["parsed_type"] == "file_change"
+        assert result["summary"] == "2ファイルcreated"
+        assert result["parsed_data"]["fileCount"] == 2
+
+    @pytest.mark.asyncio
+    async def test_load_session_entries_since(self, tmp_path):
+        """since パラメータによる差分読み込みをテストします."""
+        # テスト用ディレクトリ構造を作成
+        teams_dir = tmp_path / "teams"
+        teams_dir.mkdir()
+        projects_dir = tmp_path / "projects"
+        projects_dir.mkdir()
+
+        team_name = "test-team"
+        team_dir = teams_dir / team_name
+        team_dir.mkdir()
+
+        # config.json を作成
+        lead_session_id = "test-session-123"
+        cwd = "/Users/test/project"
+        project_hash = "-" + cwd.lstrip("/").replace("/", "-")
+
+        config = {
+            "leadSessionId": lead_session_id,
+            "members": [{"cwd": cwd}]
+        }
+        config_file = team_dir / "config.json"
+        config_file.write_text(json.dumps(config))
+
+        # セッションファイルを作成（複数のタイムスタンプを含む）
+        session_file = projects_dir / project_hash / f"{lead_session_id}.jsonl"
+        session_file.parent.mkdir(parents=True, exist_ok=True)
+
+        entries = [
+            '{"type": "user", "content": "First", "timestamp": "2026-02-21T10:00:00Z"}',
+            '{"type": "user", "content": "Second", "timestamp": "2026-02-21T10:00:05Z"}',
+            '{"type": "user", "content": "Third", "timestamp": "2026-02-21T10:00:10Z"}',
+        ]
+        session_file.write_text("\n".join(entries))
+
+        service = TimelineService(claude_dir=tmp_path)
+
+        # since なし：全エントリを取得
+        all_entries = await service.load_session_entries_since(team_name)
+        assert len(all_entries) == 3
+
+        # since 指定：指定時刻以降のエントリのみを取得
+        since_entries = await service.load_session_entries_since(
+            team_name,
+            since="2026-02-21T10:00:05Z"
+        )
+        assert len(since_entries) == 1
+        assert since_entries[0]["content"] == "Third"
+
+        # 境界値テスト：ちょうど同じタイムスタンプは含まれない
+        boundary_entries = await service.load_session_entries_since(
+            team_name,
+            since="2026-02-21T10:00:10Z"
+        )
+        assert len(boundary_entries) == 0

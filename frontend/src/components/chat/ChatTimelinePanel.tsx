@@ -16,7 +16,8 @@ import { ChatHeader } from './ChatHeader';
 import { ChatMessageList } from './ChatMessageList';
 import { MessageDetailPanel } from './MessageDetailPanel';
 import { useDashboardStore } from '@/stores/dashboardStore';
-import type { ParsedMessage, MessageType, InboxMessage } from '@/types/message';
+import type { TimelineMessage } from './ChatMessageBubble';
+import type { ParsedMessage, MessageType } from '@/types/message';
 
 /**
  * チャットタイムラインパネルのプロパティ。
@@ -334,8 +335,8 @@ export const ChatTimelinePanel = ({
   /**
    * メッセージクリックハンドラー。
    */
-  const handleMessageClick = useCallback((message: ParsedMessage) => {
-    setSelectedMessage(message);
+  const handleMessageClick = useCallback((message: TimelineMessage) => {
+    setSelectedMessage(message as ParsedMessage);
     setDetailModalOpen(true);
   }, [setSelectedMessage, setDetailModalOpen]);
 

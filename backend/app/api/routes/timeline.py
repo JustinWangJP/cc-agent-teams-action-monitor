@@ -3,11 +3,11 @@
 inbox メッセージとセッションログを統合したタイムラインを提供します。
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Query, HTTPException
-from pydantic import BaseModel, field_validator
+from fastapi import APIRouter, Query
+from pydantic import BaseModel, ConfigDict
 
 from app.services.timeline_service import TimelineService
 
@@ -55,14 +55,15 @@ class UnifiedTimelineEntry(BaseModel):
     parsed_data: Optional[dict] = None
     details: Optional[dict] = None
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class UnifiedTimelineResponse(BaseModel):
     """統合タイムラインレスポンス."""
     items: list[UnifiedTimelineEntry]
     last_timestamp: str
+    has_more: bool = False  # ページネーション：さらに古いエントリが存在するか
+    last_event_id: Optional[str] = None  # 次ページ用カーソル
 
 
 # TimelineService のインスタンスを取得するヘルパー関数
@@ -75,7 +76,8 @@ def _get_timeline_service() -> TimelineService:
 async def get_timeline_history(
     team_name: str,
     limit: int = Query(100, ge=1, le=500, description="最大取得件数"),
-    types: Optional[str] = Query(None, description="カンマ区切りでタイプ指定（例: message,thinking,tool_use）")
+    types: Optional[str] = Query(None, description="カンマ区切りでタイプ指定（例: message,thinking,tool_use）"),
+    before_event_id: Optional[str] = Query(None, description="このイベントIDより古いエントリを取得（ページネーション用）")
 ):
     """統合タイムライン履歴を取得します。
 
@@ -86,6 +88,7 @@ async def get_timeline_history(
         team_name: チーム名
         limit: 最大取得件数（1-500、デフォルト100）
         types: フィルタリングするタイプ（カンマ区切り）
+        before_event_id: このイベントIDより古いエントリを取得（ページネーション用）
 
     Returns:
         統合タイムラインレスポンス
@@ -112,21 +115,48 @@ async def get_timeline_history(
         ]
 
     # timestamp が None のエントリを除外してからソート
+    # タイムスタンプが同じ場合は ID でソートして順序を安定させる
     all_entries = [e for e in all_entries if e.get("timestamp") is not None]
     all_entries.sort(
-        key=lambda x: x.get("timestamp", ""),
+        key=lambda x: (x.get("timestamp", ""), x.get("id", "")),
         reverse=True
     )
 
-    # 件数制限
+    # before_event_id によるページネーション
+    if before_event_id:
+        # 指定されたイベントIDのインデックスを検索
+        before_index = None
+        for i, entry in enumerate(all_entries):
+            if entry.get("id") == before_event_id:
+                before_index = i
+                break
+
+        if before_index is not None:
+            # 指定イベントより後ろ（古い）のエントリのみを使用
+            all_entries = all_entries[before_index + 1:]
+        else:
+            # 指定されたイベントIDが見つからない場合、空のリストを返す
+            logger.warning(f"before_event_id not found: {before_event_id}")
+            all_entries = []
+
+    # 件数制限（has_more 判定の前に元のサイズを保存）
+    total_before_limit = len(all_entries)
     all_entries = all_entries[:limit]
+    has_more = total_before_limit > limit
 
     # 最終タイムスタンプを取得
-    last_timestamp = all_entries[0]["timestamp"] if all_entries else datetime.utcnow().isoformat() + "+00:00"
+    last_timestamp = all_entries[0]["timestamp"] if all_entries else datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    # 次ページ用カーソルを設定（has_more=True の場合のみ）
+    last_event_id = all_entries[-1]["id"] if all_entries and has_more else None
+
+    # UnifiedTimelineEntry モデルを明示的にインスタンス化
+    timeline_items = [UnifiedTimelineEntry(**entry) for entry in all_entries]
 
     return UnifiedTimelineResponse(
-        items=all_entries,
-        last_timestamp=last_timestamp
+        items=timeline_items,
+        last_timestamp=last_timestamp,
+        has_more=has_more,
+        last_event_id=last_event_id
     )
 
 
@@ -178,15 +208,24 @@ async def get_timeline_updates(
         reverse=True
     )
 
-    # 件数制限
+    # 件数制限（has_more 判定の前に元のサイズを保存）
+    total_before_limit = len(all_entries)
     all_entries = all_entries[:limit]
+    has_more = total_before_limit > limit
 
     # 最終タイムスタンプを取得
-    last_timestamp = all_entries[0]["timestamp"] if all_entries else datetime.utcnow().isoformat() + "+00:00"
+    last_timestamp = all_entries[0]["timestamp"] if all_entries else datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    # 次ページ用カーソルを設定（has_more=True の場合のみ）
+    last_event_id = all_entries[-1]["id"] if all_entries and has_more else None
+
+    # UnifiedTimelineEntry モデルを明示的にインスタンス化
+    timeline_items = [UnifiedTimelineEntry(**entry) for entry in all_entries]
 
     return UnifiedTimelineResponse(
-        items=all_entries,
-        last_timestamp=last_timestamp
+        items=timeline_items,
+        last_timestamp=last_timestamp,
+        has_more=has_more,
+        last_event_id=last_event_id
     )
 
 
@@ -254,7 +293,7 @@ async def get_file_changes(
     file_changes = file_changes[:limit]
 
     # 最終タイムスタンプを取得
-    last_timestamp = file_changes[0]["timestamp"] if file_changes else datetime.utcnow().isoformat() + "+00:00"
+    last_timestamp = file_changes[0]["timestamp"] if file_changes else datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     return FileChangesResponse(
         items=file_changes,

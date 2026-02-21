@@ -41,6 +41,8 @@ export interface AgentStatus {
   currentTaskId: string | null;
   /** 現在のタスク件名 */
   currentTaskSubject: string | null;
+  /** 現在の作業内容（進行中アクティビティ） */
+  activeForm?: string;
   /** 担当タスクIDリスト */
   assignedTasks: string[];
   /** 完了タスクIDリスト */

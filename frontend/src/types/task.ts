@@ -74,4 +74,8 @@ export interface TaskWithProgress extends TaskSummary {
   startedAt?: string;
   /** 完了時刻（ISO 8601形式） */
   completedAt?: string;
+  /** このタスクがブロックしているタスクIDリスト */
+  blocks?: string[];
+  /** このタスクをブロックしているタスクIDリスト */
+  blockedBy?: string[];
 }

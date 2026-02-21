@@ -78,7 +78,7 @@ export function useFileChanges({
         throw new Error('Team name is required');
       }
 
-      const url = `${apiBaseUrl}/file-changes/${encodeURIComponent(teamName)}?limit=${limit}`;
+      const url = `${apiBaseUrl}/timeline/file-changes/${encodeURIComponent(teamName)}?limit=${limit}`;
       const response = await fetch(url);
 
       if (!response.ok) {

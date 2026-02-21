@@ -12,6 +12,7 @@ from typing import Optional
 import orjson
 
 from app.config import settings
+from app.services.message_parser import parse_structured_message
 
 logger = logging.getLogger(__name__)
 
@@ -188,20 +189,17 @@ class TimelineService:
     ) -> list[dict]:
         """差分読み込みを行います。
 
-        前回の読み込み位置から新規エントリのみを読み込みます。
+        since 以降のタイムスタンプを持つ新規エントリのみを読み込みます。
+        キャッシュはあくまで最適化として使用し、since パラメータを優先します。
 
         Args:
             team_name: チーム名
-            since: タイムスタンプ（現時点では使用せず、キャッシュ位置を使用）
+            since: タイムスタンプ（ISO 8601 形式）。指定時は当該時刻以降のエントリのみを返す。
 
         Returns:
             新規タイムラインエントリリスト
 
         """
-        # キャッシュから前回の読み込み位置を取得
-        cache_key = f"session_{team_name}"
-        cached_pos = self._session_cache.get(cache_key, 0)
-
         session_file = self._find_session_file(team_name)
         if not session_file:
             return []
@@ -209,29 +207,22 @@ class TimelineService:
         entries = []
         try:
             with open(session_file, "r", encoding="utf-8") as f:
-                # 前回位置までスキップ
-                for _ in range(cached_pos):
-                    next(f, None)
-
-                # 新規エントリを読み込み
-                line_num = cached_pos
                 for line in f:
                     line = line.strip()
                     if not line:
-                        line_num += 1
                         continue
                     try:
                         entry = orjson.loads(line)
                         mapped = self._map_session_entry(entry)
                         if mapped:
+                            # since パラメータが指定されている場合はタイムスタンプでフィルタ
+                            if since:
+                                entry_timestamp = mapped.get("timestamp", "")
+                                if entry_timestamp <= since:
+                                    continue  # since 以前のエンティティはスキップ
                             entries.append(mapped)
-                        line_num += 1
                     except (orjson.JSONDecodeError, ValueError):
-                        line_num += 1
                         continue
-
-                # キャッシュを更新
-                self._session_cache[cache_key] = line_num
         except IOError as e:
             logger.error(f"Failed to read session file: {e}")
             return []
@@ -274,6 +265,8 @@ class TimelineService:
                 "shutdown_response": "#22c55e",
                 "plan_approval_request": "#8b5cf6",
                 "plan_approval_response": "#22c55e",
+                "file_change": "#0891b2",
+                "error": "#dc2626",
             }
             color = color_map.get(parsed_type)
 
@@ -314,15 +307,16 @@ class TimelineService:
         """
         entry_type = entry.get("type")
 
-        # タイプマッピング
+        # タイプマッピング（entry_type が None の場合は "unknown" を使用）
         type_mapping = {
             "user": "user_message",
             "assistant": "assistant_message",
             "thinking": "thinking",
             "tool_use": "tool_use",
+            "file-history-snapshot": "file_change",
         }
 
-        parsed_type = type_mapping.get(entry_type, "unknown")
+        parsed_type = "unknown" if entry_type is None else type_mapping.get(entry_type, "unknown")
 
         # エージェント名を推定（セッションでは送信者情報が限定的）
         # 通常はリードエージェント（team-lead）のアクティビティ
@@ -367,12 +361,56 @@ class TimelineService:
                 "toolInput": tool_input,
             }
 
+        elif entry_type == "file-history-snapshot":
+            # ファイル変更履歴の処理
+            # データ構造：entry.fileChanges（辞書形式）を優先
+            # フォールバック：entry.snapshot.trackedFileBackups
+            file_changes = entry.get("fileChanges") or entry.get("snapshot", {}).get("trackedFileBackups", {})
+            files_list = []
+
+            # fileChanges が辞書形式かリスト形式かを判定
+            if isinstance(file_changes, dict):
+                # 辞書形式：{path: {operation, version}}
+                for path, change_info in file_changes.items():
+                    if isinstance(change_info, dict):
+                        operation = change_info.get("operation", "read")
+                        version = change_info.get("version")
+                        files_list.append({
+                            "path": path,
+                            "operation": operation,
+                            "version": version,
+                        })
+            elif isinstance(file_changes, list):
+                # リスト形式：[{path, operation, version}]
+                for change_info in file_changes:
+                    if isinstance(change_info, dict):
+                        path = change_info.get("path", "")
+                        operation = change_info.get("operation", "read")
+                        version = change_info.get("version")
+                        if path:
+                            files_list.append({
+                                "path": path,
+                                "operation": operation,
+                                "version": version,
+                            })
+
+            changed_count = len(files_list)
+            if changed_count == 1:
+                content = f"ファイル変更: {files_list[0]['path']}"
+            else:
+                content = f"{changed_count} ファイル変更"
+
+            details = {
+                "files": files_list,
+            }
+
         # 色設定
         color_map = {
             "user_message": "#3b82f6",
             "assistant_message": "#8b5cf6",
             "thinking": "#9ca3af",
             "tool_use": "#06b6d4",
+            "file_change": "#0891b2",
         }
         color = color_map.get(parsed_type)
 
@@ -396,7 +434,7 @@ class TimelineService:
     def _parse_structured_message(self, text: str) -> Optional[dict]:
         """構造化メッセージ（JSON-in-JSON）をパースします。
 
-        タイプ別に詳細情報を抽出し、summary を生成します。
+        MessageParser モジュールに委譲します。
 
         Args:
             text: メッセージテキスト
@@ -405,98 +443,4 @@ class TimelineService:
             パースされた構造化データ（失敗時は None）
 
         """
-        if not text or not isinstance(text, str):
-            return None
-
-        text = text.strip()
-
-        # JSON テキストの抽出を試行（```json ブロック内など）
-        json_start = text.find("{")
-        json_end = text.rfind("}")
-
-        if json_start == -1 or json_end == -1 or json_start >= json_end:
-            return None
-
-        try:
-            json_str = text[json_start:json_end + 1]
-            data = json.loads(json_str)
-
-            # 構造化メッセージの type フィールドを確認
-            msg_type = data.get("type")
-            if not msg_type:
-                return None
-
-            # 有効なメッセージタイプ
-            valid_types = {
-                "task_assignment",
-                "task_completed",
-                "idle_notification",
-                "shutdown_request",
-                "shutdown_response",
-                "plan_approval_request",
-                "plan_approval_response",
-            }
-
-            if msg_type not in valid_types:
-                return None
-
-            # タイプ別の詳細抽出と summary 生成
-            if msg_type == "task_assignment":
-                task_id = data.get("taskId")
-                subject = data.get("subject", "")
-                if task_id:
-                    summary = f"タスク #{task_id}: {subject}" if subject else f"タスク #{task_id} 割り当て"
-                else:
-                    summary = "タスク割り当て"
-                data["summary"] = summary
-
-            elif msg_type == "task_completed":
-                task_id = data.get("taskId")
-                if task_id:
-                    summary = f"タスク #{task_id} 完了"
-                else:
-                    summary = "タスク完了"
-                data["summary"] = summary
-
-            elif msg_type == "idle_notification":
-                idle_reason = data.get("idleReason", "")
-                summary_text = data.get("summary", "アイドル中")
-                if idle_reason:
-                    summary = f"アイドル通知: {idle_reason}"
-                else:
-                    summary = summary_text
-                data["summary"] = summary
-
-            elif msg_type == "shutdown_request":
-                reason = data.get("reason", "")
-                if reason:
-                    summary = f"シャットダウン要求: {reason}"
-                else:
-                    summary = "シャットダウン要求"
-                data["summary"] = summary
-
-            elif msg_type == "shutdown_response":
-                # approve フィールドで判定
-                approve = data.get("approve", True)
-                if approve is False:
-                    summary = "シャットダウン拒否"
-                else:
-                    summary = "シャットダウン応答"
-                data["summary"] = summary
-
-            elif msg_type == "plan_approval_request":
-                summary = "プラン承認要求"
-                data["summary"] = summary
-
-            elif msg_type == "plan_approval_response":
-                approve = data.get("approve", True)
-                if approve is False:
-                    summary = "プラン却下"
-                else:
-                    summary = "プラン承認"
-                data["summary"] = summary
-
-            return data
-
-        except (json.JSONDecodeError, ValueError):
-            return None
+        return parse_structured_message(text)

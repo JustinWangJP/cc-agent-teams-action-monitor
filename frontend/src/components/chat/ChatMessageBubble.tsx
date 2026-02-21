@@ -299,8 +299,15 @@ const highlightText = (text: string, query: string): ReactNode => {
 
 /**
  * 安全に日付をフォーマットする関数。
+ *
+ * @param timestamp - タイムスタンプ
+ * @param showAbsolute - 絶対時刻を表示するかどうか
+ * @returns フォーマットされた日時文字列
  */
-const safeFormatDate = (timestamp: string | number | Date | undefined): string => {
+const safeFormatDate = (
+  timestamp: string | number | Date | undefined,
+  showAbsolute: boolean = false
+): string => {
   if (!timestamp) return '日時不明';
 
   try {
@@ -308,8 +315,52 @@ const safeFormatDate = (timestamp: string | number | Date | undefined): string =
     if (isNaN(date.getTime())) {
       return '無効な日時';
     }
+
+    // 絶対時刻を表示する場合
+    if (showAbsolute) {
+      return date.toLocaleString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    }
+
     // ja ロケールが読み込まれていない場合はデフォルトを使用
     return formatDistanceToNow(date, { addSuffix: true });
+  } catch {
+    return '無効な日時';
+  }
+};
+
+/**
+ * 絶対時刻と相対時刻の両方を表示する関数。
+ *
+ * @param timestamp - タイムスタンプ
+ * @returns フォーマットされた日時文字列（絶対時刻 + 相対時刻）
+ */
+const formatFullDate = (timestamp: string | number | Date | undefined): string => {
+  if (!timestamp) return '日時不明';
+
+  try {
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) {
+      return '無効な日時';
+    }
+
+    const absolute = date.toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const relative = formatDistanceToNow(date, { addSuffix: true });
+
+    return `${absolute} (${relative})`;
   } catch {
     return '無効な日時';
   }
@@ -407,8 +458,8 @@ interface SessionDetailsProps {
   parsedType: string;
 }
 
-const SessionDetails = memo<SessionDetailsProps>(({ details, parsedType }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+const SessionDetails = memo<SessionDetailsProps>(({ details, parsedType: _parsedType }) => {
+  const [isThinkingExpanded, setIsThinkingExpanded] = useState(false);
 
   if (!details) return null;
 
@@ -420,14 +471,16 @@ const SessionDetails = memo<SessionDetailsProps>(({ details, parsedType }) => {
 
   if (!hasExpandableContent) return null;
 
+  const hasToolName = !!details.toolName;
+
   return (
     <div className="mt-2 space-y-2 text-sm">
       {/* thinking ブロック */}
       {details.thinking && (
         <details
           className="bg-slate-100 dark:bg-slate-800 rounded p-2 group/details"
-          open={isExpanded}
-          onToggle={(e) => setIsExpanded((e.target as HTMLDetailsElement).open)}
+          open={isThinkingExpanded}
+          onToggle={(e) => setIsThinkingExpanded((e.target as HTMLDetailsElement).open)}
         >
           <summary className="cursor-pointer text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 select-none">
             <span className="inline-flex items-center gap-1">
@@ -450,28 +503,8 @@ const SessionDetails = memo<SessionDetailsProps>(({ details, parsedType }) => {
         </div>
       )}
 
-      {/* ツール使用 */}
-      {details.toolName && (
-        <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded">
-          <span>🔧</span>
-          <span className="font-medium">{details.toolName}</span>
-          {details.toolInput && (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-            >
-              {isExpanded ? '▲' : '▼'}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* ツール入力（展開時） */}
-      {details.toolInput && isExpanded && (
-        <pre className="bg-slate-100 dark:bg-slate-800 p-2 rounded text-xs overflow-x-auto">
-          {JSON.stringify(details.toolInput, null, 2)}
-        </pre>
-      )}
+      {/* ツール使用 - 拡張版 (一時的に無効化) */}
+      {hasToolName && <div>Tool: {String(details.toolName)}</div>}
     </div>
   );
 });
@@ -530,6 +563,89 @@ const FileChangeBadge = memo<FileChangeBadgeProps>(({ file }) => {
 FileChangeBadge.displayName = 'FileChangeBadge';
 
 /**
+ * メタデータ表示コンポーネント。
+ *
+ * セッション由来のメタデータ（タスク情報、セッションIDなど）を表示します。
+ */
+interface MetadataDisplayProps {
+  /** UnifiedTimelineEntry のメタデータ */
+  metadata?: {
+    /** セッションID */
+    sessionId?: string;
+    /** タスクID */
+    taskId?: string;
+    /** タスク件名 */
+    taskSubject?: string;
+    /** モデル名 */
+    model?: string;
+  };
+  /** 表示を折りたたむかどうか */
+  collapsible?: boolean;
+}
+
+const MetadataDisplay = memo<MetadataDisplayProps>(({ metadata, collapsible = true }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (!metadata) return null;
+
+  const hasMetadata =
+    metadata.sessionId ||
+    metadata.taskId ||
+    metadata.taskSubject ||
+    metadata.model;
+
+  if (!hasMetadata) return null;
+
+  return (
+    <details
+      className={clsx(
+        'mt-2 bg-slate-50 dark:bg-slate-800/50 rounded p-2 text-xs',
+        'border border-slate-200 dark:border-slate-700'
+      )}
+      open={collapsible ? isExpanded : true}
+      onToggle={(e) => collapsible && setIsExpanded((e.target as HTMLDetailsElement).open)}
+    >
+      <summary className="cursor-pointer text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 select-none flex items-center gap-1">
+        <span>📋 メタデータ</span>
+        {collapsible && (
+          <span className="text-xs opacity-50 group-open/metadata:rotate-90 transition-transform">▶</span>
+        )}
+      </summary>
+      <dl className="mt-2 space-y-1">
+        {metadata.sessionId && (
+          <div className="flex gap-2">
+            <dt className="text-slate-500 dark:text-slate-400 min-w-[80px]">セッションID:</dt>
+            <dd className="text-slate-700 dark:text-slate-300 font-mono truncate">
+              {metadata.sessionId.slice(0, 8)}...
+            </dd>
+          </div>
+        )}
+        {metadata.taskId && (
+          <div className="flex gap-2">
+            <dt className="text-slate-500 dark:text-slate-400 min-w-[80px]">タスクID:</dt>
+            <dd className="text-slate-700 dark:text-slate-300 font-mono">#{metadata.taskId}</dd>
+          </div>
+        )}
+        {metadata.taskSubject && (
+          <div className="flex gap-2">
+            <dt className="text-slate-500 dark:text-slate-400 min-w-[80px]">タスク:</dt>
+            <dd className="text-slate-700 dark:text-slate-300">{metadata.taskSubject}</dd>
+          </div>
+        )}
+        {metadata.model && (
+          <div className="flex gap-2">
+            <dt className="text-slate-500 dark:text-slate-400 min-w-[80px]">モデル:</dt>
+            <dd className="text-slate-700 dark:text-slate-300">{metadata.model}</dd>
+          </div>
+        )}
+      </dl>
+    </details>
+  );
+});
+
+MetadataDisplay.displayName = 'MetadataDisplay';
+
+/**
  * チャットメッセージバブルのプロパティ。
  */
 export interface ChatMessageBubbleProps {
@@ -545,6 +661,10 @@ export interface ChatMessageBubbleProps {
   isSelected?: boolean;
   /** ブックマーク機能を有効にするかどうか */
   showBookmark?: boolean;
+  /** 絶対時刻を表示するかどうか */
+  showAbsoluteTime?: boolean;
+  /** メタデータを表示するかどうか */
+  showMetadata?: boolean;
 }
 
 /**
@@ -564,7 +684,16 @@ export interface ChatMessageBubbleProps {
  * ```
  */
 export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
-  ({ message, isHighlighted = false, searchQuery = '', onClick, isSelected = false, showBookmark = true }) => {
+  ({
+    message,
+    isHighlighted = false,
+    searchQuery = '',
+    onClick,
+    isSelected = false,
+    showBookmark = true,
+    showAbsoluteTime = false,
+    showMetadata = false,
+  }) => {
     const colors = getAgentColor(message.from);
 
     // UnifiedTimelineEntry か ParsedMessage かに応じて処理を分岐
@@ -575,7 +704,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
     const typeIcon = getMessageTypeIcon(parsedType);
     const typeColorClass = getMessageTypeColorClassLocal(parsedType);
     const initials = getInitials(message.from);
-    const formattedTime = safeFormatDate(message.timestamp);
+    const formattedTime = safeFormatDate(message.timestamp, showAbsoluteTime);
 
     // メッセージ表示用テキストを生成（タイプ別ロジック）
     const { summary: messageSummary, detail: messageDetail } = getMessageDisplayText(message);
@@ -584,12 +713,19 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
     // メッセージID（ブックマーク用）
     const messageId = `${message.timestamp}-${message.from}`;
 
+    // メタデータの抽出
+    const metadata = isUnifiedTimelineEntry(message) && message.source === 'session'
+      ? {
+          sessionId: message.details?.taskId ? undefined : (message as any).sessionId,
+          taskId: message.details?.taskId,
+          taskSubject: message.details?.taskSubject,
+          model: (message as any).model,
+        }
+      : undefined;
+
     const handleClick = useCallback(() => {
       onClick?.(message);
     }, [message, onClick]);
-
-    // ブックマーク機能はBookmarkButton内で完結しているため、
-    // handleBookmarkClickは不要（内部でlocalStorage管理）
 
     return (
       <div
@@ -647,7 +783,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
 
         {/* メッセージコンテンツ */}
         <div className="flex-1 min-w-0">
-          {/* ヘッダー（送信者→受信者 + 時刻） */}
+          {/* ヘッダー（送信者→受信者 + タイプ + 時刻） */}
           <div className="flex items-center gap-2 mb-1">
             {/* 送信者→受信者の表示 */}
             <span className={clsx('text-sm font-medium', colors.text)}>
@@ -662,7 +798,10 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
               </>
             )}
             <span className="text-xs text-slate-500 dark:text-slate-400">{typeIcon}</span>
-            <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto">
+            <span
+              className="text-xs text-slate-400 dark:text-slate-500 ml-auto cursor-help"
+              title={showAbsoluteTime ? formatFullDate(message.timestamp) : undefined}
+            >
               {formattedTime}
             </span>
           </div>
@@ -707,6 +846,11 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
               />
             )}
           </div>
+
+          {/* メタデータ表示 */}
+          {showMetadata && metadata && (
+            <MetadataDisplay metadata={metadata} />
+          )}
         </div>
       </div>
     );
