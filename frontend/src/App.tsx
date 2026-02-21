@@ -15,6 +15,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorDisplay } from '@/components/common/ErrorDisplay';
 import { PollingIntervalSelector } from '@/components/common/PollingIntervalSelector';
 import { ChatTimelinePanel } from '@/components/chat';
+import { FileChangesPanel } from '@/components/file/FileChangesPanel';
 import { useTeams, useTeam } from '@/hooks/useTeams';
 import { useTasks } from '@/hooks/useTasks';
 import { useDashboardStore } from '@/stores/dashboardStore';
@@ -24,6 +25,7 @@ import {
   ListTodo,
   Search,
   X,
+  FolderOpen,
 } from 'lucide-react';
 
 /**
@@ -33,6 +35,7 @@ const VIEWS = [
   { id: 'overview' as const, label: '概要', icon: LayoutDashboard },
   { id: 'timeline' as const, label: 'タイムライン', icon: MessageSquare },
   { id: 'tasks' as const, label: 'タスク', icon: ListTodo },
+  { id: 'files' as const, label: 'ファイル', icon: FolderOpen },
 ];
 
 function App() {
@@ -496,6 +499,49 @@ function App() {
                 </div>
               </div>
               </div>
+            </div>
+          )}
+
+          {/* Files View - File Changes Panel */}
+          {currentView === 'files' && (
+            <div key="files" role="tabpanel" aria-labelledby="tab-files" className="animate-in fade-in slide-in-from-bottom-2 duration-300 h-[calc(100vh-200px)]">
+              {/* チームセレクター */}
+              <div className="mb-4">
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">チームを選択:</label>
+                  <select
+                    value={selectedTeam || ''}
+                    onChange={(e) => setSelectedTeam(e.target.value || null)}
+                    className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- チームを選択 --</option>
+                    {teams.map((team) => (
+                      <option key={team.name} value={team.name}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedTeam && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTeam(null)}
+                      className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      クリア
+                    </button>
+                  )}
+                </div>
+              </div>
+              {selectedTeam ? (
+                <FileChangesPanel teamName={selectedTeam} />
+              ) : (
+                <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 h-[600px] flex items-center justify-center">
+                  <div className="text-center text-gray-500 dark:text-gray-400">
+                    <FolderOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>ファイル変更を表示するチームを選択してください</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

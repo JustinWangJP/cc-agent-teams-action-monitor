@@ -248,9 +248,11 @@ export interface UnifiedTimelineEntry {
   /** コンテンツ本文 */
   content: string;
   /** ParsedMessage 互換のための text プロパティ（content と同じ値） */
-  text: string;
-  /** 送信者 */
-  from: string;
+  text?: string;
+  /** 送信者（APIレスポンスでは from_ フィールド） */
+  from_?: string;
+  /** 送信者（変換後のフィールド） */
+  from?: string;
   /** 受信者（省略可能） */
   to?: string;
   /** タイムスタンプ（ISO 8601形式） */

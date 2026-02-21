@@ -9,7 +9,7 @@
 /**
  * エージェントの状態。
  */
-export type AgentStatusType = 'idle' | 'active' | 'working' | 'completed' | 'error';
+export type AgentStatusType = 'idle' | 'active' | 'working' | 'waiting' | 'completed' | 'error';
 
 /**
  * 拡張エージェント状態。
@@ -93,6 +93,13 @@ export const AGENT_STATUS_CONFIG: Record<AgentStatusType, AgentStatusConfig> = {
     bgClass: 'bg-blue-50 dark:bg-blue-900/20',
     textClass: 'text-blue-800 dark:text-blue-300',
     borderClass: 'border-blue-300 dark:border-blue-700',
+  },
+  waiting: {
+    icon: '⏳',
+    label: '待機中',
+    bgClass: 'bg-purple-50 dark:bg-purple-900/20',
+    textClass: 'text-purple-800 dark:text-purple-300',
+    borderClass: 'border-purple-300 dark:border-purple-700',
   },
   completed: {
     icon: '✅',

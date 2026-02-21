@@ -20,7 +20,7 @@ import type { Task } from '@/types/task';
 /**
  * ビューの種類。
  */
-export type ViewType = 'overview' | 'timeline' | 'tasks';
+export type ViewType = 'overview' | 'timeline' | 'tasks' | 'files';
 
 /**
  * ソート順の種類。
