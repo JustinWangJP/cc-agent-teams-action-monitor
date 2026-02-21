@@ -1,101 +1,156 @@
 ---
 name: teamworks
-description: "Agent Teamsを使った実装に入る前に、必ずこれを実行してください。実装を始める前に、必要なteammateを含む一つのチームをどのような体制を構成するかを深く検討してください。"
+description: "Agent Teamsを用いたチーム体制を設計・提案するスキル。実装フェーズ開始前に呼び出し、必要なSection（Product Design / Product Build）・メンバー構成をユーザーへ提示し承認を取得する。"
+disable-model-invocation: true
 ---
 
-# Agent Teamsを用いたチーム体制の構成定義
+# Agent Teams チーム体制構成
 
-## Overview
+## 目標
 
-Agent Teamsを立ち上げるためには、現在カレントプロジェクトの内容を十分に分析して理解し、与えられたタスクを基にプロダクトオーナーの観点から目標を完遂するためにどのチーム（複数チーム可）に依頼すれば、**高品質**、**最適コスト**、**ユーザー満足度最高** プロダクトのビルドできるかよく考えてください。
+選定する体制は常に以下の3軸を満たすこと:
 
-依頼予定チーム（複数チーム可）のLeaderを最低で１名採用し、アサイン予定の具体タスクとタスク量を基にどのようなロールのチームメンバーが必要となるか、各ロールのチームメンバーは何名が必要となるかよく考えてからAgent Teamsを立ち上げてください。
+- **高品質** — 欠陥・手戻りを最小化する実装品質
+- **最適コスト** — 不要なメンバー・工数を排除（YAGNI）
+- **ユーザー満足度最高** — Product Design SectionのUATで品質検証
 
-<HARD-GATE>
-チーム構成を提示し、ユーザーに承認されるまでは、実装スキルを駆使したり、コードを書いたり、プロジェクトのスキャフォールディングを行ったり、実装作業を行ったりしないでください。これは、見た目のシンプルさに関わらず、すべてのプロジェクトに当てはまります。
-</HARD-GATE>
+---
 
-## アンチパターン：「これは単純すぎるので適当にチーム構成した」
+## ⚠️ HARD-GATE（必須制約）
 
-すべてのプロジェクトはこのプロセスを経ます。ToDoリスト、単機能ユーティリティ実装、設定変更など、どれもそうです。「シンプルな」プロジェクトでは、**高品質**、**最適コスト**、**ユーザー満足度最高** プロダクトビルドの目標を考えていないことや、チームへの依頼タスクが不明確、各依頼チームではチームLeaderを含めない体制、各チームにアサインしたチームメンバーのロール不適切や保有したスキルが不適切などが最も無駄な作業を生み出します。Agent Teamsを用いたチーム体制は短くても構いません（本当にシンプルなプロジェクトなら数文程度）。しかし、必ず提示し、承認を得る必要があります。
+**チーム体制をユーザーへ提示し、明示的な承認を得るまで、以下を一切実行してはならない:**
 
-## チーム紹介
+- コードの記述・編集
+- ファイルの作成・変更
+- スキャフォールディング
+- その他すべての実装作業
 
-YOU MUST 割り当てられたタスクを完了するには、1 つまたは複数のチームを選択する必要です。
+**プロジェクトの見た目の複雑さに関わらず、すべてのケースに適用される。**
 
-1. **Product Design Section** 
-   - チーム役割と目標：**ユーザー満足度最高**のプロダクトを設計し、システムの運用手法を含めてデザインする。開発チームに依頼した開発の設計物に対してUATを行い、開発したプロダクトのフィードバックを開発チームへ連携する。Product Ownerはこのチームに所属する。
-   - Section Leader：Product Owner
+---
 
-2. **Product Build Section** 
-　　— チーム役割と目標：与えられたビジネス要件、システム要件に基づき、プロダクト実装を行う重要の役割している。実装したプロダクトは自チーム内に評価し、自チーム内で完成を認めたら、Product Design SectionへUATの受け入れを行う。また、Product Design SectionがUATを実施する際に、必要のメンバーで体制を整え、Product Design Sectionからの指摘事項を真摯に受け取り、全力で完成するように対応する。このチームの目標は**高品質**、**最適コスト**のプロダクトを創造する。
-   - Section Leader：Develop Leader
+## 実行ワークフロー
+
+1. **分析** — プロジェクトのコードベース・要件・タスクを把握する
+2. **Section選定** — 後述の「利用可能なSection」を参照し、必要なSectionを選択する（1つ以上、複数可）
+3. **メンバー設計** — 選定した各SectionのSection Leaderを必ずアサインし、タスク量・難易度に応じてメンバーの役割・人数を決定する
+4. **体制提示** — 以下のフォーマットでユーザーへ提示する
+5. **承認取得** → 承認後に実装フェーズへ移行
+
+### 提示フォーマット
+
+```
+## 提案チーム体制
+
+### 選定Section
+- **[Section名]**: [選定理由]
+
+### メンバー構成
+| ロール | 人数 | 担当タスク |
+|--------|------|-----------|
+| [ロール名] | [N]名 | [タスク概要] |
+
+### コミュニケーション経路
+[Section間・メンバー間の報告・連絡の流れ]
+
+### 体制根拠
+[この体制を選んだ理由・考え方]
+```
+
+---
+
+## アンチパターン
+
+> **「シンプルだから体制提示を省略する」は厳禁。**
+
+手戻りを生む典型的な失敗例:
+
+- Section LeaderなしでSectionを構成する
+- 目標3軸（品質・コスト・満足度）を考慮しない
+- Sectionへの依頼タスクが不明確
+- 不要なメンバーを追加する（YAGNI違反）
+- 体制承認なしに実装を開始する
+
+---
+
+## 利用可能なSection
+
+各Sectionには必ず **Section Leaderを1名** アサインすること。
+
+### 1. Product Design Section
+
+| 項目 | 内容 |
+|------|------|
+| **Section Leader** | Product Owner |
+| **役割・目標** | ユーザー満足度最高のプロダクト設計・UAT実施・フィードバック連携 |
+| **選定基準** | UI/UX設計・E2Eテスト・受入テストが必要なプロジェクト |
+
+### 2. Product Build Section
+
+| 項目 | 内容 |
+|------|------|
+| **Section Leader** | Develop Leader |
+| **役割・目標** | ビジネス要件・システム要件に基づく高品質・最適コストの実装。Section内テスト完了後、Product Design SectionへUATを依頼する |
+| **選定基準** | フロントエンド・バックエンド・アーキテクチャ設計を伴うプロジェクト |
+
+---
 
 ## メンバープロフィール
 
-各チームの格メンバープロフィールは以下になる。役割、コミニュケーションルール、保有しているskills、mcp server、toolsなどを定義している。
+### Product Design Section
 
-### **Product Design Section** 
-1. Product Owner（１名在籍）
-   - 役割：Product Design Sectionの全体リードです。Product Design Sectionチームメンバーへ具体の指示を下さる。チーム役割と目標を念頭に常に考える。わからない内容があったら、ユーザーへ問い合わせする。
-   - コミュニケーションルール：もしProduct Build Sectionは協力チームとして存在する場合に、`Develop Leader`のみと会話です。Product Build Sectionのチームメンバーへ直接の指示を行うのは厳禁です。
-2. E2E Member（3名在籍）
-   - 役割：Product OwnerからアサインされたE2Eテストタスクを受け取り、タスクを高品質的・高効率的に推進する。
-   - コミュニケーションルール：`Product Owner`のみと会話し、報告する。他のチームメンバーへ直接の指示を行うのは厳禁です。
-   - mcpServers: 
-      - zai-mcp-server
-      - chrome-devtools
+#### Product Owner（1名固定）
 
-### **Product Build Section** 
-1. Develop Leader（１名在籍）
-   - 役割：Product Build Sectionの全体リードです。Product Build Sectionチームメンバーへ具体の指示を下さる。チーム役割と目標を念頭に常に考える。Product Ownerからの指摘事項を真摯に受け取り、全力で完成するように対応する。チームメンバーからの開発課題などよく理解し、適切の意見をチームメンバーへフィードバックする。わからない内容がありましたら、mcp serverを介して検索し、よくまとめた内容をチームメンバーへ連携する。
-   - コミュニケーションルール：もしProduct Design Sectionは協力チームとして存在する場合に、`Product Owner`のみと会話です。Product Design Sectionのチームメンバーへ直接の指示を行うのは厳禁です。
+- **役割:** Section全体リード。メンバーへの具体的指示・不明点のユーザーへの問い合わせを担う
+- **コミュニケーション:** Product Build Sectionとの連携は `Develop Leader` のみと行う。Build Sectionメンバーへの直接指示は禁止
 
-2. Frontend Developer（3名在籍）
-   - 役割：UI/UX画面デザインや、React、tailwind等フレームワークに精通する開発者です。Develop Leaderからアサインされたフロントエンド開発タスクを受け取り、タスクを高品質的・高効率的に開発する。複数名開発メンバーが存在する場合に、同一ファイアルに対して複数名開発者の共同開発が厳禁です。
-   - コミュニケーションルール：`Develop Leader`のみと会話し、報告する。他のチームメンバーへ直接の指示を行うのは厳禁です。他のチームメンバーへ伝達事項ありましたら、必ず`Develop Leader`を介して連携する。
-   - skills:
-      - tailwind-design-system
-      - ui-ux-pro-max
-      - vercel-react-best-practices
-      - error-handling-patterns
-      - chrome-devtools
-   - mcpServers:
-      - perplexity
-      - context7
-      - github
-      - zai-mcp-server
-      - chrome-devtools
+#### E2E Member（上限3名）
 
-3. Backend Developer（3名在籍）
-   - 役割：Python、Java、データベースデザインなどバックエンド開発スキルを持つスペシャリストです。Develop Leaderからアサインされたバックエンド開発タスクを受け取り、タスクを高品質的・高効率的に開発する。複数名開発メンバーが存在する場合に、同一ファイアルに対して複数名開発者の共同開発が厳禁です。
-   - コミュニケーションルール：`Develop Leader`のみと会話し、報告する。他のチームメンバーへ直接の指示を行うのは厳禁です。他のチームメンバーへ伝達事項ありましたら、必ず`Develop Leader`を介して連携する。
-   - skills:
-      - fastapi-templates
-      - microsoft-agent-framework
-      - error-handling-patterns
-   - mcpServers:
-      - perplexity
-      - context7  
+- **役割:** Product OwnerからアサインされたE2Eテストタスクを高品質・高効率で実行する
+- **コミュニケーション:** `Product Owner` のみへ報告。他メンバーへの直接指示は禁止
+- **MCP Servers:** `zai-mcp-server`, `chrome-devtools`
 
-4. System Architect（1名在籍）
-   - 役割：システムアーキテクチャデザインに精通するアーキテクトです。Develop Leaderからアサインされたタスクを受け取り、タスクを高品質的・高効率的に開発する。具体のコード開発を行いませんが、システムデザインを専門し、適切なシステム設計をチームへ共有する。活躍時に必ず`architect`roleへ切り替えてください。
-   - コミュニケーションルール：`Develop Leader`のみと会話し、報告する。他のチームメンバーへ直接の指示を行うのは厳禁です。他のチームメンバーへ伝達事項ありましたら、必ず`Develop Leader`を介して連携する。
-   - skills:
-      - fastapi-templates
-      - microsoft-agent-framework
-      - tailwind-design-system
-      - ui-ux-pro-max
-      - vercel-react-best-practices
-      - error-handling-patterns
-   - mcpServers:
-      - perplexity
-      - context7  
+---
+
+### Product Build Section
+
+#### Develop Leader（1名固定）
+
+- **役割:** Section全体リード。メンバーへの具体的指示・Product Ownerからの指摘対応・メンバー課題へのフィードバックを担う。不明点はMCP Serverを介してWeb調査し、まとめた内容をメンバーへ共有する
+- **コミュニケーション:** Product Design Sectionとの連携は `Product Owner` のみと行う。Design Sectionメンバーへの直接指示は禁止
+
+#### Frontend Developer（上限3名）
+
+- **役割:** UI/UX・React・Tailwindなどフロントエンド実装を担う
+- **制約:** 同一ファイルへの複数名同時編集は禁止
+- **コミュニケーション:** `Develop Leader` のみへ報告。他メンバーへの連絡は必ず `Develop Leader` を経由する
+- **Skills:** `tailwind-design-system`, `ui-ux-pro-max`, `vercel-react-best-practices`, `error-handling-patterns`, `chrome-devtools`
+- **MCP Servers:** `perplexity`, `context7`, `github`, `zai-mcp-server`, `chrome-devtools`
+
+#### Backend Developer（上限3名）
+
+- **役割:** Python・Java・データベース設計などバックエンド実装を担う
+- **制約:** 同一ファイルへの複数名同時編集は禁止
+- **コミュニケーション:** `Develop Leader` のみへ報告。他メンバーへの連絡は必ず `Develop Leader` を経由する
+- **Skills:** `fastapi-templates`, `microsoft-agent-framework`, `error-handling-patterns`
+- **MCP Servers:** `perplexity`, `context7`
+
+#### System Architect（1名固定）
+
+- **役割:** システムアーキテクチャ設計専任。コード実装は行わず、適切な設計をDevelop Leaderへ提案・共有する
+- **制約:** 活動時は必ず `architect` ロールへ切り替えること
+- **コミュニケーション:** `Develop Leader` のみへ報告。他メンバーへの連絡は必ず `Develop Leader` を経由する
+- **Skills:** `fastapi-templates`, `microsoft-agent-framework`, `tailwind-design-system`, `ui-ux-pro-max`, `vercel-react-best-practices`, `error-handling-patterns`
+- **MCP Servers:** `perplexity`, `context7`
+
+---
 
 ## Key Principles
 
-- **体制具体化** - どのチーム、どのメンバーが必要となるか、各要員がrole、skills、mcp server、toolsを利用するか、明確する
-- **体制理由説明** - Agent Teamの体制はどういった考えの元に体制を組んでいたか理由を説明する。
-- **YAGNIを徹底** - 不要なチームまたはメンバーを排除する
-- **各チームの１名リードルール** - 選定されたチームは必ず**チーム紹介**の**Section Leader**を体制にアサインする。
-- **コミュニケーションルール厳守** - チーム間のコミュニケーションは必ず各チームのリード間で行う。チームメンバーへのタスク指示は必ずまた、コミュニケーションネットワークを作成してください。
+| 原則 | 内容 |
+|------|------|
+| **体制具体化** | どのSection・メンバー・ロール・スキル・MCPサーバーを使うか明確にする |
+| **体制理由説明** | 体制構成の根拠を必ず説明する |
+| **YAGNI徹底** | 不要なSection・メンバーを追加しない |
+| **Leaderルール** | 選定した各SectionにSection Leaderを必ずアサインする |
+| **コミュニケーション厳守** | Section間通信はリード同士のみ。メンバーの直接横断通信は禁止 |
