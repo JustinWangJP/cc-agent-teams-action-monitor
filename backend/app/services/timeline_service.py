@@ -267,7 +267,6 @@ class TimelineService:
                 "shutdown_response": "#22c55e",
                 "plan_approval_request": "#8b5cf6",
                 "plan_approval_response": "#22c55e",
-                "file_change": "#0891b2",
                 "error": "#dc2626",
             }
             color = color_map.get(parsed_type)
@@ -318,8 +317,11 @@ class TimelineService:
             "user": "user_message",
             "assistant": "assistant_message",
             "thinking": "thinking",
-            "file-history-snapshot": "file_change",
         }
+
+        # file-history-snapshot は UAT 要件によりスキップ
+        if entry_type == "file-history-snapshot":
+            return None
 
         parsed_type = "unknown" if entry_type is None else type_mapping.get(entry_type, "unknown")
 
@@ -328,14 +330,16 @@ class TimelineService:
         # assistant の場合はモデル名を含めて「AI Assistant (model)」形式にする
         message = entry.get("message", {})
         role = message.get("role", entry.get("role", "assistant"))
-        if role == "assistant":
+
+        # thinking と file-history-snapshot は assistant の model チェックをスキップ
+        if role == "assistant" and entry_type not in ("thinking", "file-history-snapshot"):
             model = message.get("model")
             # モデルが特定できない場合はエントリを除外
             if not model or model == "unknown":
                 return None
             from_ = f"AI Assistant ({model})"
         else:
-            from_ = role
+            from_ = role if role != "assistant" else "AI Assistant"
 
         # タイムスタンプ
         timestamp = entry.get("timestamp")
@@ -478,7 +482,6 @@ class TimelineService:
             "assistant_message": "#8b5cf6",
             "thinking": "#9ca3af",
             "tool_use": "#06b6d4",
-            "file_change": "#0891b2",
         }
         color = color_map.get(parsed_type)
 

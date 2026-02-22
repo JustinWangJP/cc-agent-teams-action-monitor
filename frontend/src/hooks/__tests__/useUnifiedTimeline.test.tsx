@@ -64,21 +64,13 @@ const mockEntries: UnifiedTimelineEntry[] = [
     },
   },
   {
-    id: 'session-2026-02-21T10:02:00Z-file_change',
-    content: 'ファイル変更：src/components/Test.tsx',
-    text: 'ファイル変更：src/components/Test.tsx',
-    from: 'assistant',
+    id: 'session-2026-02-21T10:02:00Z-user_message',
+    content: 'ユーザーメッセージ',
+    text: 'ユーザーメッセージ',
+    from: 'user',
     timestamp: '2026-02-21T10:02:00+00:00',
     source: 'session',
-    parsedType: 'file_change',
-    details: {
-      files: [
-        {
-          path: 'src/components/Test.tsx',
-          operation: 'created',
-        },
-      ],
-    },
+    parsedType: 'user_message',
   },
 ];
 

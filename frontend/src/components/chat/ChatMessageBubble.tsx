@@ -78,16 +78,6 @@ const getMessageDisplayText = (message: TimelineMessage): { summary: string; det
             summary: '思考中...',
             detail: details?.thinking || content,
           };
-        case 'tool_use':
-          return {
-            summary: `ツール使用: ${details?.toolName || '不明'}`,
-            detail: content,
-          };
-        case 'file_change':
-          return {
-            summary: `${details?.files?.length || 0}件のファイル変更`,
-            detail: content,
-          };
         case 'user_message':
           return {
             summary: content.slice(0, 50) + (content.length > 50 ? '...' : ''),
@@ -228,6 +218,35 @@ const getMessageDisplayText = (message: TimelineMessage): { summary: string; det
 };
 
 /**
+ * User/AIメッセージ用の色設定を取得。
+ *
+ * session由来のuser_message/assistant_message用のスタイルを返す。
+ */
+const getUserAIColor = (
+  parsedType: string | undefined
+): { bg: string; text: string; border: string; icon: string; displayName: string } | null => {
+  if (parsedType === 'user_message') {
+    return {
+      bg: 'bg-blue-100 dark:bg-blue-900/30',
+      text: 'text-blue-800 dark:text-blue-300',
+      border: 'border-blue-200 dark:border-blue-800',
+      icon: '👤',
+      displayName: 'User',
+    };
+  }
+  if (parsedType === 'assistant_message') {
+    return {
+      bg: 'bg-purple-100 dark:bg-purple-900/30',
+      text: 'text-purple-800 dark:text-purple-300',
+      border: 'border-purple-200 dark:border-purple-800',
+      icon: '🤖',
+      displayName: 'AI Assistant',
+    };
+  }
+  return null;
+};
+
+/**
  * エージェント名から一意の色を生成。
  */
 const getAgentColor = (agentName: string | undefined): { bg: string; text: string; border: string } => {
@@ -268,6 +287,7 @@ const getAgentColor = (agentName: string | undefined): { bg: string; text: strin
 
 /**
  * エージェント名の頭文字を取得。
+ * User/AIメッセージの場合はアイコン絵文字を返す。
  */
 const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
@@ -428,6 +448,13 @@ const MarkdownRenderer = memo<MarkdownRendererProps>(({ content, className }) =>
         '[&>hr]:border-slate-300 [&>hr]:my-2',
         // 段落
         '[&>p]:my-1',
+        // テーブル（GitHubスタイル）
+        '[&>table]:w-full [&>table]:border-collapse [&>table]:my-2',
+        '[&>table>thead>tr]:border-b [&>table>thead>tr]:border-slate-300 [&>table>thead>tr]:dark:border-slate-600',
+        '[&>table>thead>tr>th]:text-left [&>table>thead>tr>th]:p-2 [&>table>thead>tr>th]:bg-slate-100 [&>table>thead>tr>th]:dark:bg-slate-800 [&>table>thead>tr>th]:font-semibold',
+        '[&>table>tbody>tr]:border-b [&>table>tbody>tr]:border-slate-200 [&>table>tbody>tr]:dark:border-slate-700',
+        '[&>table>tbody>tr>td]:p-2 [&>table>tbody>tr>td]:align-top',
+        '[&>table>tbody>tr:nth-child(even)]:bg-slate-50 [&>table>tbody>tr:nth-child(even)]:dark:bg-slate-800/50',
         className
       )}
     >
@@ -459,12 +486,9 @@ const SessionDetails = memo<SessionDetailsProps>(({ details, parsedType: _parsed
   // 折りたたみ可能な詳細を持つタイプ
   const hasExpandableContent =
     details.thinking ||
-    (details.files && details.files.length > 0) ||
-    details.toolName;
+    (details.files && details.files.length > 0);
 
   if (!hasExpandableContent) return null;
-
-  const hasToolName = !!details.toolName;
 
   return (
     <div className="mt-2 space-y-2 text-sm">
@@ -495,9 +519,6 @@ const SessionDetails = memo<SessionDetailsProps>(({ details, parsedType: _parsed
           ))}
         </div>
       )}
-
-      {/* ツール使用 - 拡張版 (一時的に無効化) */}
-      {hasToolName && <div>Tool: {String(details.toolName)}</div>}
     </div>
   );
 });
@@ -687,18 +708,28 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
     showAbsoluteTime = false,
     showMetadata = false,
   }) => {
+    // データソース判定: sessionは左側、inboxは右側
+    const isSession = isUnifiedTimelineEntry(message) && message.source === 'session';
+    const layoutClass = isSession ? 'flex-row' : 'flex-row-reverse';
+
     // fromフィールドがundefinedの場合の安全対策
     const safeFrom = message.from || 'Unknown';
-    const colors = getAgentColor(safeFrom);
 
     // UnifiedTimelineEntry か ParsedMessage かに応じて処理を分岐
     const parsedType = isUnifiedTimelineEntry(message)
       ? message.parsedType
       : message.parsedType;
 
+    // User/AIメッセージ用の色設定を取得
+    const userAIColor = getUserAIColor(parsedType);
+    const colors = userAIColor || getAgentColor(safeFrom);
+
     const typeIcon = getMessageTypeIcon(parsedType);
     const typeColorClass = getMessageTypeColorClassLocal(parsedType);
-    const initials = getInitials(safeFrom);
+    // User/AIメッセージの場合はアイコン絵文字、それ以外は頭文字
+    const initials = userAIColor?.icon || getInitials(safeFrom);
+    // User/AIメッセージの場合は displayName、それ以外は from
+    const displayName = userAIColor?.displayName || safeFrom;
     const formattedTime = safeFormatDate(message.timestamp);
 
     // メッセージ表示用テキストを生成（タイプ別ロジック）
@@ -729,7 +760,8 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
           'hover:bg-slate-50 dark:hover:bg-slate-800/50',
           isSelected && 'bg-blue-50 dark:bg-blue-900/20',
           isHighlighted && 'bg-yellow-50 dark:bg-yellow-900/20 ring-2 ring-yellow-400 dark:ring-yellow-600',
-          'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-400'
+          'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-400',
+          layoutClass
         )}
         onClick={handleClick}
         role="button"
@@ -740,12 +772,12 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
             handleClick();
           }
         }}
-        aria-label={`${safeFrom}からのメッセージ: ${messageText.slice(0, 50)}${messageText.length > 50 ? '...' : ''}`}
+        aria-label={`${displayName}からのメッセージ: ${messageText.slice(0, 50)}${messageText.length > 50 ? '...' : ''}`}
         aria-pressed={isSelected}
       >
         {/* ブックマークボタン（オーバーレイ） */}
         {showBookmark && (
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <div className={clsx('absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity z-10', isSession ? 'right-2' : 'left-2')}>
             <BookmarkButton
               messageId={messageId}
               size="sm"
@@ -763,7 +795,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
               colors.border,
               'border-2'
             )}
-            title={safeFrom}
+            title={displayName}
           >
             {initials}
           </div>
@@ -777,12 +809,12 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
         </div>
 
         {/* メッセージコンテンツ */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 max-w-[80%]">
           {/* ヘッダー（送信者→受信者 + タイプ + 時刻） */}
-          <div className="flex items-center gap-2 mb-1">
+          <div className={clsx('flex items-center gap-2 mb-1', isSession ? 'justify-start' : 'justify-end')}>
             {/* 送信者→受信者の表示 */}
             <span className={clsx('text-sm font-medium', colors.text)}>
-              {searchQuery ? highlightText(safeFrom, searchQuery) : safeFrom}
+              {searchQuery ? highlightText(displayName, searchQuery) : displayName}
             </span>
             {message.to && message.to !== 'all' && (
               <>
@@ -794,7 +826,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
             )}
             <span className="text-xs text-slate-500 dark:text-slate-400">{typeIcon}</span>
             <span
-              className="text-xs text-slate-400 dark:text-slate-500 ml-auto cursor-help"
+              className="text-xs text-slate-400 dark:text-slate-500 cursor-help"
               title={showAbsoluteTime ? formatFullDate(message.timestamp) : undefined}
             >
               {formattedTime}
@@ -804,7 +836,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
           {/* メッセージバブル */}
           <div
             className={clsx(
-              'inline-block max-w-full px-3 py-2 rounded-lg',
+              'inline-block px-3 py-2 rounded-lg',
               'border text-sm break-words',
               typeColorClass
             )}

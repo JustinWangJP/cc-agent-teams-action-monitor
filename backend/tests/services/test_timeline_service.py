@@ -196,8 +196,9 @@ class TestTimelineService:
         session_file.parent.mkdir(parents=True, exist_ok=True)
 
         # JSONL 形式で書き込み
+        # message オブジェクト付きの正しい形式
         entries = [
-            '{"type": "user", "content": "Hello", "timestamp": "2026-02-21T10:00:00Z"}',
+            '{"type": "user", "role": "user", "message": {"role": "user", "content": "Hello"}, "timestamp": "2026-02-21T10:00:00Z"}',
             '{"type": "thinking", "thinking": "Let me think", "timestamp": "2026-02-21T10:00:01Z"}',
             '{"type": "tool_use", "name": "read", "input": {"file": "test.py"}, "timestamp": "2026-02-21T10:00:02Z"}',
         ]
@@ -207,10 +208,10 @@ class TestTimelineService:
         service = TimelineService(claude_dir=tmp_path)
         result = await service.load_session_entries(team_name)
 
-        assert len(result) == 3
+        # tool_use はスキップされるため 2 件になる
+        assert len(result) == 2
         assert result[0]["parsed_type"] == "user_message"
         assert result[1]["parsed_type"] == "thinking"
-        assert result[2]["parsed_type"] == "tool_use"
 
     @pytest.mark.asyncio
     async def test_map_inbox_message_with_structured_data(self):
@@ -238,7 +239,8 @@ class TestTimelineService:
 
         entry = {
             "type": "user",
-            "content": "Hello",
+            "role": "user",
+            "message": {"role": "user", "content": "Hello"},
             "timestamp": "2026-02-21T10:00:00Z"
         }
 
@@ -271,7 +273,7 @@ class TestTimelineService:
 
     @pytest.mark.asyncio
     async def test_map_session_entry_tool_use(self):
-        """ツール使用エントリのマッピングをテストします."""
+        """ツール使用エントリはスキップされることをテストします."""
         service = TimelineService()
 
         entry = {
@@ -283,11 +285,8 @@ class TestTimelineService:
 
         result = service._map_session_entry(entry)
 
-        assert result is not None
-        assert result["parsed_type"] == "tool_use"
-        assert result["content"] == "ツール使用: read_file"
-        assert result["details"]["toolName"] == "read_file"
-        assert result["color"] == "#06b6d4"
+        # tool_use はスキップされる
+        assert result is None
 
     def test_parse_structured_message_valid(self):
         """有効な構造化メッセージのパースをテストします."""
@@ -395,6 +394,7 @@ class TestTimelineService:
         assert result["type"] == "plan_approval_response"
         assert result["summary"] == "プラン却下"
 
+    @pytest.mark.skip(reason="UAT 要件：file-history-snapshot はスキップされるため")
     @pytest.mark.asyncio
     async def test_map_session_entry_file_history_snapshot_single(self):
         """ファイル変更履歴（単一ファイル）のマッピングをテストします."""
@@ -402,6 +402,8 @@ class TestTimelineService:
 
         entry = {
             "type": "file-history-snapshot",
+            "role": "assistant",
+            "message": {"role": "assistant", "model": "claude-opus-4-6"},
             "fileChanges": {
                 "/path/to/file.py": {
                     "operation": "modified",
@@ -423,6 +425,7 @@ class TestTimelineService:
         assert result["details"]["files"][0]["operation"] == "modified"
         assert result["details"]["files"][0]["version"] == 5
 
+    @pytest.mark.skip(reason="UAT 要件：file-history-snapshot はスキップされるため")
     @pytest.mark.asyncio
     async def test_map_session_entry_file_history_snapshot_multiple(self):
         """ファイル変更履歴（複数ファイル）のマッピングをテストします."""
@@ -430,6 +433,8 @@ class TestTimelineService:
 
         entry = {
             "type": "file-history-snapshot",
+            "role": "assistant",
+            "message": {"role": "assistant", "model": "claude-opus-4-6"},
             "fileChanges": {
                 "/path/to/file1.py": {
                     "operation": "created",
@@ -464,6 +469,7 @@ class TestTimelineService:
         assert files[2]["path"] == "/path/to/file3.py"
         assert files[2]["operation"] == "deleted"
 
+    @pytest.mark.skip(reason="UAT 要件：file-history-snapshot はスキップされるため")
     @pytest.mark.asyncio
     async def test_map_session_entry_file_history_snapshot_empty(self):
         """空のファイル変更履歴のマッピングをテストします."""
@@ -471,6 +477,8 @@ class TestTimelineService:
 
         entry = {
             "type": "file-history-snapshot",
+            "role": "assistant",
+            "message": {"role": "assistant", "model": "claude-opus-4-6"},
             "fileChanges": {},
             "timestamp": "2026-02-21T10:00:00Z"
         }
@@ -512,9 +520,10 @@ class TestTimelineService:
         session_file.parent.mkdir(parents=True, exist_ok=True)
 
         # JSONL 形式で書き込み（file-history-snapshot を含む）
+        # message オブジェクト付きの正しい形式
         entries = [
-            '{"type": "user", "content": "Hello", "timestamp": "2026-02-21T10:00:00Z"}',
-            '{"type": "file-history-snapshot", "fileChanges": {"/path/to/file.py": {"operation": "modified", "version": 1}}, "timestamp": "2026-02-21T10:00:01Z"}',
+            '{"type": "user", "role": "user", "message": {"role": "user", "content": "Hello"}, "timestamp": "2026-02-21T10:00:00Z"}',
+            '{"type": "file-history-snapshot", "role": "assistant", "message": {"role": "assistant", "model": "claude-opus-4-6"}, "fileChanges": {"/path/to/file.py": {"operation": "modified", "version": 1}}, "timestamp": "2026-02-21T10:00:01Z"}',
             '{"type": "thinking", "thinking": "Let me think", "timestamp": "2026-02-21T10:00:02Z"}',
         ]
         session_file.write_text("\n".join(entries))
@@ -523,12 +532,12 @@ class TestTimelineService:
         service = TimelineService(claude_dir=tmp_path)
         result = await service.load_session_entries(team_name)
 
-        assert len(result) == 3
+        # file-history-snapshot はスキップされるため 2 件になる
+        assert len(result) == 2
         assert result[0]["parsed_type"] == "user_message"
-        assert result[1]["parsed_type"] == "file_change"
-        assert result[1]["content"] == "ファイル変更: /path/to/file.py"
-        assert result[2]["parsed_type"] == "thinking"
+        assert result[1]["parsed_type"] == "thinking"
 
+    @pytest.mark.skip(reason="UAT 要件：file_change タイプは削除されるため")
     @pytest.mark.asyncio
     async def test_map_inbox_message_file_change(self):
         """ファイル変更構造化メッセージのマッピングをテストします."""
@@ -615,10 +624,11 @@ class TestTimelineService:
         session_file = projects_dir / project_hash / f"{lead_session_id}.jsonl"
         session_file.parent.mkdir(parents=True, exist_ok=True)
 
+        # message オブジェクト付きの正しい形式
         entries = [
-            '{"type": "user", "content": "First", "timestamp": "2026-02-21T10:00:00Z"}',
-            '{"type": "user", "content": "Second", "timestamp": "2026-02-21T10:00:05Z"}',
-            '{"type": "user", "content": "Third", "timestamp": "2026-02-21T10:00:10Z"}',
+            '{"type": "user", "role": "user", "message": {"role": "user", "content": "First"}, "timestamp": "2026-02-21T10:00:00Z"}',
+            '{"type": "user", "role": "user", "message": {"role": "user", "content": "Second"}, "timestamp": "2026-02-21T10:00:05Z"}',
+            '{"type": "user", "role": "user", "message": {"role": "user", "content": "Third"}, "timestamp": "2026-02-21T10:00:10Z"}',
         ]
         session_file.write_text("\n".join(entries))
 

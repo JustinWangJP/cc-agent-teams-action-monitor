@@ -172,9 +172,7 @@ export type ExtendedParsedType =
   // session 由来（新規）
   | 'user_message'
   | 'assistant_message'
-  | 'thinking'
-  | 'tool_use'
-  | 'file_change';
+  | 'thinking';
 
 /**
  * ファイル変更情報。
@@ -186,38 +184,6 @@ export interface FileChangeInfo {
   operation: 'created' | 'modified' | 'deleted' | 'read';
   /** ファイルバージョン（省略可能） */
   version?: number;
-}
-
-/**
- * ファイル変更エントリ（監視パネル用）。
- *
- * セッションログから抽出したファイル変更情報。
- */
-export interface FileChangeEntry {
-  /** エントリID */
-  id: string;
-  /** ファイル変更情報 */
-  file: FileChangeInfo;
-  /** タイムスタンプ */
-  timestamp: string;
-  /** 関連エージェント（推定） */
-  agent?: string;
-  /** セッションID */
-  sessionId?: string;
-}
-
-/**
- * ファイル変更フィルター条件。
- */
-export interface FileChangeFilter {
-  /** 操作種別でフィルタ（空配列で全て） */
-  operations: FileChangeInfo['operation'][];
-  /** ディレクトリでフィルタ（空配列で全て） */
-  directories: string[];
-  /** 拡張子でフィルタ（空配列で全て、"."なしで指定） */
-  extensions: string[];
-  /** エージェントでフィルタ（空配列で全て） */
-  agents: string[];
 }
 
 /**
@@ -493,16 +459,6 @@ export const MESSAGE_TYPE_CONFIG: Record<ExtendedParsedType, MessageTypeConfig> 
     color: '#9ca3af',
     label: '思考',
   },
-  tool_use: {
-    icon: '🔧',
-    color: '#06b6d4',
-    label: 'ツール使用',
-  },
-  file_change: {
-    icon: '📁',
-    color: '#06b6d4',
-    label: 'ファイル変更',
-  },
 };
 
 /**
@@ -537,6 +493,7 @@ export function getMessageTypeColorClass(type: ExtendedParsedType): string {
     '#8b5cf6': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
     '#9ca3af': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
     '#06b6d4': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
+    '#0891b2': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
   };
   return colorMap[config.color] || colorMap['#6b7280'];
 }

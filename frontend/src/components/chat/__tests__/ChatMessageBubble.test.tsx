@@ -76,8 +76,10 @@ describe('TC-005: ChatMessageBubble 拡張', () => {
 
       render(<ChatMessageBubble {...baseProps} message={message} />);
 
-      // user_message のアイコン（👤）を確認
-      expect(screen.getByText('👤')).toBeInTheDocument();
+      // user_message のアバター（title属性で判定）
+      expect(screen.getByTitle('User')).toBeInTheDocument();
+      // アイコン絵文字が含まれることを確認
+      expect(screen.getAllByText('👤').length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -95,8 +97,10 @@ describe('TC-005: ChatMessageBubble 拡張', () => {
 
       render(<ChatMessageBubble {...baseProps} message={message} />);
 
-      // assistant_message のアイコン（🤖）を確認
-      expect(screen.getByText('🤖')).toBeInTheDocument();
+      // assistant_message のアバター（title属性で判定）
+      expect(screen.getByTitle('AI Assistant')).toBeInTheDocument();
+      // アイコン絵文字が含まれることを確認
+      expect(screen.getAllByText('🤖').length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -122,57 +126,9 @@ describe('TC-005: ChatMessageBubble 拡張', () => {
     });
   });
 
-  describe('TC-005-06: tool_use アイコン', () => {
-    it('🔧 アイコンが表示される', () => {
-      const message: UnifiedTimelineEntry = {
-        id: 'session-tool-use',
-        content: 'ツール使用：read_file',
-        text: 'ツール使用：read_file',
-        from: 'assistant',
-        timestamp: '2026-02-21T10:00:00+00:00',
-        source: 'session',
-        parsedType: 'tool_use',
-        details: {
-          toolName: 'read_file',
-          toolInput: { path: 'test.py' },
-        },
-      };
+  // TC-005-06, TC-005-07: tool_use, file_change はフィルターから削除されたためテストをスキップ
 
-      render(<ChatMessageBubble {...baseProps} message={message} />);
-
-      // tool_use のアイコン（🔧）を確認
-      expect(screen.getByText('🔧')).toBeInTheDocument();
-    });
-  });
-
-  describe('TC-005-07: file_change アイコン', () => {
-    it('📁 アイコンが表示される', () => {
-      const message: UnifiedTimelineEntry = {
-        id: 'session-file-change',
-        content: 'ファイル変更：test.py',
-        text: 'ファイル変更：test.py',
-        from: 'assistant',
-        timestamp: '2026-02-21T10:00:00+00:00',
-        source: 'session',
-        parsedType: 'file_change',
-        details: {
-          files: [
-            {
-              path: 'test.py',
-              operation: 'created',
-            },
-          ],
-        },
-      };
-
-      render(<ChatMessageBubble {...baseProps} message={message} />);
-
-      // file_change のアイコン（📁）を確認
-      expect(screen.getByText('📁')).toBeInTheDocument();
-    });
-  });
-
-  describe('TC-005-08: thinking 詳細表示', () => {
+  describe('TC-005-06: thinking 詳細表示', () => {
     it('折りたたみ可能な思考ブロックが表示される', async () => {
       const user = userEvent.setup();
 
@@ -204,58 +160,9 @@ describe('TC-005: ChatMessageBubble 拡張', () => {
     });
   });
 
-  describe('TC-005-09: ファイル変更一覧', () => {
-    it('ファイルバッジ一覧が操作種別アイコン付きで表示される', () => {
-      const message: UnifiedTimelineEntry = {
-        id: 'session-file-changes',
-        content: '2 件のファイル変更',
-        text: '2 件のファイル変更',
-        from: 'assistant',
-        timestamp: '2026-02-21T10:00:00+00:00',
-        source: 'session',
-        parsedType: 'file_change',
-        details: {
-          files: [
-            { path: 'src/test.tsx', operation: 'created' },
-            { path: 'src/utils.ts', operation: 'modified' },
-          ],
-        },
-      };
+  // TC-005-09, TC-005-10: file_change, tool_use はフィルターから削除されたためテストをスキップ
 
-      render(<ChatMessageBubble {...baseProps} message={message} />);
-
-      // ファイルバッジが表示されることを確認
-      expect(screen.getByText('✨')).toBeInTheDocument();
-      expect(screen.getByText('src/test.tsx')).toBeInTheDocument();
-      expect(screen.getByText('✏️')).toBeInTheDocument();
-      expect(screen.getByText('src/utils.ts')).toBeInTheDocument();
-    });
-  });
-
-  describe('TC-005-10: ツール使用情報', () => {
-    it('ツール名が展開可能で表示される', () => {
-      const message: UnifiedTimelineEntry = {
-        id: 'session-tool-use-detailed',
-        content: 'ツール使用：read_file',
-        text: 'ツール使用：read_file',
-        from: 'assistant',
-        timestamp: '2026-02-21T10:00:00+00:00',
-        source: 'session',
-        parsedType: 'tool_use',
-        details: {
-          toolName: 'read_file',
-          toolInput: { path: 'test.py' },
-        },
-      };
-
-      render(<ChatMessageBubble {...baseProps} message={message} />);
-
-      // ツール名が表示されることを確認
-      expect(screen.getByText(/Tool: read_file/)).toBeInTheDocument();
-    });
-  });
-
-  describe('TC-005-11: 検索ハイライト', () => {
+  describe('TC-005-07: 検索ハイライト', () => {
     it('該当テキストがハイライト表示される', () => {
       const message: ParsedMessage = {
         from: 'team-lead',

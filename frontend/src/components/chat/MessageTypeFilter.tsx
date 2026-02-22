@@ -39,8 +39,6 @@ export const DEFAULT_TYPE_OPTIONS: MessageTypeOption[] = [
   { value: 'user_message', label: 'ユーザーメッセージ', icon: '👤' },
   { value: 'assistant_message', label: 'AI応答', icon: '🤖' },
   { value: 'thinking', label: '思考', icon: '💭' },
-  { value: 'tool_use', label: 'ツール使用', icon: '🔧' },
-  { value: 'file_change', label: 'ファイル変更', icon: '📁' },
 ];
 
 /**

@@ -46,9 +46,10 @@ export function useTasks() {
  * @returns tasks - タスク詳細配列
  * @returns loading - ローディング状態
  * @returns error - エラーメッセージ（null 可能）
+ * @returns refetch - 手動再取得関数
  */
 export function useTeamTasks(teamName: string) {
-  const { data: tasks = [], isLoading, error } = useQuery({
+  const { data: tasks = [], isLoading, error, refetch } = useQuery({
     queryKey: ['tasks', 'team', teamName],
     queryFn: async () => {
       const response = await fetch(`/api/tasks/team/${teamName}`);
@@ -63,5 +64,6 @@ export function useTeamTasks(teamName: string) {
     tasks,
     loading: isLoading,
     error: error?.message || null,
+    refetch,
   };
 }

@@ -16,29 +16,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/timeline", tags=["timeline"])
 
 
-# ファイル変更関連のモデル
-class FileChangeInfo(BaseModel):
-    """ファイル変更情報."""
-    path: str
-    operation: str  # 'created' | 'modified' | 'deleted' | 'read'
-    version: Optional[int] = None
-
-
-class FileChangeEntry(BaseModel):
-    """ファイル変更エントリ."""
-    id: str
-    file: FileChangeInfo
-    timestamp: str
-    agent: Optional[str] = None
-    session_id: Optional[str] = None
-
-
-class FileChangesResponse(BaseModel):
-    """ファイル変更レスポンス."""
-    items: list[FileChangeEntry]
-    last_timestamp: str
-
-
 # リクエスト・レスポンスモデル
 class UnifiedTimelineEntry(BaseModel):
     """統合タイムラインエントリ."""
@@ -239,77 +216,3 @@ async def get_timeline_updates(
     )
 
 
-@router.get("/file-changes/{team_name}", response_model=FileChangesResponse)
-async def get_file_changes(
-    team_name: str,
-    limit: int = Query(200, ge=1, le=1000, description="最大取得件数"),
-    operations: Optional[str] = Query(None, description="カンマ区切りで操作種別指定（例: created,modified）")
-):
-    """ファイル変更履歴を取得します.
-
-    セッションログからファイル変更エントリを抽出して返します。
-
-    Args:
-        team_name: チーム名
-        limit: 最大取得件数（1-1000、デフォルト200）
-        operations: フィルタリングする操作種別（カンマ区切り）
-
-    Returns:
-        ファイル変更レスポンス
-
-    Raises:
-        HTTPException: チームが存在しない場合
-
-    """
-    service = _get_timeline_service()
-
-    # チーム存在チェック
-    if not service.team_exists(team_name):
-        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
-
-    # セッションエントリからファイル変更を抽出
-    session_entries = await service.load_session_entries(team_name)
-
-    # file_change タイプのエントリを抽出
-    file_changes = []
-    for entry in session_entries:
-        if entry.get("parsed_type") == "file_change":
-            details = entry.get("details", {})
-            files = details.get("files", [])
-            for file_info in files:
-                file_changes.append({
-                    "id": f"{entry.get('timestamp', '')}-{file_info.get('path', '')}",
-                    "file": {
-                        "path": file_info.get("path", ""),
-                        "operation": file_info.get("operation", "unknown"),
-                        "version": file_info.get("version")
-                    },
-                    "timestamp": entry.get("timestamp", ""),
-                    "agent": entry.get("from_"),
-                    "session_id": entry.get("session_id")
-                })
-
-    # 操作種別フィルタ
-    if operations:
-        op_filter = set(operations.split(","))
-        file_changes = [
-            fc for fc in file_changes
-            if fc["file"]["operation"] in op_filter
-        ]
-
-    # タイムスタンプでソート（降順）
-    file_changes.sort(
-        key=lambda x: x["timestamp"],
-        reverse=True
-    )
-
-    # 件数制限
-    file_changes = file_changes[:limit]
-
-    # 最終タイムスタンプを取得
-    last_timestamp = file_changes[0]["timestamp"] if file_changes else datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-
-    return FileChangesResponse(
-        items=file_changes,
-        last_timestamp=last_timestamp
-    )
