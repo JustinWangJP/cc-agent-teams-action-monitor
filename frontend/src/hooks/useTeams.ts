@@ -16,10 +16,10 @@ import { useDashboardStore } from '@/stores/dashboardStore';
 export function useTeams() {
   const teamsInterval = useDashboardStore((state) => state.teamsInterval);
 
-  const { data: teams = [], isLoading, error, refetch } = useQuery({
+  const { data: teams = [], isLoading, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['teams'],
     queryFn: async () => {
-      const response = await fetch('/api/teams');
+      const response = await fetch('/api/teams/');
       if (!response.ok) throw new Error('Failed to fetch teams');
       return response.json() as Promise<TeamSummary[]>;
     },
@@ -32,6 +32,7 @@ export function useTeams() {
     loading: isLoading,
     error: error?.message || null,
     refetch,
+    dataUpdatedAt,
   };
 }
 
@@ -47,7 +48,7 @@ export function useTeams() {
  * @returns error - エラーメッセージ（null 可能）
  */
 export function useTeam(teamName: string) {
-  const { data: team = null, isLoading, error } = useQuery({
+  const { data: team = null, isLoading, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['team', teamName],
     queryFn: async () => {
       const response = await fetch(`/api/teams/${teamName}`);
@@ -62,5 +63,7 @@ export function useTeam(teamName: string) {
     team,
     loading: isLoading,
     error: error?.message || null,
+    refetch,
+    dataUpdatedAt,
   };
 }

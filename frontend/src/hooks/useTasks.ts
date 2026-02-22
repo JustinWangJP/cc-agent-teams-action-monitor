@@ -16,10 +16,10 @@ import { useDashboardStore } from '@/stores/dashboardStore';
 export function useTasks() {
   const tasksInterval = useDashboardStore((state) => state.tasksInterval);
 
-  const { data: tasks = [], isLoading, error, refetch } = useQuery({
+  const { data: tasks = [], isLoading, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['tasks'],
     queryFn: async () => {
-      const response = await fetch('/api/tasks');
+      const response = await fetch('/api/tasks/');
       if (!response.ok) throw new Error('Failed to fetch tasks');
       return response.json() as Promise<TaskSummary[]>;
     },
@@ -32,6 +32,7 @@ export function useTasks() {
     loading: isLoading,
     error: error?.message || null,
     refetch,
+    dataUpdatedAt,
   };
 }
 
