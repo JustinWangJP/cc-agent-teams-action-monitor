@@ -149,8 +149,9 @@ disable-model-invocation: true
 
 | 原則 | 内容 |
 |------|------|
-| **体制具体化** | どのSection・メンバー・ロール・スキル・MCPサーバーを使うか明確にする |
+| **体制具体化** | どのSection・メンバー・ロールかを明確にする |
 | **体制理由説明** | 体制構成の根拠を必ず説明する |
 | **YAGNI徹底** | 不要なSection・メンバーを追加しない |
 | **Leaderルール** | 選定した各SectionにSection Leaderを必ずアサインする |
 | **コミュニケーション厳守** | Section間通信はリード同士のみ。メンバーの直接横断通信は禁止 |
+| **利用SkillsとMCP Serverの明示提示** |　体制内の各teammatesは利用する予定のSkillsとMCP Serversを明確に提示する。メンバープロフィールに定義した各メンバーが保持しているSkillsとMCP Servers以外に利用することが厳禁。 |
