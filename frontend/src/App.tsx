@@ -26,7 +26,9 @@ import {
   Search,
   X,
   FolderOpen,
+  RefreshCw,
 } from 'lucide-react';
+import { clsx } from 'clsx';
 
 /**
  * ビュー定義。
@@ -39,8 +41,8 @@ const VIEWS = [
 ];
 
 function App() {
-  const { teams, loading: teamsLoading, error: teamsError, refetch: refetchTeams } = useTeams();
-  const { tasks, loading: tasksLoading, error: tasksError, refetch: refetchTasks } = useTasks();
+  const { teams, loading: teamsLoading, error: teamsError, refetch: refetchTeams, dataUpdatedAt: teamsDataUpdatedAt } = useTeams();
+  const { tasks, loading: tasksLoading, error: tasksError, refetch: refetchTasks, dataUpdatedAt: tasksDataUpdatedAt } = useTasks();
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   // タスクビュー用のフィルター状態
@@ -54,7 +56,12 @@ function App() {
   const setTasksInterval = useDashboardStore((state) => state.setTasksInterval);
 
   // 選択されたチームの詳細を取得
-  const { team: selectedTeamDetail } = useTeam(selectedTeam || '');
+  const {
+    team: selectedTeamDetail,
+    loading: teamDetailLoading,
+    refetch: refetchTeamDetail,
+    dataUpdatedAt: teamDetailDataUpdatedAt,
+  } = useTeam(selectedTeam || '');
 
   // 個別のセレクターを使用して無限レンダリングを防ぐ
   const currentView = useDashboardStore((state) => state.currentView);
@@ -182,6 +189,11 @@ function App() {
                   <TeamDetailPanel
                     team={selectedTeamDetail}
                     onBack={() => setSelectedTeam(null)}
+                    dataUpdatedAt={teamDetailDataUpdatedAt}
+                    onRefresh={refetchTeamDetail}
+                    isLoading={teamDetailLoading}
+                    pollingInterval={teamsInterval}
+                    onPollingIntervalChange={setTeamsInterval}
                   />
                 </div>
               )}
@@ -196,8 +208,26 @@ function App() {
                       value={teamsInterval}
                       onChange={setTeamsInterval}
                       label=""
+                      lastUpdateTimestamp={teamsDataUpdatedAt}
                     />
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => refetchTeams()}
+                    disabled={teamsLoading}
+                    className={clsx(
+                      'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
+                      'text-slate-700 dark:text-slate-300',
+                      'bg-white dark:bg-slate-800',
+                      'border border-slate-300 dark:border-slate-700',
+                      'hover:bg-slate-50 dark:hover:bg-slate-700',
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                      teamsLoading && 'opacity-50 cursor-not-allowed'
+                    )}
+                  >
+                    <RefreshCw className={clsx('w-4 h-4', teamsLoading && 'animate-spin')} />
+                    更新
+                  </button>
                 </div>
                 {/* 検索ボックス (TC-006) */}
                 <div className="mb-4">
@@ -266,8 +296,26 @@ function App() {
                       value={tasksInterval}
                       onChange={setTasksInterval}
                       label=""
+                      lastUpdateTimestamp={tasksDataUpdatedAt}
                     />
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => refetchTasks()}
+                    disabled={tasksLoading}
+                    className={clsx(
+                      'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
+                      'text-slate-700 dark:text-slate-300',
+                      'bg-white dark:bg-slate-800',
+                      'border border-slate-300 dark:border-slate-700',
+                      'hover:bg-slate-50 dark:hover:bg-slate-700',
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                      tasksLoading && 'opacity-50 cursor-not-allowed'
+                    )}
+                  >
+                    <RefreshCw className={clsx('w-4 h-4', tasksLoading && 'animate-spin')} />
+                    更新
+                  </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Pending */}
@@ -363,8 +411,26 @@ function App() {
                       value={tasksInterval}
                       onChange={setTasksInterval}
                       label="更新間隔"
+                      lastUpdateTimestamp={tasksDataUpdatedAt}
                     />
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => refetchTasks()}
+                    disabled={tasksLoading}
+                    className={clsx(
+                      'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
+                      'text-slate-700 dark:text-slate-300',
+                      'bg-white dark:bg-slate-800',
+                      'border border-slate-300 dark:border-slate-700',
+                      'hover:bg-slate-50 dark:hover:bg-slate-700',
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                      tasksLoading && 'opacity-50 cursor-not-allowed'
+                    )}
+                  >
+                    <RefreshCw className={clsx('w-4 h-4', tasksLoading && 'animate-spin')} />
+                    更新
+                  </button>
                 </div>
 
                 {/* フィルターコントロール */}
