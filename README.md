@@ -44,7 +44,7 @@ Agent Teams Dashboard は、Claude Code の Agent Teams 機能をリアルタイ
 
 ### 主な特徴
 
-- **リアルタイム更新**: WebSocket による即座なデータ反映
+- **リアルタイム更新**: HTTP Polling による自動データ更新
 - **チーム監視**: アクティブなエージェントチームの一覧表示
 - **タスク管理**: ステータス別のタスク可視化
 - **アクティビティフィード**: エージェント間のメッセージ履歴
@@ -61,8 +61,7 @@ Agent Teams Dashboard は、Claude Code の Agent Teams 機能をリアルタイ
 | タスク一覧表示 | ステータス別（Pending/In Progress/Completed）タスク表示 |
 | タスク詳細表示 | 説明、所有者、依存関係の表示 |
 | アクティビティフィード | リアルタイムのエージェント活動履歴 |
-| WebSocket 接続状態表示 | 接続状態のリアルタイム表示 |
-| 自動再接続 | 切断時の自動再接続（指数バックオフ） |
+| 自動更新 | HTTP Polling によるデータ自動更新（間隔設定可） |
 
 ---
 
@@ -210,7 +209,7 @@ VITE v5.0.0  ready in 500 ms
 
 | セクション | 説明 | 更新タイミング |
 |-----------|------|---------------|
-| **ヘッダー** | タイトルと WebSocket 接続状態 | リアルタイム |
+| **ヘッダー** | タイトルと接続状態 | リアルタイム |
 | **Active Teams** | アクティブなチーム一覧 | チーム設定変更時 |
 | **Tasks Overview** | ステータス別タスク数 | タスク状態変更時 |
 | **Activity Feed** | エージェント活動履歴 | メッセージ/タスク更新時 |
@@ -219,7 +218,7 @@ VITE v5.0.0  ready in 500 ms
 
 | 表示 | 状態 | 説明 |
 |------|------|------|
-| ● 緑色 | Connected | WebSocket 正常接続 |
+| ● 緑色 | Connected | HTTP接続正常 |
 | ● 黄色 | Connecting | 再接続中 |
 | ● 赤色 | Disconnected | 接続切断 |
 
@@ -256,7 +255,7 @@ VITE v5.0.0  ready in 500 ms
 | 問題 | 原因 | 解決方法 |
 |------|------|----------|
 | チームが表示されない | `~/.claude/teams/` が空 | Claude Code でチームを作成してください |
-| WebSocket が切断される | バックエンド停止 | バックエンドを再起動してください |
+| HTTP 接続エラー | バックエンド停止 | バックエンドを再起動してください |
 | ページが読み込めない | フロントエンド未起動 | `npm run dev` を実行してください |
 | リアルタイム更新が動作しない | ポートがブロックされている | ファイアウォール設定を確認してください |
 
@@ -297,12 +296,12 @@ DASHBOARD_DEBUG=True uvicorn app.main:app --reload
 | カテゴリ | 技術 | バージョン | 用途 |
 |----------|------|-----------|------|
 | プログラミング言語 | Python | 3.11+ | メイン開発言語 |
-| Web フレームワーク | FastAPI | 0.109.0+ | REST API・WebSocket サーバー |
+| Web フレームワーク | FastAPI | 0.109.0+ | REST API サーバー |
 | ASGI サーバー | Uvicorn | 0.27.0+ | 非同期サーバー実行 |
 | データ検証 | Pydantic | 2.5.0+ | データモデル・バリデーション |
 | 設定管理 | pydantic-settings | 2.1.0+ | 環境変数管理 |
 | ファイル監視 | watchdog | 4.0.0+ | ファイルシステムイベント監視 |
-| WebSocket | websockets | 12.0+ | 双方向リアルタイム通信 |
+| HTTP クライアント | httpx | 0.26.0+ | 非同期 HTTP リクエスト |
 
 ### フロントエンド
 
@@ -339,7 +338,7 @@ cc-agent-teams-action-monitor/
 │   │   │       ├── __init__.py
 │   │   │       ├── teams.py          # チーム関連 API エンドポイント
 │   │   │       ├── tasks.py          # タスク関連 API エンドポイント
-│   │   │       └── websocket.py      # WebSocket エンドポイント
+│   │   │       └── messages.py         # メッセージ API エンドポイント
 │   │   ├── models/
 │   │   │   ├── __init__.py
 │   │   │   ├── team.py               # Team/Member モデル
@@ -374,7 +373,9 @@ cc-agent-teams-action-monitor/
 │   │   ├── hooks/
 │   │   │   ├── useTeams.ts
 │   │   │   ├── useTasks.ts
-│   │   │   └── useWebSocket.ts
+│   │   │   │   ├── useTeams.ts
+│   │   │   │   ├── useTasks.ts
+│   │   │   │   └── useInbox.ts
 │   │   └── types/
 │   │       ├── team.ts
 │   │       ├── task.ts
@@ -560,68 +561,6 @@ GET /api/tasks/team/{team_name}
 GET /api/tasks/{task_id}?team_name={team_name}
 ```
 
-### WebSocket API
-
-#### エンドポイント
-
-```
-ws://localhost:8000/ws/{channel}
-```
-
-**チャンネル:**
-- `dashboard` - チーム・インボックス更新
-- `tasks` - タスク更新
-
-#### メッセージ形式
-
-**クライアント → サーバー:**
-```json
-{
-  "type": "ping"
-}
-```
-
-**サーバー → クライアント:**
-
-Ping 応答:
-```json
-{
-  "type": "pong"
-}
-```
-
-チーム更新:
-```json
-{
-  "type": "team_update",
-  "team": "my-team",
-  "event": "modified",
-  "config": { ... }
-}
-```
-
-タスク更新:
-```json
-{
-  "type": "task_update",
-  "team": "my-team",
-  "taskId": "task-1",
-  "event": "modified",
-  "task": { ... }
-}
-```
-
-インボックス更新:
-```json
-{
-  "type": "inbox_update",
-  "team": "my-team",
-  "agent": "agent-1",
-  "event": "modified",
-  "messages": [ ... ]
-}
-```
-
 ---
 
 ## テスト
@@ -805,16 +744,6 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-
-    # WebSocket
-    location /ws {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_read_timeout 86400;
-    }
 }
 ```
 
@@ -957,7 +886,7 @@ logging.basicConfig(
 | プロセス稼働 | - | プロセスダウン時は再起動 |
 | HTTP 応答時間 | > 1s | アラート |
 | エラーレート | > 1% | アラート |
-| WebSocket 接続数 | - | モニタリング |
+| HTTP リクエスト数 | - | モニタリング |
 | メモリ使用量 | > 80% | アラート |
 | CPU 使用率 | > 80% | アラート |
 
@@ -1030,19 +959,19 @@ echo "Restore completed"
 │  │  │           │  │           │  │                        │   │   │
 │  │  │ - TeamCard│  │ - useTeams│  │ - Team                 │   │   │
 │  │  │ - TaskCard│  │ - useTasks│  │ - Task                 │   │   │
-│  │  │ - Header  │  │ - useWS   │  │ - Message              │   │   │
+│  │  │ - Header  │  │ - useInbox│  │ - Message              │   │   │
 │  │  └───────────┘  └───────────┘  └────────────────────────┘   │   │
 │  └─────────────────────────────────────────────────────────────┘   │
-│         │ HTTP/REST              │ WebSocket                        │
+│         │ HTTP/REST              │ HTTP Polling                     │
 │         ▼                        ▼                                  │
 │  ┌─────────────────────────────────────────────────────────────┐   │
 │  │                    Backend (FastAPI)                         │   │
 │  │  ┌───────────┐  ┌───────────┐  ┌────────────────────────┐   │   │
-│  │  │API Routes │  │ WebSocket │  │ File Watcher Service   │   │   │
-│  │  │           │  │ Manager   │  │                        │   │   │
+│  │  │API Routes │  │ Cache     │  │ File Watcher Service   │   │   │
+│  │  │           │  │ Service   │  │                        │   │   │
 │  │  │ /api/teams│  │           │  │ - ClaudeFileHandler    │   │   │
-│  │  │ /api/tasks│  │ - connect │  │ - 500ms debounce       │   │   │
-│  │  │ /api/health│ │ - broadcast│ │ - recursive watch      │   │   │
+│  │  │ /api/tasks│  │ - 30s TTL │  │ - 500ms debounce       │   │   │
+│  │  │ /api/health│ │ - 60s TTL │  │ - recursive watch      │   │   │
 │  │  └───────────┘  └───────────┘  └────────────────────────┘   │   │
 │  │  ┌───────────┐  ┌───────────┐                                │   │
 │  │  │  Models   │  │  Config   │                                │   │
@@ -1064,17 +993,21 @@ echo "Restore completed"
 ## データフロー
 
 ```
-User Action → Component → Hook → API/WebSocket → Backend
+User Action → Component → Hook → API/HTTP → Backend
                                                ↓
 Component ← Hook ← State Update ← Response ←────┘
 ```
 
-## WebSocket チャンネル
+## HTTP Polling
 
-| チャンネル | 用途 | メッセージタイプ |
-|-----------|------|-----------------|
-| `dashboard` | ダッシュボード更新 | `team_update`, `inbox_update` |
-| `tasks` | タスク更新 | `task_update` |
+| API エンドポイント | 用途 | デフォルト間隔 |
+|-------------------|------|---------------|
+| `GET /api/teams` | チーム一覧取得 | 30秒 |
+| `GET /api/tasks` | タスク一覧取得 | 30秒 |
+| `GET /api/teams/{name}/inboxes` | インボックス取得 | 30秒 |
+| `GET /api/teams/{name}/inboxes/{agent}` | エージェント別メッセージ | 30秒 |
+
+ポーリング間隔は Zustand Store で管理し、UIから5秒/10秒/20秒/30秒/60秒から選択可能。
 
 ## ファイル監視パターン
 

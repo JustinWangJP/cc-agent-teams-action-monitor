@@ -1,7 +1,7 @@
 /**
  * メッセージ関連の TypeScript 型定義。
  *
- * InboxMessage、ProtocolMessage、ActivityEvent、WebSocketMessage インターフェースを定義し、
+ * InboxMessage、ProtocolMessage、ActivityEvent インターフェースを定義し、
  * エージェント間通信とリアルタイム更新を型安全に管理します。
  *
  * @module types/message
@@ -60,22 +60,6 @@ export interface ActivityEvent {
     parsedType: ExtendedParsedType;
     details?: ParsedEvent['details'];
   };
-}
-
-/**
- * WebSocket メッセージを表すインターフェース。
- *
- * メッセージタイプ、チーム名、タスクID、エージェント名、データ等を持ちます。
- * team_update/task_update/inbox_update 等のタイプを取ります。
- */
-export interface WebSocketMessage {
-  type: string;
-  team?: string;
-  task_id?: string;
-  data?: unknown;
-  agent?: string;
-  event?: string;
-  messages?: InboxMessage[];
 }
 
 /**
