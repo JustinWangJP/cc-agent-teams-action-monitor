@@ -98,11 +98,6 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
         params.append('types', messageFilter.types.join(','));
       }
 
-      // 未読のみ
-      if (messageFilter.unreadOnly) {
-        params.append('unread_only', 'true');
-      }
-
       // 検索クエリ
       if (searchQuery) {
         params.append('search', searchQuery);

@@ -22,7 +22,7 @@ class Task(BaseModel):
     subject: str
     description: Optional[str] = ""
     activeForm: str = ""
-    status: str  # pending, in_progress, completed, deleted
+    status: str  # pending, in_progress, completed, deleted, stopped
     owner: Optional[str] = None
     blocks: list[str] = []
     blockedBy: list[str] = []
@@ -50,7 +50,7 @@ class TaskUpdate(BaseModel):
     """タスク更新イベントのデータモデル。
 
     タスクID、チーム名、新しいステータス、変更前ステータス、タイムスタンプを含みます。
-    WebSocket 経由でリアルタイム更新を通知する際に使用します。
+    ポーリングによるデータ取得時に変更検知に使用します。
 
 
     """

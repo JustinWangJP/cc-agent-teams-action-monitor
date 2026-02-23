@@ -20,7 +20,7 @@ import type { Task } from '@/types/task';
 /**
  * ビューの種類。
  */
-export type ViewType = 'overview' | 'timeline' | 'tasks' | 'graphs' | 'network';
+export type ViewType = 'overview' | 'timeline' | 'tasks' | 'files';
 
 /**
  * ソート順の種類。
@@ -31,6 +31,7 @@ export type SortOrder = 'asc' | 'desc';
  * ダッシュボード状態インターフェース。
  *
  * グローバルに管理する状態とアクションを定義します。
+ * 未読機能は削除済み（設計書1.4）。
  */
 export interface DashboardState {
   // ====================
@@ -45,13 +46,6 @@ export interface DashboardState {
   selectedTask: Task | null;
   /** 現在のビュー */
   currentView: ViewType;
-
-  // ====================
-  // 未読管理
-  // ====================
-
-  /** チーム別の未読メッセージ数 */
-  unreadCounts: Record<string, number>;
 
   // ====================
   // フィルター
@@ -91,6 +85,8 @@ export interface DashboardState {
   isSidebarOpen: boolean;
   /** タイムラインの自動スクロール */
   autoScrollTimeline: boolean;
+  /** タスクパネルの折りたたみ状態 */
+  isTaskPanelCollapsed: boolean;
 
   // ====================
   // アクション
@@ -139,24 +135,15 @@ export interface DashboardState {
   toggleSidebar: () => void;
   /** タイムライン自動スクロールを切り替え */
   toggleAutoScroll: () => void;
+  /** タスクパネルの折りたたみを切り替え */
+  toggleTaskPanel: () => void;
+  /** タスクパネルの折りたたみを設定 */
+  setTaskPanelCollapsed: (collapsed: boolean) => void;
 
   /** すべてのフィルターをリセット */
   resetFilters: () => void;
   /** すべての状態をリセット */
   reset: () => void;
-
-  // ====================
-  // 未読管理アクション
-  // ====================
-
-  /** 未読カウントを設定 */
-  setUnreadCount: (teamName: string, count: number) => void;
-  /** 未読カウントを増加 */
-  incrementUnread: (teamName: string, amount?: number) => void;
-  /** チームの未読を全て既読にする */
-  markAsRead: (teamName: string) => void;
-  /** 全てのチームの未読をリセット */
-  resetUnreadCounts: () => void;
 }
 
 /**
@@ -174,7 +161,6 @@ const INITIAL_MESSAGE_FILTER: MessageFilter = {
   senders: [],
   receivers: [],
   types: [],
-  unreadOnly: false,
 };
 
 /**
@@ -207,12 +193,10 @@ const initialState: Omit<
   | 'setDarkMode'
   | 'toggleSidebar'
   | 'toggleAutoScroll'
+  | 'toggleTaskPanel'
+  | 'setTaskPanelCollapsed'
   | 'resetFilters'
   | 'reset'
-  | 'setUnreadCount'
-  | 'incrementUnread'
-  | 'markAsRead'
-  | 'resetUnreadCounts'
 > = {
   selectedTeam: null,
   selectedMessage: null,
@@ -230,7 +214,7 @@ const initialState: Omit<
   isDarkMode: false,
   isSidebarOpen: true,
   autoScrollTimeline: true,
-  unreadCounts: {},
+  isTaskPanelCollapsed: false,
 };
 
 /**
@@ -289,6 +273,7 @@ function saveState(state: Partial<DashboardState>) {
       isDarkMode: state.isDarkMode,
       isSidebarOpen: state.isSidebarOpen,
       autoScrollTimeline: state.autoScrollTimeline,
+      isTaskPanelCollapsed: state.isTaskPanelCollapsed,
       teamsInterval: state.teamsInterval,
       tasksInterval: state.tasksInterval,
       inboxInterval: state.inboxInterval,
@@ -454,42 +439,27 @@ export const useDashboardStore = create<DashboardState>()(
           'toggleAutoScroll',
         ),
 
-      // ====================
-      // 未読管理アクション
-      // ====================
-
-      setUnreadCount: (teamName, count) =>
+      toggleTaskPanel: () =>
         set(
-          (state) => ({
-            unreadCounts: { ...state.unreadCounts, [teamName]: count },
-          }),
+          (state) => {
+            const newState = { isTaskPanelCollapsed: !state.isTaskPanelCollapsed };
+            saveState(newState);
+            return newState;
+          },
           false,
-          'setUnreadCount',
+          'toggleTaskPanel',
         ),
 
-      incrementUnread: (teamName, amount = 1) =>
+      setTaskPanelCollapsed: (collapsed) =>
         set(
-          (state) => ({
-            unreadCounts: {
-              ...state.unreadCounts,
-              [teamName]: (state.unreadCounts[teamName] || 0) + amount,
-            },
-          }),
+          () => {
+            const newState = { isTaskPanelCollapsed: collapsed };
+            saveState(newState);
+            return newState;
+          },
           false,
-          'incrementUnread',
+          'setTaskPanelCollapsed',
         ),
-
-      markAsRead: (teamName) =>
-        set(
-          (state) => ({
-            unreadCounts: { ...state.unreadCounts, [teamName]: 0 },
-          }),
-          false,
-          'markAsRead',
-        ),
-
-      resetUnreadCounts: () =>
-        set({ unreadCounts: {} }, false, 'resetUnreadCounts'),
 
       // ====================
       // リセットアクション
@@ -567,10 +537,13 @@ export const useUIState = () =>
     isDarkMode: state.isDarkMode,
     isSidebarOpen: state.isSidebarOpen,
     autoScrollTimeline: state.autoScrollTimeline,
+    isTaskPanelCollapsed: state.isTaskPanelCollapsed,
     toggleDarkMode: state.toggleDarkMode,
     setDarkMode: state.setDarkMode,
     toggleSidebar: state.toggleSidebar,
     toggleAutoScroll: state.toggleAutoScroll,
+    toggleTaskPanel: state.toggleTaskPanel,
+    setTaskPanelCollapsed: state.setTaskPanelCollapsed,
   }));
 
 /**
@@ -580,27 +553,4 @@ export const useCurrentView = () =>
   useDashboardStore((state) => ({
     currentView: state.currentView,
     setCurrentView: state.setCurrentView,
-  }));
-
-/**
- * セレクターフック: 未読管理のみを取得。
- */
-export const useUnreadCounts = () =>
-  useDashboardStore((state) => ({
-    unreadCounts: state.unreadCounts,
-    setUnreadCount: state.setUnreadCount,
-    incrementUnread: state.incrementUnread,
-    markAsRead: state.markAsRead,
-    resetUnreadCounts: state.resetUnreadCounts,
-  }));
-
-/**
- * セレクターフック: 指定したチームの未読数のみを取得。
- */
-export const useTeamUnreadCount = (teamName: string | null) =>
-  useDashboardStore((state) => ({
-    unreadCount: teamName ? (state.unreadCounts[teamName] ?? 0) : 0,
-    markAsRead: () => {
-      if (teamName) state.markAsRead(teamName);
-    },
   }));

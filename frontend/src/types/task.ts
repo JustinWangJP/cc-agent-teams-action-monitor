@@ -4,7 +4,7 @@
  * Task、TaskSummary インターフェースを定義し、
  * Claude Code Agent Teams のタスク管理を型安全に行います。
  *
-*/
+ */
 
 /**
  * タスク詳細情報を表すインターフェース。
@@ -17,12 +17,22 @@ export interface Task {
   subject: string;
   description?: string;
   activeForm: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'deleted';
+  status: 'pending' | 'in_progress' | 'completed' | 'deleted' | 'stopped';
   owner?: string;
   blocks: string[];
   blockedBy: string[];
   metadata?: Record<string, unknown>;
   teamName?: string;
+
+  // 進捗トラッキング用拡張フィールド
+  /** 進捗（0-100） */
+  progress?: number;
+  /** 関連ファイルパスリスト */
+  relatedFiles?: string[];
+  /** 開始時刻（ISO 8601形式） */
+  startedAt?: string;
+  /** 完了時刻（ISO 8601形式） */
+  completedAt?: string;
 }
 
 /**
@@ -34,8 +44,40 @@ export interface Task {
 export interface TaskSummary {
   id: string;
   subject: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'deleted';
+  status: 'pending' | 'in_progress' | 'completed' | 'deleted' | 'stopped';
   owner?: string;
   blockedCount: number;
   teamName?: string;
+
+  // 進捗トラッキング用拡張フィールド
+  /** 進捗（0-100） */
+  progress?: number;
+  /** アクティブフォーム（現在の作業内容） */
+  activeForm?: string;
+  /** 関連ファイル数 */
+  relatedFileCount?: number;
+}
+
+/**
+ * 拡張タスクカード用のインターフェース。
+ *
+ * TaskSummary に加え、進捗情報を含みます。
+ */
+export interface TaskWithProgress extends TaskSummary {
+  /** アクティブフォーム（現在の作業内容） */
+  activeForm: string;
+  /** 進捗（0-100） */
+  progress: number;
+  /** 関連ファイルパスリスト */
+  relatedFiles: string[];
+  /** 開始時刻（ISO 8601形式） */
+  startedAt?: string;
+  /** 完了時刻（ISO 8601形式） */
+  completedAt?: string;
+  /** このタスクがブロックしているタスクIDリスト */
+  blocks?: string[];
+  /** このタスクをブロックしているタスクIDリスト */
+  blockedBy?: string[];
+  /** タスクの詳細説明 */
+  description?: string;
 }

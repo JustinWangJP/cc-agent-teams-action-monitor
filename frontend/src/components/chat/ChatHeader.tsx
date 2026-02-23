@@ -8,9 +8,8 @@
 
 'use client';
 
-import { memo, useState, useCallback } from 'react';
-import { Search, RefreshCw, Filter, ChevronUp, ChevronDown, Check, Mail } from 'lucide-react';
-import { PollingIntervalSelector } from '@/components/common/PollingIntervalSelector';
+import { memo } from 'react';
+import { Search, Filter, ChevronUp, ChevronDown } from 'lucide-react';
 import { MessageTypeFilter, type MessageTypeFilterProps } from './MessageTypeFilter';
 import { SenderFilter, type SenderFilterProps } from './SenderFilter';
 import { clsx } from 'clsx';
@@ -23,10 +22,6 @@ export interface ChatHeaderProps {
   title?: string;
   /** メッセージ数 */
   messageCount?: number;
-  /** 未読メッセージ数 */
-  unreadCount?: number;
-  /** 既読にするハンドラー */
-  onMarkAsRead?: () => void;
   /** 検索クエリ */
   searchQuery?: string;
   /** 検索クエリ変更ハンドラー */
@@ -39,16 +34,6 @@ export interface ChatHeaderProps {
   onPrevResult?: () => void;
   /** 次の結果へハンドラー */
   onNextResult?: () => void;
-  /** ポーリング間隔 */
-  pollingInterval?: number;
-  /** ポーリング間隔変更ハンドラー */
-  onPollingIntervalChange?: (interval: number) => void;
-  /** 最後の更新タイムスタンプ（カウントダウン用） */
-  lastUpdateTimestamp?: number;
-  /** リフレッシュハンドラー */
-  onRefresh?: () => void;
-  /** ローディング状態 */
-  isLoading?: boolean;
   /** メッセージタイプフィルター */
   messageTypeFilter?: MessageTypeFilterProps;
   /** 送信者フィルター */
@@ -57,6 +42,10 @@ export interface ChatHeaderProps {
   showFilter?: boolean;
   /** フィルター展開切り替え */
   onToggleFilter?: () => void;
+  /** 表示件数制限 */
+  displayLimit?: '500' | 'all';
+  /** 表示件数制限変更ハンドラー */
+  onDisplayLimitChange?: (limit: '500' | 'all') => void;
 }
 
 /**
@@ -80,39 +69,53 @@ export const ChatHeader = memo<ChatHeaderProps>(
   ({
     title = '💬 メッセージタイムライン',
     messageCount = 0,
-    unreadCount = 0,
-    onMarkAsRead,
     searchQuery = '',
     onSearchChange,
     searchResultCount = 0,
     searchResultIndex = -1,
     onPrevResult,
     onNextResult,
-    pollingInterval = 30000,
-    onPollingIntervalChange,
-    lastUpdateTimestamp = Date.now(),
-    onRefresh,
-    isLoading = false,
     messageTypeFilter,
     senderFilter,
     showFilter = false,
     onToggleFilter,
+    displayLimit = '500',
+    onDisplayLimitChange,
   }) => {
-    // 既読処理のアニメーション状態
-    const [isMarkingRead, setIsMarkingRead] = useState(false);
-
-    const handleMarkAsRead = useCallback(() => {
-      if (onMarkAsRead && unreadCount > 0) {
-        setIsMarkingRead(true);
-        onMarkAsRead();
-        setTimeout(() => setIsMarkingRead(false), 1000);
-      }
-    }, [onMarkAsRead, unreadCount]);
     return (
       <div className="flex flex-col gap-3">
         {/* メインタイトルバー */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* 表示件数セレクター */}
+            {onDisplayLimitChange && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onDisplayLimitChange('500')}
+                  className={clsx(
+                    'px-2 py-0.5 text-xs rounded transition-colors',
+                    displayLimit === '500'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+                  )}
+                >
+                  500件
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDisplayLimitChange('all')}
+                  className={clsx(
+                    'px-2 py-0.5 text-xs rounded transition-colors',
+                    displayLimit === 'all'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+                  )}
+                >
+                  全量
+                </button>
+              </div>
+            )}
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               {title}
             </h2>
@@ -120,34 +123,6 @@ export const ChatHeader = memo<ChatHeaderProps>(
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                 {messageCount}件
               </span>
-            )}
-            {/* 未読バッジ */}
-            {unreadCount > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
-                  <Mail className="w-3 h-3" />
-                  未読 {unreadCount}件
-                </span>
-                {onMarkAsRead && (
-                  <button
-                    type="button"
-                    onClick={handleMarkAsRead}
-                    disabled={isMarkingRead}
-                    className={clsx(
-                      'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-all',
-                      'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-                      'border border-blue-200 dark:border-blue-800',
-                      'hover:bg-blue-200 dark:hover:bg-blue-900/50',
-                      'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                      isMarkingRead && 'opacity-50 cursor-not-allowed'
-                    )}
-                    aria-label="すべて既読にする"
-                  >
-                    <Check className={clsx('w-3 h-3', isMarkingRead && 'animate-pulse')} />
-                    すべて既読
-                  </button>
-                )}
-              </div>
             )}
           </div>
 
@@ -177,39 +152,6 @@ export const ChatHeader = memo<ChatHeaderProps>(
                     {(messageTypeFilter?.selectedTypes.length || 0) + (senderFilter?.selectedSenders.length || 0)}
                   </span>
                 )}
-              </button>
-            )}
-
-            {/* ポーリング間隔セレクター */}
-            {onPollingIntervalChange && (
-              <PollingIntervalSelector
-                value={pollingInterval}
-                onChange={onPollingIntervalChange}
-                label="更新間隔"
-                lastUpdateTimestamp={lastUpdateTimestamp}
-                showCountdown={true}
-              />
-            )}
-
-            {/* リフレッシュボタン */}
-            {onRefresh && (
-              <button
-                type="button"
-                onClick={onRefresh}
-                disabled={isLoading}
-                className={clsx(
-                  'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
-                  'text-slate-700 dark:text-slate-300',
-                  'bg-white dark:bg-slate-800',
-                  'border border-slate-300 dark:border-slate-700',
-                  'hover:bg-slate-50 dark:hover:bg-slate-700',
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                  isLoading && 'opacity-50 cursor-not-allowed'
-                )}
-                aria-label="更新"
-              >
-                <RefreshCw className={clsx('w-4 h-4', isLoading && 'animate-spin')} />
-                更新
               </button>
             )}
           </div>

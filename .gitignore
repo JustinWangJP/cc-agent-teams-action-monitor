@@ -208,9 +208,24 @@ __marimo__/
 
 #Ignore Claude Code related files.
 mcp.json
-.claude/
-.agents/
 start-claude-*.sh
+
+# .claude/ directory - except skills/teamworks
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/teamworks/
+!.claude/skills/brainstorming/
+!.claude/skills/ui-ux-pro-max/
+!.claude/skills/vercel-react-best-practise/
+!.claude/skills/tailwind-design-system/
+!.claude/skills/pi-planning-with-files/
+!.claude/skills/prompt-engineering-patterns/
+!.claude/skills/ms-agent-framework-python/
+!.claude/skills/fastapi-templates/
+!.claude/skills/error-handling-patterns/
+!.claude/skills/chrome-devtools/
+!.claude/rules/
 
 */node_modules/*
 node_modules/*

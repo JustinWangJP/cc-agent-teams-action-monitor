@@ -45,7 +45,7 @@ const getMessageTypeName = (type: string): string => {
     plan_approval_request: 'プラン承認要求',
     plan_approval_response: 'プラン承認応答',
     task_assignment: 'タスク割り当て',
-    shutdown_approved: 'シャットダウン承認',
+    shutdown_approved: 'シャットダウン了承',
   };
   return names[type] || '不明';
 };

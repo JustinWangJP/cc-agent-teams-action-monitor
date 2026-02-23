@@ -10,10 +10,12 @@
 import { Team } from '@/types/team';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { ModelBadge } from '@/components/overview/ModelBadge';
-import { ArrowLeft, Calendar, User, Clock, FileText, Tag, ChevronDown, ChevronUp } from 'lucide-react';
+import { PollingIntervalSelector } from '@/components/common/PollingIntervalSelector';
+import { ArrowLeft, Calendar, User, Clock, FileText, Tag, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale/ja';
 import { useState, useMemo } from 'react';
+import { clsx } from 'clsx';
 
 /**
  * Unixタイムスタンプ（秒またはミリ秒）をDateオブジェクトに変換。
@@ -182,6 +184,16 @@ interface TeamDetailPanelProps {
   team: Team;
   /** 戻るボタンクリック時のコールバック */
   onBack: () => void;
+  /** 最後の更新タイムスタンプ */
+  dataUpdatedAt?: number;
+  /** 更新ハンドラー */
+  onRefresh?: () => void;
+  /** ローディング状態 */
+  isLoading?: boolean;
+  /** ポーリング間隔（ミリ秒） */
+  pollingInterval?: number;
+  /** ポーリング間隔変更ハンドラー */
+  onPollingIntervalChange?: (interval: number) => void;
 }
 
 /**
@@ -197,7 +209,15 @@ interface TeamDetailPanelProps {
  * />
  * ```
  */
-export function TeamDetailPanel({ team, onBack }: TeamDetailPanelProps) {
+export function TeamDetailPanel({
+  team,
+  onBack,
+  dataUpdatedAt,
+  onRefresh,
+  isLoading = false,
+  pollingInterval = 30000,
+  onPollingIntervalChange,
+}: TeamDetailPanelProps) {
   // プロンプト表示状態（メンバーごと）
   const [expandedPrompts, setExpandedPrompts] = useState<Set<string>>(new Set());
 
@@ -237,7 +257,36 @@ export function TeamDetailPanel({ team, onBack }: TeamDetailPanelProps) {
           <ArrowLeft className="w-4 h-4" />
           <span>一覧に戻る</span>
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {/* ポーリング間隔セレクター */}
+          {onPollingIntervalChange && (
+            <PollingIntervalSelector
+              value={pollingInterval}
+              onChange={onPollingIntervalChange}
+              label="更新間隔"
+              lastUpdateTimestamp={dataUpdatedAt}
+            />
+          )}
+          {/* 更新ボタン */}
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={isLoading}
+              className={clsx(
+                'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
+                'text-slate-700 dark:text-slate-300',
+                'bg-white dark:bg-slate-800',
+                'border border-slate-300 dark:border-slate-700',
+                'hover:bg-slate-50 dark:hover:bg-slate-700',
+                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                isLoading && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              <RefreshCw className={clsx('w-4 h-4', isLoading && 'animate-spin')} />
+              更新
+            </button>
+          )}
           <StatusBadge status={team.members.some(m => m.status === 'active') ? 'active' : 'idle'} />
         </div>
       </div>

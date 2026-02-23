@@ -1,0 +1,16 @@
+#!/bin/bash
+# start-claude-deepseek.sh
+find . -name '__pycache__' -type d -exec rm -r {} +
+
+# Bigmodel glm-5 with Claude Code
+export ANTHROPIC_BASE_URL="https://open.bigmodel.cn/api/anthropic"
+export ANTHROPIC_AUTH_TOKEN="input your token"
+export ANTHROPIC_MODEL="glm-5"
+export ANTHROPIC_SMALL_FAST_MODEL="glm-5"
+export CLAUDE_CODE_SUBAGENT_MODEL="glm-5"
+export API_TIMEOUT_MS="300000"
+export ENABLE_LSP_TOOLS=1
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+
+# Launch Claude Code
+claude "$@"

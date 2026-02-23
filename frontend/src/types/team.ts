@@ -4,7 +4,7 @@
  * Member、Team、TeamSummary インターフェースを定義し、
  * Claude Code Agent Teams のチーム構成を型安全に管理します。
  *
-*/
+ */
 
 /**
  * チームメンバー情報を表すインターフェース。
@@ -52,6 +52,12 @@ export interface Team {
  * チーム名、メンバー数、タスク数、ステータスを持ち、一覧画面での高速表示用に
  * 最適化されています。
  *
+ * ステータス一覧:
+ * - active: セッションログ mtime ≤ 1時間
+ * - stopped: セッションログ mtime > 1時間
+ * - unknown: セッションログなし
+ * - inactive: members 空配列
+ *
  * モデル情報を含める場合は `models` プロパティを追加してください。
  */
 export interface TeamSummary {
@@ -60,7 +66,7 @@ export interface TeamSummary {
   memberCount: number;
   /** チームに関連するタスク数 */
   taskCount: number;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'stopped' | 'unknown';
   lastActivity?: string;
   leadAgentId: string;
   /** 作成日時（Unixタイムスタンプ、ソート用） */

@@ -1,25 +1,18 @@
 """チーム関連の REST API エンドポイント。
 
-チーム一覧、チーム詳細、チームインボックス、通信ネットワークデータの取得エンドポイントを提供します。
+チーム一覧、チーム詳細、チームインボックスの取得エンドポイントを提供します。
 ~/.claude/teams/ ディレクトリの config.json からデータを読み込みます。
 
 """
-from typing import Any, Optional
-from fastapi import APIRouter, HTTPException, Query
+from typing import Optional
+from fastapi import APIRouter, HTTPException
 from pathlib import Path
 import json
-from collections import defaultdict
+import os
+from datetime import datetime, timezone
 
 from app.config import settings
 from app.models.team import Team, TeamSummary, Member
-from app.models.network import (
-    NetworkData,
-    AgentNode,
-    CommunicationEdge,
-    EdgeTypeCounts,
-    NetworkMeta,
-    NetworkTimeRange,
-)
 
 router = APIRouter()
 
@@ -60,7 +53,7 @@ def get_team_inboxes(team_dir: Path) -> dict[str, list]:
     """
     import logging
     logger = logging.getLogger(__name__)
-    
+
     inboxes_dir = team_dir / "inboxes"
     inboxes = {}
     if inboxes_dir.exists():
@@ -96,13 +89,112 @@ def get_team_task_count(team_name: str) -> int:
     return 0
 
 
+def _cwd_to_project_hash(cwd: str) -> str:
+    """作業ディレクトリから project-hash を生成する。
+
+    Args:
+        cwd: 作業ディレクトリパス
+
+    Returns:
+        project-hash 文字列
+
+    """
+    return "-" + cwd.lstrip("/").replace("/", "-")
+
+
+def _find_session_file(claude_dir: Path, config: dict) -> Optional[Path]:
+    """チームのセッションログファイルを特定する。
+
+    config.json から leadSessionId と cwd を取得し、セッションログを探す。
+    leadSessionId に対応するファイルが存在しない場合は None を返す。
+    （フォールバックは行わない - 別チームのセッションログを誤使用しないため）
+
+    Args:
+        claude_dir: ~/.claude ディレクトリのパス
+        config: チーム設定辞書
+
+    Returns:
+        セッションファイルのパス（存在しない場合は None）
+
+    """
+    members = config.get("members", [])
+    if not members:
+        return None
+
+    # 最初のメンバーの cwd を使用
+    cwd = members[0].get("cwd")
+    if not cwd:
+        return None
+
+    # project-hash に変換
+    project_hash = _cwd_to_project_hash(cwd)
+    project_dir = claude_dir / "projects" / project_hash
+
+    if not project_dir.exists():
+        return None
+
+    # leadSessionId に対応するファイルを探す
+    # 注意: フォールバックは行わない。セッションファイルが存在しない場合は None を返す。
+    # これにより、セッションログがないチームは 'unknown' ステータスになる。
+    lead_session_id = config.get("leadSessionId")
+    if lead_session_id:
+        session_file = project_dir / f"{lead_session_id}.jsonl"
+        if session_file.exists():
+            return session_file
+
+    return None
+
+
+def get_team_status(config: dict) -> str:
+    """チームのステータスを判定する。
+
+    判定基準:
+    - members が存在しない → 'inactive'
+    - members が存在する場合:
+      - セッションログが存在しない → 'unknown'
+      - セッションログの mtime が1時間超過 → 'stopped'
+      - セッションログの mtime が1時間以内 → 'active'
+
+    Args:
+        config: チーム設定辞書
+
+    Returns:
+        ステータス文字列 ('active', 'inactive', 'stopped', 'unknown')
+
+    """
+    if not config.get("members"):
+        return "inactive"
+
+    # セッションログファイルを特定
+    session_file = _find_session_file(settings.claude_dir, config)
+
+    if not session_file:
+        return "unknown"
+
+    # セッションログの mtime を取得
+    mtime = os.path.getmtime(session_file)
+    mtime_dt = datetime.fromtimestamp(mtime, tz=timezone.utc)
+    now = datetime.now(timezone.utc)
+
+    # 1時間（3600秒）を超過しているか判定
+    if (now - mtime_dt).total_seconds() > 60 * 60:
+        return "stopped"
+
+    return "active"
+
+
 @router.get("/", response_model=list[TeamSummary])
 async def list_teams():
     """全チーム一覧を取得するエンドポイント。
 
     ~/.claude/teams/ ディレクトリ内の全チームの config.json を読み込み、
-    TeamSummary 形式で返します。メンバーがいれば active、いなければ inactive。
-    また、各チームのタスク数も取得します。
+    TeamSummary 形式で返します。
+
+    ステータス判定基準:
+    - inactive: members が空
+    - unknown: セッションログが存在しない
+    - stopped: セッションログ mtime が1時間超過
+    - active: セッションログ mtime が1時間以内
 
     Returns:
         list[TeamSummary]: チーム概要情報のリスト
@@ -115,12 +207,13 @@ async def list_teams():
                 config = get_team_config(team_dir)
                 if config:
                     team_name = config.get("name", team_dir.name)
+                    status = get_team_status(config)
                     teams.append(TeamSummary(
                         name=team_name,
                         description=config.get("description", ""),
                         memberCount=len(config.get("members", [])),
                         taskCount=get_team_task_count(team_name),
-                        status="active" if config.get("members") else "inactive",
+                        status=status,
                         leadAgentId=config.get("leadAgentId", ""),
                         createdAt=config.get("createdAt"),
                     ))
@@ -214,254 +307,91 @@ async def get_agent_inbox(team_name: str, agent_name: str):
         return json.load(f)
 
 
-def get_model_color_and_icon(model: str) -> tuple[str, str]:
-    """モデルIDから色とアイコンを取得するヘルパー関数。
+@router.delete("/{team_name}")
+async def delete_team(team_name: str):
+    """チームを削除するエンドポイント。
 
-    Claude Code Agent Teams のモデル設定に基づいて視覚的表現を返します。
-    Claude、Kimi、GLM などのモデルに対応しています。
+    指定されたチームと関連ファイルを削除します。
+    削除できるのは「stopped」状態のチームのみです。
 
-    Args:
-        model: モデルID文字列
-
-    Returns:
-        tuple[str, str]: (色コード, アイコン絵文字) のタプル
-
-    """
-    model_lower = model.lower()
-
-    # Anthropic Claude
-    if "opus" in model_lower:
-        return "#8B5CF6", "💎"  # violet-500
-    if "sonnet" in model_lower:
-        return "#3B82F6", "🔵"  # blue-500
-    if "haiku" in model_lower:
-        return "#10B981", "🍃"  # green-500
-
-    # Moonshot AI
-    if "kimi" in model_lower:
-        return "#F59E0B", "🟡"  # amber-500
-
-    # Zhipu AI
-    if "glm" in model_lower:
-        return "#EF4444", "🔴"  # red-500
-
-    # デフォルト
-    return "#6B7280", "🤖"  # gray-500
-
-
-def parse_message_type(text: str) -> str:
-    """メッセージ本文からプロトコルタイプを推定するヘルパー関数。
-
-    JSON-in-JSON 形式のプロトコルメッセージを解析してタイプを判定します。
-    idle_notification、shutdown_request などのタイプを識別します。
+    削除対象:
+    - teams/{team_name}/ ディレクトリ
+    - tasks/{team_name}/ ディレクトリ
+    - projects/{project_hash}/ ディレクトリ
 
     Args:
-        text: メッセージ本文文字列
+        team_name: 削除対象のチーム名
 
     Returns:
-        str: 判定されたメッセージタイプ
+        dict: 削除結果（メッセージと削除パス一覧）
+
+    Raises:
+        HTTPException:
+            - 404: チームが存在しない
+            - 400: ステータスが stopped 以外
+            - 500: 削除処理中にエラー
 
     """
-    text = text.strip()
+    import shutil
+    import logging
 
-    # JSON形式かチェック
-    if not text.startswith("{"):
-        return "message"
+    logger = logging.getLogger(__name__)
 
-    try:
-        data = json.loads(text)
-        msg_type = data.get("type", "").lower()
-
-        # タイプ別の正規化
-        if "idle" in msg_type:
-            return "idle_notification"
-        if "shutdown_request" in msg_type:
-            return "shutdown_request"
-        if "shutdown_response" in msg_type or "shutdown_approved" in msg_type:
-            return "shutdown_response"
-        if "plan_approval" in msg_type:
-            return "plan_approval"
-
-        return "message"
-    except (json.JSONDecodeError, TypeError, AttributeError):
-        return "message"
-
-
-def get_dominant_type(types: dict[str, int]) -> str:
-    """エッジの主要タイプを判定するヘルパー関数。
-
-    カウントが最も多いメッセージタイプを返します。
-
-    Args:
-        types: タイプ名をキー、カウントを値とする辞書
-
-    Returns:
-        str: 最も多いタイプ名
-
-    """
-    return max(types.items(), key=lambda x: x[1])[0] if types else "message"
-
-
-@router.get("/{team_name}/messages/network", response_model=NetworkData)
-async def get_team_network(
-    team_name: str,
-    start_time: Optional[str] = Query(None, description="開始時刻 (ISO 8601)"),
-    end_time: Optional[str] = Query(None, description="終了時刻 (ISO 8601)"),
-):
-    """チームのエージェント間通信ネットワークデータを取得するエンドポイント。
-
-    インボックスメッセージを解析してノード（エージェント）とエッジ（通信関係）を構築し、
-    D3.js フォースグラフ用のデータを返します。
-
-    Args:
-        team_name: チーム名
-        start_time: フィルタ開始時刻（オプション）
-        end_time: フィルタ終了時刻（オプション）
-
-    Returns:
-        NetworkData: ノード、エッジ、メタ情報を含むネットワークデータ
-
-    """
+    # チームの存在確認
     team_dir = settings.teams_dir / team_name
     if not team_dir.exists():
-        raise HTTPException(status_code=404, detail="Team not found")
+        raise HTTPException(
+            status_code=404,
+            detail=f"チーム「{team_name}」が見つかりません"
+        )
 
-    # チーム設定とメンバー情報を取得
+    # チーム設定取得
     config = get_team_config(team_dir)
     if not config:
-        raise HTTPException(status_code=404, detail="Team config not found")
-
-    members = {m["name"]: m for m in config.get("members", [])}
-
-    # インボックスメッセージを取得
-    inboxes = get_team_inboxes(team_dir)
-
-    # エージェント別の統計を集計
-    agent_stats: dict[str, dict[str, int]] = defaultdict(
-        lambda: {"sent": 0, "received": 0, "total": 0}
-    )
-
-    # エッジ統計: "from->to" -> エッジデータ
-    edge_stats: dict[
-        str, dict[str, Any]
-    ] = {}
-
-    # タイムスタンプ範囲
-    timestamps: list[str] = []
-    total_messages = 0
-
-    # 各インボックスを処理
-    for agent_name, messages in inboxes.items():
-        for msg in messages:
-            # タイムフィルタ適用
-            msg_timestamp = msg.get("timestamp", "")
-            if not msg_timestamp:
-                continue
-
-            if start_time and msg_timestamp < start_time:
-                continue
-            if end_time and msg_timestamp > end_time:
-                continue
-
-            timestamps.append(msg_timestamp)
-            total_messages += 1
-
-            # 受信者を推定（inboxの所有者が受信者）
-            from_agent = msg.get("from", "")
-            to_agent = agent_name  # inboxファイル名 = 受信者
-
-            if not from_agent:
-                continue
-
-            # 送信者カウント
-            agent_stats[from_agent]["sent"] += 1
-            agent_stats[from_agent]["total"] += 1
-
-            # 受信者カウント
-            agent_stats[to_agent]["received"] += 1
-            agent_stats[to_agent]["total"] += 1
-
-            # エッジ統計
-            edge_key = f"{from_agent}->{to_agent}"
-            if edge_key not in edge_stats:
-                edge_stats[edge_key] = {
-                    "source": from_agent,
-                    "target": to_agent,
-                    "count": 0,
-                    "types": {
-                        "message": 0,
-                        "idle_notification": 0,
-                        "shutdown_request": 0,
-                        "shutdown_response": 0,
-                        "plan_approval": 0,
-                        "other": 0,
-                    },
-                    "lastTimestamp": msg_timestamp,
-                }
-
-            edge_stats[edge_key]["count"] += 1
-            edge_stats[edge_key]["lastTimestamp"] = max(
-                edge_stats[edge_key]["lastTimestamp"], msg_timestamp
-            )
-
-            # メッセージタイプを判定してカウント
-            msg_text = msg.get("text", "")
-            msg_type = parse_message_type(msg_text)
-
-            if msg_type in edge_stats[edge_key]["types"]:
-                edge_stats[edge_key]["types"][msg_type] += 1
-            else:
-                edge_stats[edge_key]["types"]["other"] += 1
-
-    # メッセージがない場合でもチームメンバーをノードに追加
-    # メンバーが agent_stats にいない場合は初期化
-    for member_name in members.keys():
-        if member_name not in agent_stats:
-            agent_stats[member_name] = {"sent": 0, "received": 0, "total": 0}
-
-    # ノードを構築
-    nodes: list[AgentNode] = []
-    for agent_id, stats in agent_stats.items():
-        member = members.get(agent_id, {})
-        model = member.get("model", "unknown")
-        model_color, model_icon = get_model_color_and_icon(model)
-
-        nodes.append(
-            AgentNode(
-                id=agent_id,
-                label=agent_id,
-                model=model,
-                modelColor=model_color,
-                modelIcon=model_icon,
-                messageCount=stats["total"],
-                sentCount=stats["sent"],
-                receivedCount=stats["received"],
-            )
+        raise HTTPException(
+            status_code=404,
+            detail=f"チーム「{team_name}」の設定ファイルが見つかりません"
         )
 
-    # エッジを構築
-    edges: list[CommunicationEdge] = []
-    for edge_data in edge_stats.values():
-        types_dict = edge_data["types"]
-        edge_types = EdgeTypeCounts(**types_dict)
-
-        edges.append(
-            CommunicationEdge(
-                source=edge_data["source"],
-                target=edge_data["target"],
-                count=edge_data["count"],
-                types=edge_types,
-                dominantType=get_dominant_type(types_dict),
-                lastTimestamp=edge_data["lastTimestamp"],
-            )
+    # ステータス確認（active 以外は削除可能）
+    status = get_team_status(config)
+    deletable_statuses = ["stopped", "inactive", "unknown"]
+    if status not in deletable_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"このチームは削除できません。ステータスが「{status}」です。削除できるのは stopped, inactive, unknown 状態のチームのみです。"
         )
 
-    # メタデータを構築
-    time_range = NetworkTimeRange(
-        min=min(timestamps) if timestamps else "",
-        max=max(timestamps) if timestamps else "",
-    )
+    deleted_paths = []
 
-    meta = NetworkMeta(totalMessages=total_messages, timeRange=time_range)
+    try:
+        # 1. teams/{team_name}/ を削除
+        shutil.rmtree(team_dir)
+        deleted_paths.append(str(team_dir))
+        logger.info(f"Deleted team directory: {team_dir}")
 
-    return NetworkData(nodes=nodes, edges=edges, teamName=team_name, meta=meta)
+        # 2. tasks/{team_name}/ を削除
+        tasks_dir = settings.tasks_dir / team_name
+        if tasks_dir.exists():
+            shutil.rmtree(tasks_dir)
+            deleted_paths.append(str(tasks_dir))
+            logger.info(f"Deleted tasks directory: {tasks_dir}")
+
+        # 3. セッションファイルのみ削除（プロジェクトディレクトリは残す）
+        session_file = _find_session_file(settings.claude_dir, config)
+        if session_file and session_file.exists():
+            session_file.unlink()
+            deleted_paths.append(str(session_file))
+            logger.info(f"Deleted session file: {session_file}")
+
+        return {
+            "message": f"チーム「{team_name}」を削除しました",
+            "deletedPaths": deleted_paths
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to delete team {team_name}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"チーム「{team_name}」の削除中にエラーが発生しました: {str(e)}"
+        )

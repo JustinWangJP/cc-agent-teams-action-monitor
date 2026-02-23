@@ -11,10 +11,14 @@ import type { ModelUsage, TeamModelSummary } from '@/types/model';
 import { MODEL_CONFIGS } from '@/config/models';
 
 /**
- * メンバーリストからモデル使用状況を算出します。
+ * メンバーリストからモデル使用状況を集計して算出します。
+ *
+ * 各メンバーのモデル設定を収集し、モデルごとの使用回数と
+ * 使用エージェント一覧を含むModelUsage配列を返します。
  *
  * @param members - チームメンバーリスト
- * @returns モデル使用状況の配列
+ * @returns モデル使用状況の配列（使用数の降順でソート済み）
+ *
  */
 export function computeTeamModels(members: Member[]): ModelUsage[] {
   const modelMap = new Map<string, ModelUsage>();
@@ -40,10 +44,14 @@ export function computeTeamModels(members: Member[]): ModelUsage[] {
 }
 
 /**
- * チームからモデルサマリー情報を算出します。
+ * チーム全体のモデル使用サマリー情報を算出します。
  *
- * @param team - チーム情報
- * @returns チームモデルサマリー
+ * チームメンバーのモデルを集計し、最も多く使用されている
+ * モデルを primaryModel として設定したサマリーオブジェクトを返します。
+ *
+ * @param team - チーム情報（name, members を含む）
+ * @returns チームモデルサマリー（teamName, models, primaryModel）
+ *
  */
 export function computeTeamModelSummary(team: Team): TeamModelSummary {
   const models = computeTeamModels(team.members);
@@ -57,10 +65,14 @@ export function computeTeamModelSummary(team: Team): TeamModelSummary {
 }
 
 /**
- * チームメンバーからユニークなモデルIDリストを取得します。
+ * チームメンバーから重複を除外したユニークなモデルIDリストを取得します。
+ *
+ * 各メンバーのモデルを走査し、Setを使用して重複を除外した
+ * モデルIDの配列を返します。
  *
  * @param members - チームメンバーリスト
- * @returns モデルIDの配列（重複なし）
+ * @returns ユニークなモデルIDの配列
+ *
  */
 export function getUniqueModelIds(members: Member[]): string[] {
   const modelSet = new Set<string>();

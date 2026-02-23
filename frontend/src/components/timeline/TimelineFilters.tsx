@@ -205,21 +205,11 @@ export const TimelineFilters: React.FC<TimelineFiltersProps> = ({
     [messageFilter, updateMessageFilter, onFilterChange],
   );
 
-  const handleUnreadOnlyChange = useCallback(
-    (checked: boolean) => {
-      const newFilter = { ...messageFilter, unreadOnly: checked };
-      updateMessageFilter(newFilter);
-      onFilterChange?.(newFilter);
-    },
-    [messageFilter, updateMessageFilter, onFilterChange],
-  );
-
   const handleReset = useCallback(() => {
     const newFilter: MessageFilter = {
       senders: [],
       receivers: [],
       types: [],
-      unreadOnly: false,
     };
     updateMessageFilter(newFilter);
     onFilterChange?.(newFilter);
@@ -228,8 +218,7 @@ export const TimelineFilters: React.FC<TimelineFiltersProps> = ({
   const hasActiveFilters = useMemo(
     () =>
       messageFilter.senders.length > 0 ||
-      messageFilter.types.length > 0 ||
-      messageFilter.unreadOnly,
+      messageFilter.types.length > 0,
     [messageFilter],
   );
 
@@ -279,17 +268,6 @@ export const TimelineFilters: React.FC<TimelineFiltersProps> = ({
         placeholder="すべてのタイプ"
       />
 
-      {/* 未読のみチェックボックス */}
-      <label className="flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-        <input
-          type="checkbox"
-          checked={messageFilter.unreadOnly}
-          onChange={(e) => handleUnreadOnlyChange(e.target.checked)}
-          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 dark:bg-slate-800 dark:border-slate-700"
-        />
-        <span className="text-slate-700 dark:text-slate-300">未読のみ</span>
-      </label>
-
       {/* リセットボタン */}
       {hasActiveFilters && (
         <button
@@ -308,7 +286,6 @@ export const TimelineFilters: React.FC<TimelineFiltersProps> = ({
           {[
             messageFilter.senders.length > 0 && `${messageFilter.senders.length}送信者`,
             messageFilter.types.length > 0 && `${messageFilter.types.length}タイプ`,
-            messageFilter.unreadOnly && '未読',
           ]
             .filter(Boolean)
             .join(', ')}

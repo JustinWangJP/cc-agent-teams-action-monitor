@@ -7,6 +7,8 @@
 from fastapi import APIRouter, HTTPException
 from pathlib import Path
 import json
+import os
+from datetime import datetime, timezone
 
 from app.config import settings
 from app.models.task import Task, TaskSummary
@@ -20,6 +22,11 @@ def read_task_file(task_path: Path) -> dict | None:
     指定されたパスの JSON ファイルを読み込み、辞書形式で返します。
     ファイルが存在しない、または JSON 形式でない場合は None を返します。
 
+    Args:
+        task_path: 読み込むタスクファイルのパス
+
+    Returns:
+        タスクデータの辞書、読み込み失敗時は None
 
     """
     if task_path.exists() and task_path.suffix == ".json":
@@ -28,13 +35,46 @@ def read_task_file(task_path: Path) -> dict | None:
     return None
 
 
+def get_task_status(task_path: Path, current_status: str) -> str:
+    """タスクのステータスを判定する。
+
+    現在のステータスが completed または deleted の場合は変更せず、
+    それ以外の場合はタスクファイルの最終更新日時（mtime）が24時間超過で 'stopped' と判定。
+
+    Args:
+        task_path: タスクファイルのパス
+        current_status: 現在のステータス
+
+    Returns:
+        ステータス文字列
+
+    """
+    # completed または deleted は停止判定の対象外
+    if current_status in ("completed", "deleted"):
+        return current_status
+
+    if task_path.exists():
+        mtime = os.path.getmtime(task_path)
+        mtime_dt = datetime.fromtimestamp(mtime, tz=timezone.utc)
+        now = datetime.now(timezone.utc)
+
+        # 24時間（86400秒）を超過しているか判定
+        if (now - mtime_dt).total_seconds() > 24 * 60 * 60:
+            return "stopped"
+
+    return current_status
+
+
 @router.get("/", response_model=list[TaskSummary])
 async def list_tasks():
     """全チームの全タスク一覧を取得するエンドポイント。
 
     ~/.claude/tasks/ ディレクトリ内の全チームのタスクを読み込み、
     TaskSummary 形式で返します。チーム名も各タスクに含まれます。
+    24時間以上更新のないタスクは 'stopped' ステータスに変換します。
 
+    Returns:
+        list[TaskSummary]: タスク概要情報のリスト
 
     """
     tasks = []
@@ -45,10 +85,12 @@ async def list_tasks():
                     if task_file.name != ".lock":
                         task_data = read_task_file(task_file)
                         if task_data:
+                            original_status = task_data.get("status", "pending")
+                            status = get_task_status(task_file, original_status)
                             tasks.append(TaskSummary(
                                 id=task_data.get("id", task_file.stem),
                                 subject=task_data.get("subject", ""),
-                                status=task_data.get("status", "pending"),
+                                status=status,
                                 owner=task_data.get("owner"),
                                 blockedCount=len(task_data.get("blockedBy", [])),
                                 teamName=team_task_dir.name,
@@ -63,6 +105,14 @@ async def list_team_tasks(team_name: str):
     指定されたチーム名のタスクディレクトリから全タスクを読み込み、
     Task 形式（詳細版）で返します。チームが存在しない場合は 404 エラー。
 
+    Args:
+        team_name: 取得対象のチーム名
+
+    Returns:
+        list[Task]: タスク詳細情報のリスト
+
+    Raises:
+        HTTPException: チームが存在しない場合（404）
 
     """
     tasks = []
@@ -85,6 +135,15 @@ async def get_task(task_id: str, team_name: str | None = None):
     タスクIDを指定してタスク詳細を取得します。team_name が指定された場合は
     そのチーム内で検索し、未指定の場合は全チームから検索します。
 
+    Args:
+        task_id: 取得対象のタスクID
+        team_name: 検索対象のチーム名（省略時は全チーム検索）
+
+    Returns:
+        dict: タスク詳細データ
+
+    Raises:
+        HTTPException: タスクが見つからない場合（404）
 
     """
     if team_name:
