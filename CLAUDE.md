@@ -77,13 +77,16 @@ npm install
 # 開発サーバー起動 (http://localhost:5173)
 npm run dev
 
+# 型チェック
+npx tsc --noEmit                         # 型エラー確認（ビルドなし）
+
 # テスト実行
 npm run test                             # テスト実行（単発）
 npm run test:watch                       # ウォッチモード
 npm run test:coverage                    # カバレッジ付き
 npm run test:ui                          # UIモード
 
-# 本番ビルド
+# 本番ビルド（tsc + vite build）
 npm run build
 
 # ビルドプレビュー

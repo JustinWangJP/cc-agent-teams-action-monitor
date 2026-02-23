@@ -795,9 +795,9 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
     }, [message, onClick]);
 
     return (
-      <div
+      <article
         className={clsx(
-          'group relative flex gap-3 p-3 rounded-lg transition-all duration-200',
+          'group relative flex gap-4 p-4 rounded-lg transition-all duration-200',
           'hover:bg-slate-50 dark:hover:bg-slate-800/50',
           isSelected && 'bg-blue-50 dark:bg-blue-900/20',
           isHighlighted && 'bg-yellow-50 dark:bg-yellow-900/20 ring-2 ring-yellow-400 dark:ring-yellow-600',
@@ -815,7 +815,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
           }
         }}
         aria-label={`${displayName}からのメッセージ: ${messageText.slice(0, 50)}${messageText.length > 50 ? '...' : ''}`}
-        aria-pressed={isSelected}
+        aria-pressed={isSelected ? 'true' : 'false'}
       >
         {/* session は左配置（アバター→コンテンツ）、inbox は右配置（コンテンツ→アバター） */}
         {isSession ? (
@@ -859,13 +859,16 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
                 </span>
               </>
             )}
-            <span className="text-xs text-slate-500 dark:text-slate-400">{typeIcon}</span>
-            <span
-              className="text-xs text-slate-400 dark:text-slate-500 cursor-help"
+            <span className="text-xs text-slate-500 dark:text-slate-400" aria-label={`メッセージタイプ: ${parsedType}`}>
+              {typeIcon}
+            </span>
+            <time
+              className="text-xs text-slate-500 dark:text-slate-400 cursor-help"
               title={showAbsoluteTime ? formatFullDate(message.timestamp) : undefined}
+              dateTime={typeof message.timestamp === 'string' ? message.timestamp : new Date(message.timestamp).toISOString()}
             >
               {formattedTime}
-            </span>
+            </time>
           </div>
 
           {/* メッセージバブル */}
@@ -934,7 +937,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
             />
           </div>
         )}
-      </div>
+      </article>
     );
   }
 );

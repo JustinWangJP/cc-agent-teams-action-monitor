@@ -109,8 +109,7 @@ export const ChatTimelinePanel = ({
   const searchResultIdsRef = useRef<string[]>([]);
 
   // ストアから状態を取得（二重管理を解消）
-  const inboxInterval = useDashboardStore((state) => state.inboxInterval);
-  const setInboxInterval = useDashboardStore((state) => state.setInboxInterval);
+  const messagesInterval = useDashboardStore((state) => state.messagesInterval);
   const messageFilter = useDashboardStore((state) => state.messageFilter);
   const searchQuery = useDashboardStore((state) => state.searchQuery);
   const selectedMessage = useDashboardStore((state) => state.selectedMessage);
@@ -141,7 +140,7 @@ export const ChatTimelinePanel = ({
   /**
    * タイムラインデータを取得（統合タイムラインAPI版）。
    */
-  const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['unified-timeline', teamName, displayLimit],
     queryFn: async (): Promise<TimelineMessage[]> => {
       if (!teamName) {
@@ -203,36 +202,10 @@ export const ChatTimelinePanel = ({
 
       return messages;
     },
-    refetchInterval: inboxInterval,
+    refetchInterval: messagesInterval,
     enabled: !!teamName,
     staleTime: 0,
   });
-
-  // Page Visibility API: タブ非アクティブ時にポーリング間隔を延長
-  // refetchをrefで保持して無限ループを回避
-  const refetchRef = useRef(refetch);
-
-  useEffect(() => {
-    refetchRef.current = refetch;
-  }, [refetch]);
-
-  useEffect(() => {
-    const ACTIVE_INTERVAL = 30000; // 30秒（アクティブ時）
-    const BACKGROUND_INTERVAL = 60000; // 60秒（非アクティブ時）
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setInboxInterval(BACKGROUND_INTERVAL);
-      } else {
-        setInboxInterval(ACTIVE_INTERVAL);
-        // アクティブに戻ったときに即時更新（ref経由で呼び出し）
-        refetchRef.current();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [setInboxInterval]);
 
 
   /**
@@ -407,13 +380,6 @@ export const ChatTimelinePanel = ({
   }, [setDetailModalOpen, setSelectedMessage]);
 
   /**
-   * リフレッシュハンドラー。
-   */
-  const handleRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
-
-  /**
    * 検索クエリ変更ハンドラー（ストアに直接保存）。
    */
   const handleSearchChange = useCallback((query: string) => {
@@ -433,42 +399,10 @@ export const ChatTimelinePanel = ({
   }
 
   return (
-    <div className="flex flex-col h-full gap-4">
-      {/* 表示件数選択 */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-slate-600 dark:text-slate-400">表示件数:</span>
-        <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={() => setDisplayLimit('500')}
-            className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              displayLimit === '500'
-                ? 'bg-blue-500 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
-            }`}
-          >
-            500件
-          </button>
-          <button
-            type="button"
-            onClick={() => setDisplayLimit('all')}
-            className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              displayLimit === 'all'
-                ? 'bg-blue-500 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
-            }`}
-          >
-            全量
-          </button>
-        </div>
-        <span className="text-xs text-slate-500 dark:text-slate-500">
-          （{sortedMessages.length}件表示中）
-        </span>
-      </div>
-
+    <div className="flex flex-col h-full gap-3">
       {/* ヘッダー */}
       <ChatHeader
-        title="💬 メッセージタイムライン"
+        title="メッセージタイムライン"
         messageCount={sortedMessages.length}
         searchQuery={effectiveSearchQuery}
         onSearchChange={handleSearchChange}
@@ -476,11 +410,8 @@ export const ChatTimelinePanel = ({
         searchResultIndex={searchResultIndex}
         onPrevResult={handlePrevResult}
         onNextResult={handleNextResult}
-        pollingInterval={inboxInterval}
-        onPollingIntervalChange={setInboxInterval}
-        lastUpdateTimestamp={dataUpdatedAt}
-        onRefresh={handleRefresh}
-        isLoading={isLoading}
+        displayLimit={displayLimit}
+        onDisplayLimitChange={setDisplayLimit}
         messageTypeFilter={{
           selectedTypes,
           onChange: handleTypeFilterChange,

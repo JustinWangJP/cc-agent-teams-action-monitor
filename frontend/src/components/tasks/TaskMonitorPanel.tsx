@@ -86,7 +86,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
   isCollapsed = false,
   onToggle,
 }) => {
-  const { tasks, loading, error, refetch } = useTeamTasks(teamName);
+  const { tasks, loading, error } = useTeamTasks(teamName);
 
   // TaskWithProgress に変換
   const tasksWithProgress = useMemo(() => {
@@ -240,29 +240,9 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             タスク監視
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            {teamName} のタスク状況
-          </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => refetch()}
-            disabled={loading}
-            className={clsx(
-              'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
-              'text-slate-700 dark:text-slate-300',
-              'bg-white dark:bg-slate-800',
-              'border border-slate-300 dark:border-slate-700',
-              'hover:bg-slate-50 dark:hover:bg-slate-700',
-              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-              loading && 'opacity-50 cursor-not-allowed',
-            )}
-            aria-label="タスクを更新"
-          >
-            <RefreshCw className={clsx('w-4 h-4', loading && 'animate-spin')} />
-            更新
-          </button>
+
           {/* 折りたたみボタン */}
           {onToggle && (
             <button

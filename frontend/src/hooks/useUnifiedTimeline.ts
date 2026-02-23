@@ -244,7 +244,7 @@ export function useUnifiedTimeline({
   limit = 100,
 }: UseUnifiedTimelineOptions): UseUnifiedTimelineResult {
   const queryClient = useQueryClient();
-  const inboxInterval = useDashboardStore((state) => state.inboxInterval);
+  const messagesInterval = useDashboardStore((state) => state.messagesInterval);
 
   // キャッシュをクリアする関数
   const clearCache = useCallback(() => {
@@ -306,7 +306,7 @@ export function useUnifiedTimeline({
         throw classifiedError;
       }
     },
-    refetchInterval: inboxInterval,
+    refetchInterval: messagesInterval,
     enabled: !!teamName && enabled,
     staleTime: 0,
     retry: 3,
@@ -379,7 +379,7 @@ export function useUnifiedTimelineUpdates(
   since: string | null,
   options?: Partial<UseUnifiedTimelineOptions>
 ): UseUnifiedTimelineUpdatesResult {
-  const inboxInterval = useDashboardStore((state) => state.inboxInterval);
+  const messagesInterval = useDashboardStore((state) => state.messagesInterval);
   const apiBaseUrl = options?.apiBaseUrl ?? '/api';
   const limit = options?.limit ?? 50;
   const enabled = options?.enabled ?? true;
@@ -427,7 +427,7 @@ export function useUnifiedTimelineUpdates(
         throw classifiedError;
       }
     },
-    refetchInterval: inboxInterval,
+    refetchInterval: messagesInterval,
     enabled: !!teamName && !!since && enabled,
     staleTime: 0,
     retry: 3,

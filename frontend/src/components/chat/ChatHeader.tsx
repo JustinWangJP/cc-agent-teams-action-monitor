@@ -9,8 +9,7 @@
 'use client';
 
 import { memo } from 'react';
-import { Search, RefreshCw, Filter, ChevronUp, ChevronDown } from 'lucide-react';
-import { PollingIntervalSelector } from '@/components/common/PollingIntervalSelector';
+import { Search, Filter, ChevronUp, ChevronDown } from 'lucide-react';
 import { MessageTypeFilter, type MessageTypeFilterProps } from './MessageTypeFilter';
 import { SenderFilter, type SenderFilterProps } from './SenderFilter';
 import { clsx } from 'clsx';
@@ -35,16 +34,6 @@ export interface ChatHeaderProps {
   onPrevResult?: () => void;
   /** 次の結果へハンドラー */
   onNextResult?: () => void;
-  /** ポーリング間隔 */
-  pollingInterval?: number;
-  /** ポーリング間隔変更ハンドラー */
-  onPollingIntervalChange?: (interval: number) => void;
-  /** 最後の更新タイムスタンプ（カウントダウン用） */
-  lastUpdateTimestamp?: number;
-  /** リフレッシュハンドラー */
-  onRefresh?: () => void;
-  /** ローディング状態 */
-  isLoading?: boolean;
   /** メッセージタイプフィルター */
   messageTypeFilter?: MessageTypeFilterProps;
   /** 送信者フィルター */
@@ -53,6 +42,10 @@ export interface ChatHeaderProps {
   showFilter?: boolean;
   /** フィルター展開切り替え */
   onToggleFilter?: () => void;
+  /** 表示件数制限 */
+  displayLimit?: '500' | 'all';
+  /** 表示件数制限変更ハンドラー */
+  onDisplayLimitChange?: (limit: '500' | 'all') => void;
 }
 
 /**
@@ -82,21 +75,47 @@ export const ChatHeader = memo<ChatHeaderProps>(
     searchResultIndex = -1,
     onPrevResult,
     onNextResult,
-    pollingInterval = 30000,
-    onPollingIntervalChange,
-    lastUpdateTimestamp = Date.now(),
-    onRefresh,
-    isLoading = false,
     messageTypeFilter,
     senderFilter,
     showFilter = false,
     onToggleFilter,
+    displayLimit = '500',
+    onDisplayLimitChange,
   }) => {
     return (
       <div className="flex flex-col gap-3">
         {/* メインタイトルバー */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* 表示件数セレクター */}
+            {onDisplayLimitChange && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onDisplayLimitChange('500')}
+                  className={clsx(
+                    'px-2 py-0.5 text-xs rounded transition-colors',
+                    displayLimit === '500'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+                  )}
+                >
+                  500件
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDisplayLimitChange('all')}
+                  className={clsx(
+                    'px-2 py-0.5 text-xs rounded transition-colors',
+                    displayLimit === 'all'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+                  )}
+                >
+                  全量
+                </button>
+              </div>
+            )}
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               {title}
             </h2>
@@ -133,39 +152,6 @@ export const ChatHeader = memo<ChatHeaderProps>(
                     {(messageTypeFilter?.selectedTypes.length || 0) + (senderFilter?.selectedSenders.length || 0)}
                   </span>
                 )}
-              </button>
-            )}
-
-            {/* ポーリング間隔セレクター */}
-            {onPollingIntervalChange && (
-              <PollingIntervalSelector
-                value={pollingInterval}
-                onChange={onPollingIntervalChange}
-                label="更新間隔"
-                lastUpdateTimestamp={lastUpdateTimestamp}
-                showCountdown={true}
-              />
-            )}
-
-            {/* リフレッシュボタン */}
-            {onRefresh && (
-              <button
-                type="button"
-                onClick={onRefresh}
-                disabled={isLoading}
-                className={clsx(
-                  'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
-                  'text-slate-700 dark:text-slate-300',
-                  'bg-white dark:bg-slate-800',
-                  'border border-slate-300 dark:border-slate-700',
-                  'hover:bg-slate-50 dark:hover:bg-slate-700',
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                  isLoading && 'opacity-50 cursor-not-allowed'
-                )}
-                aria-label="更新"
-              >
-                <RefreshCw className={clsx('w-4 h-4', isLoading && 'animate-spin')} />
-                更新
               </button>
             )}
           </div>

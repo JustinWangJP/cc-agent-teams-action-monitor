@@ -18,7 +18,8 @@ import { ChatTimelinePanel } from "@/components/chat";
 import { TimelineTaskSplitLayout } from "@/components/timeline/TimelineTaskSplitLayout";
 import { TaskMonitorPanel } from "@/components/tasks/TaskMonitorPanel";
 import { useTeams, useTeam } from "@/hooks/useTeams";
-import { useTasks } from "@/hooks/useTasks";
+import { useTasks, useTeamTasks } from "@/hooks/useTasks";
+import { useUnifiedTimeline } from "@/hooks/useUnifiedTimeline";
 import { useDashboardStore } from "@/stores/dashboardStore";
 import {
   LayoutDashboard,
@@ -65,14 +66,8 @@ function App() {
   const setTeamsInterval = useDashboardStore((state) => state.setTeamsInterval);
   const tasksInterval = useDashboardStore((state) => state.tasksInterval);
   const setTasksInterval = useDashboardStore((state) => state.setTasksInterval);
-
-  // 選択されたチームの詳細を取得
-  const {
-    team: selectedTeamDetail,
-    loading: teamDetailLoading,
-    refetch: refetchTeamDetail,
-    dataUpdatedAt: teamDetailDataUpdatedAt,
-  } = useTeam(selectedTeam || "");
+  const messagesInterval = useDashboardStore((state) => state.messagesInterval);
+  const setMessagesInterval = useDashboardStore((state) => state.setMessagesInterval);
 
   // 個別のセレクターを使用して無限レンダリングを防ぐ
   const currentView = useDashboardStore((state) => state.currentView);
@@ -82,12 +77,26 @@ function App() {
   const isTaskPanelCollapsed = useDashboardStore((state) => state.isTaskPanelCollapsed);
   const toggleTaskPanel = useDashboardStore((state) => state.toggleTaskPanel);
 
-  // Group tasks by status
-  const tasksByStatus = {
-    pending: tasks.filter((t) => t.status === "pending"),
-    in_progress: tasks.filter((t) => t.status === "in_progress"),
-    completed: tasks.filter((t) => t.status === "completed"),
-  };
+  // タイムライン用のデータ取得（統合更新ボタン用）
+  const { refetch: refetchTimeline, dataUpdatedAt: timelineDataUpdatedAt } = useUnifiedTimeline({
+    teamName: selectedTeam || '',
+    enabled: currentView === 'timeline' && !!selectedTeam,
+  });
+  const { refetch: refetchTeamTasks } = useTeamTasks(selectedTeam || '');
+
+  // タイムライン統合更新ハンドラー
+  const handleTimelineRefresh = useCallback(() => {
+    refetchTimeline();
+    refetchTeamTasks();
+  }, [refetchTimeline, refetchTeamTasks]);
+
+  // 選択されたチームの詳細を取得
+  const {
+    team: selectedTeamDetail,
+    loading: teamDetailLoading,
+    refetch: refetchTeamDetail,
+    dataUpdatedAt: teamDetailDataUpdatedAt,
+  } = useTeam(selectedTeam || "");
 
   // タスクフィルタリング（チームフィルタ + 検索）
   const filteredTasks = tasks.filter((task) => {
@@ -172,7 +181,7 @@ function App() {
   return (
     <Layout>
       <div className="bg-gray-50 dark:bg-slate-900 min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="px-4 py-6">
           {/* Header with View Tabs and Theme Toggle */}
           <div className="flex items-center justify-between mb-6">
             <div
@@ -193,8 +202,8 @@ function App() {
                     role="tab"
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out ${
                       isActive
-                        ? "bg-blue-500 text-white"
-                        : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
+                        ? "bg-blue-500 text-white ring-2 ring-blue-300"
+                        : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 focus:ring-2 focus:ring-blue-500"
                     }`}
                   >
                     <Icon size={18} />
@@ -329,97 +338,6 @@ function App() {
                     )}
                   </div>
                 </div>
-
-                {/* Tasks Section - 全幅表示 */}
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                        Tasks
-                      </h2>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {tasks.length} tasks
-                      </span>
-                      <PollingIntervalSelector
-                        value={tasksInterval}
-                        onChange={setTasksInterval}
-                        label=""
-                        lastUpdateTimestamp={tasksDataUpdatedAt}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => refetchTasks()}
-                      disabled={tasksLoading}
-                      className={clsx(
-                        "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
-                        "text-slate-700 dark:text-slate-300",
-                        "bg-white dark:bg-slate-800",
-                        "border border-slate-300 dark:border-slate-700",
-                        "hover:bg-slate-50 dark:hover:bg-slate-700",
-                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-                        tasksLoading && "opacity-50 cursor-not-allowed",
-                      )}
-                    >
-                      <RefreshCw
-                        className={clsx(
-                          "w-4 h-4",
-                          tasksLoading && "animate-spin",
-                        )}
-                      />
-                      更新
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Pending */}
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
-                        Pending ({tasksByStatus.pending.length})
-                      </h3>
-                      <div className="space-y-2">
-                        {tasksByStatus.pending.map((task) => (
-                          <TaskCard
-                            key={`${task.teamName}-${task.id}`}
-                            task={task}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* In Progress */}
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-500" />
-                        In Progress ({tasksByStatus.in_progress.length})
-                      </h3>
-                      <div className="space-y-2">
-                        {tasksByStatus.in_progress.map((task) => (
-                          <TaskCard
-                            key={`${task.teamName}-${task.id}`}
-                            task={task}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Completed */}
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-green-500" />
-                        Completed ({tasksByStatus.completed.length})
-                      </h3>
-                      <div className="space-y-2">
-                        {tasksByStatus.completed.map((task) => (
-                          <TaskCard
-                            key={`${task.teamName}-${task.id}`}
-                            task={task}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </>
             </div>
           )}
@@ -432,13 +350,14 @@ function App() {
               aria-labelledby="tab-timeline"
               className="animate-in fade-in slide-in-from-bottom-2 duration-300 h-[calc(100vh-200px)]"
             >
-              {/* チームセレクター */}
+              {/* チームセレクター + 更新UI（統合） */}
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label htmlFor="timeline-team-select" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     チームを選択:
                   </label>
                   <select
+                    id="timeline-team-select"
                     value={selectedTeam || ""}
                     onChange={(e) => setSelectedTeam(e.target.value || null)}
                     className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -451,10 +370,37 @@ function App() {
                     ))}
                   </select>
                 </div>
+                {selectedTeam && (
+                  <div className="flex items-center gap-3">
+                    <PollingIntervalSelector
+                      value={messagesInterval}
+                      onChange={setMessagesInterval}
+                      label=""
+                      lastUpdateTimestamp={timelineDataUpdatedAt}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTimelineRefresh}
+                      className={clsx(
+                        "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                        "text-slate-700 dark:text-slate-300",
+                        "bg-white dark:bg-slate-800",
+                        "border border-slate-300 dark:border-slate-700",
+                        "hover:bg-slate-50 dark:hover:bg-slate-700",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+                      )}
+                      aria-label="タイムラインとタスクを更新"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      更新
+                    </button>
+                  </div>
+                )}
               </div>
               {selectedTeam ? (
                 <TimelineTaskSplitLayout
                   isTaskPanelCollapsed={isTaskPanelCollapsed}
+                  taskPanelOffset={100}
                   timelinePanel={<ChatTimelinePanel teamName={selectedTeam} />}
                   taskPanel={
                     <TaskMonitorPanel
