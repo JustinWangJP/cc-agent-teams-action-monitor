@@ -54,9 +54,14 @@ class Team(BaseModel):
 class TeamSummary(BaseModel):
     """チーム一覧表示用のサマリーモデル。
 
-    チーム名、説明、メンバー数、タスク数、ステータス（active/inactive）、リードエージェントIDを含みます。
+    チーム名、説明、メンバー数、タスク数、ステータス、リードエージェントIDを含みます。
     一覧画面での高速表示に最適化された軽量モデルです。
 
+    ステータス一覧:
+    - active: セッションログ mtime ≤ 1時間
+    - stopped: セッションログ mtime > 1時間
+    - unknown: セッションログなし
+    - inactive: members 空配列
 
     """
 
@@ -64,7 +69,7 @@ class TeamSummary(BaseModel):
     description: Optional[str] = ""
     memberCount: int
     taskCount: int = 0  # チームに関連するタスク数
-    status: str  # active, inactive, stopped
+    status: str  # active, inactive, stopped, unknown
     lastActivity: Optional[datetime] = None
     leadAgentId: str
     createdAt: Optional[int] = None  # 作成日時（Unixタイムスタンプ、ソート用）
