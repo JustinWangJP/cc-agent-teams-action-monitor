@@ -78,4 +78,6 @@ export interface TaskWithProgress extends TaskSummary {
   blocks?: string[];
   /** このタスクをブロックしているタスクIDリスト */
   blockedBy?: string[];
+  /** タスクの詳細説明 */
+  description?: string;
 }

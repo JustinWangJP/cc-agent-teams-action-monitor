@@ -139,6 +139,19 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
           </div>
         </div>
 
+        {/* タスク詳細（トグル） */}
+        {task.description && (
+          <details className="group/description mb-3">
+            <summary className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 select-none">
+              <span>📝 詳細</span>
+              <span className="group-open/description:rotate-90 transition-transform">▶</span>
+            </summary>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap pl-2 border-l-2 border-slate-200 dark:border-slate-700">
+              {task.description}
+            </p>
+          </details>
+        )}
+
         {/* プログレスバー */}
         <div className="mb-3">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
@@ -196,7 +209,7 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
             )}
           </div>
           {task.blockedCount > 0 && (
-            <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-medium">
               <Lock className="w-3 h-3" />
               Blocked by {task.blockedCount}
             </span>

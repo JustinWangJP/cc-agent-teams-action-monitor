@@ -774,7 +774,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
     const formattedTime = safeFormatDate(message.timestamp);
 
     // メッセージ表示用テキストを生成（タイプ別ロジック）
-    const { summary: messageSummary } = getMessageDisplayText(message);
+    const { summary: messageSummary, detail: messageDetail } = getMessageDisplayText(message);
     const messageText = messageSummary;
 
     // メッセージID（ブックマーク用）
@@ -797,7 +797,9 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
     return (
       <article
         className={clsx(
-          'group relative flex gap-4 p-4 rounded-lg transition-all duration-200',
+          'group relative flex p-4 rounded-lg transition-all duration-200',
+          // gap: session は gap-4、inbox は gap-4
+          isSession ? 'gap-4' : 'gap-4',
           'hover:bg-slate-50 dark:hover:bg-slate-800/50',
           isSelected && 'bg-blue-50 dark:bg-blue-900/20',
           isHighlighted && 'bg-yellow-50 dark:bg-yellow-900/20 ring-2 ring-yellow-400 dark:ring-yellow-600',
@@ -844,7 +846,12 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
         ) : null}
 
         {/* メッセージコンテンツ（共通） */}
-        <div className="flex-1 min-w-0 max-w-[80%]">
+        <div className={clsx(
+          "min-w-0",
+          isSession
+            ? "flex-1 max-w-[60%] min-w-[30%] overflow-x-auto"
+            : "w-auto max-w-[60%] min-w-[30%] overflow-x-auto"
+        )}>
           {/* ヘッダー（送信者→受信者 + タイプ + 時刻） */}
           <div className={clsx('flex items-center gap-2 mb-1', isSession ? 'justify-start' : 'justify-end')}>
             {/* 送信者→受信者の表示 */}
@@ -888,6 +895,16 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
               <MarkdownRenderer content={messageText} />
             ) : (
               <p className="whitespace-pre-wrap">{messageText}</p>
+            )}
+            {/* detail（description）がある場合は表示 */}
+            {messageDetail && (
+              <div className="mt-2 text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap border-t border-slate-200 dark:border-slate-700 pt-2">
+                {isMarkdown(messageDetail) ? (
+                  <MarkdownRenderer content={messageDetail} />
+                ) : (
+                  <p>{messageDetail}</p>
+                )}
+              </div>
             )}
             {isUnifiedTimelineEntry(message) && message.source === 'session' && (
               <SessionDetails

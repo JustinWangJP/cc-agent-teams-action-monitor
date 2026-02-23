@@ -81,7 +81,7 @@ export const TimelineTaskSplitLayout = memo<TimelineTaskSplitLayoutProps>(
         {/* 右: タスク監視パネル（固定幅） */}
         <div
           className={clsx(
-            'w-full lg:h-full overflow-y-auto',
+            'w-full lg:h-full overflow-visible lg:overflow-visible',
             'border-t lg:border-t-0 lg:border-l',
             'border-slate-200 dark:border-slate-700',
             'transition-all duration-300 ease-out',

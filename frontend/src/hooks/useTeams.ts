@@ -1,6 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Team, TeamSummary } from '@/types/team';
 import { useDashboardStore } from '@/stores/dashboardStore';
+import toast from 'react-hot-toast';
+
+/**
+ * チーム削除のレスポンス型
+ */
+interface DeleteTeamResponse {
+  message: string;
+  deletedPaths: string[];
+}
 
 /**
  * 全チーム一覧を取得・管理するカスタムフック（React Query版）。
@@ -65,5 +74,48 @@ export function useTeam(teamName: string) {
     error: error?.message || null,
     refetch,
     dataUpdatedAt,
+  };
+}
+
+/**
+ * チームを削除するカスタムフック（React Query版）。
+ *
+ * /api/teams/{teamName} エンドポイントに DELETE リクエストを送信し、
+ * stopped 状態のチームと関連ファイルを削除します。
+ *
+ * @returns mutate - 削除実行関数
+ * @returns isPending - 削除処理中フラグ
+ * @returns error - エラーメッセージ（null 可能）
+ */
+export function useDeleteTeam() {
+  const queryClient = useQueryClient();
+
+  const { mutate, isPending, error } = useMutation({
+    mutationFn: async (teamName: string) => {
+      const response = await fetch(`/api/teams/${teamName}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'チームの削除に失敗しました');
+      }
+
+      return response.json() as Promise<DeleteTeamResponse>;
+    },
+    onSuccess: (data) => {
+      // チーム一覧を再取得してキャッシュを更新
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      toast.success(data.message);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  return {
+    deleteTeam: mutate,
+    isDeleting: isPending,
+    error: error?.message || null,
   };
 }
