@@ -90,7 +90,7 @@ DELETE /api/teams/{team_name}
 3. 削除実行
    ├─ teams/{team-name}/ ディレクトリ削除
    ├─ tasks/{team-name}/ ディレクトリ削除
-   └─ projects/{project-hash}/ ディレクトリ削除
+   └─ projects/{project-hash}/{session}.jsonl ファイルのみ削除（ディレクトリは残す）
 
 4. 成功レスポンス
    └─ 200 OK
