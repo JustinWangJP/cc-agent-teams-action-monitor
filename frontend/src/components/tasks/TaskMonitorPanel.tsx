@@ -3,6 +3,7 @@
  *
  * 選択されたTeamのタスクリストを表示します。
  * 進捗バー、activeForm表示、依存関係表示を含みます。
+ * 折りたたみ可能で、最小化時は統計アイコンのみ表示します。
  *
  * @module components/tasks/TaskMonitorPanel
  */
@@ -10,7 +11,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { AlertCircle, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, RefreshCw, LayoutList, ChevronLeft, PauseCircle } from 'lucide-react';
 import { ExpandedTaskCard } from './ExpandedTaskCard';
 import { useTeamTasks } from '@/hooks/useTasks';
 import { TaskWithProgress } from '@/types/task';
@@ -24,6 +25,10 @@ export interface TaskMonitorPanelProps {
   teamName: string;
   /** タイムラインフィルタハンドラー（オプション） */
   onTimelineFilter?: (taskId: string) => void;
+  /** パネルが折りたたまれているか */
+  isCollapsed?: boolean;
+  /** 折りたたみ切り替えハンドラー */
+  onToggle?: () => void;
 }
 
 /**
@@ -70,12 +75,16 @@ function convertToTaskWithProgress(task: {
  * <TaskMonitorPanel
  *   teamName="dashboard-dev"
  *   onTimelineFilter={(taskId) => console.log('Filter by task:', taskId)}
+ *   isCollapsed={false}
+ *   onToggle={() => setCollapsed(!collapsed)}
  * />
  * ```
  */
 export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
   teamName,
   onTimelineFilter,
+  isCollapsed = false,
+  onToggle,
 }) => {
   const { tasks, loading, error, refetch } = useTeamTasks(teamName);
 
@@ -122,6 +131,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
     };
   }, [tasksWithProgress, pendingTasks.length, inProgressTasks.length, completedTasks.length, otherTasks.length]);
 
+  // チーム未選択時の表示
   if (!teamName) {
     return (
       <div className="flex items-center justify-center h-full bg-slate-50 dark:bg-slate-900">
@@ -133,8 +143,97 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
     );
   }
 
+  // 最小化表示（48px幅の縦列）
+  if (isCollapsed) {
+    return (
+      <div className="flex flex-col h-full bg-white dark:bg-slate-900 shadow-lg">
+        {/* 展開ボタン（上部） */}
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex items-center justify-center p-2 border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          aria-label="タスクパネルを展開"
+          title="タスクパネルを展開"
+        >
+          <ChevronLeft className="w-5 h-5 text-slate-600 dark:text-slate-400 rotate-180" />
+        </button>
+
+        {/* 統計アイコン縦列 */}
+        <div className="flex-1 flex flex-col items-center py-4 space-y-4 overflow-y-auto">
+          {/* 全タスク */}
+          <div
+            className="flex flex-col items-center justify-center"
+            title={`全タスク: ${stats.total}`}
+          >
+            <LayoutList className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-1">
+              {stats.total}
+            </span>
+          </div>
+
+          {/* 未着手 */}
+          <div
+            className="flex flex-col items-center justify-center"
+            title={`未着手: ${stats.pending}`}
+          >
+            <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <span className="text-sm font-semibold text-amber-900 dark:text-amber-100 mt-1">
+              {stats.pending}
+            </span>
+          </div>
+
+          {/* 進行中 */}
+          <div
+            className="flex flex-col items-center justify-center"
+            title={`進行中: ${stats.inProgress}`}
+          >
+            <RefreshCw className={clsx(
+              'w-5 h-5 text-blue-600 dark:text-blue-400',
+              loading && 'animate-spin'
+            )} />
+            <span className="text-sm font-semibold text-blue-900 dark:text-blue-100 mt-1">
+              {stats.inProgress}
+            </span>
+          </div>
+
+          {/* 待機中（ブロックされているタスク） */}
+          {stats.other > 0 && (
+            <div
+              className="flex flex-col items-center justify-center"
+              title={`待機中: ${stats.other}`}
+            >
+              <PauseCircle className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-1">
+                {stats.other}
+              </span>
+            </div>
+          )}
+
+          {/* 完了 */}
+          <div
+            className="flex flex-col items-center justify-center"
+            title={`完了: ${stats.completed}`}
+          >
+            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <span className="text-sm font-semibold text-green-900 dark:text-green-100 mt-1">
+              {stats.completed}
+            </span>
+          </div>
+        </div>
+
+        {/* ローディング表示（最小化時） */}
+        {loading && (
+          <div className="flex items-center justify-center p-2 border-t border-slate-200 dark:border-slate-700">
+            <RefreshCw className="w-4 h-4 text-slate-400 animate-spin" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 展開表示（300px幅）
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900 shadow-lg">
       {/* ヘッダー */}
       <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
         <div>
@@ -145,30 +244,50 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
             {teamName} のタスク状況
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => refetch()}
-          disabled={loading}
-          className={clsx(
-            'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
-            'text-slate-700 dark:text-slate-300',
-            'bg-white dark:bg-slate-800',
-            'border border-slate-300 dark:border-slate-700',
-            'hover:bg-slate-50 dark:hover:bg-slate-700',
-            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-            loading && 'opacity-50 cursor-not-allowed',
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={loading}
+            className={clsx(
+              'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
+              'text-slate-700 dark:text-slate-300',
+              'bg-white dark:bg-slate-800',
+              'border border-slate-300 dark:border-slate-700',
+              'hover:bg-slate-50 dark:hover:bg-slate-700',
+              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+              loading && 'opacity-50 cursor-not-allowed',
+            )}
+            aria-label="タスクを更新"
+          >
+            <RefreshCw className={clsx('w-4 h-4', loading && 'animate-spin')} />
+            更新
+          </button>
+          {/* 折りたたみボタン */}
+          {onToggle && (
+            <button
+              type="button"
+              onClick={onToggle}
+              className={clsx(
+                'inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors',
+                'text-slate-600 dark:text-slate-400',
+                'hover:bg-slate-100 dark:hover:bg-slate-800',
+                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+              )}
+              aria-label="タスクパネルを折りたたむ"
+              title="タスクパネルを折りたたむ"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
           )}
-        >
-          <RefreshCw className={clsx('w-4 h-4', loading && 'animate-spin')} />
-          更新
-        </button>
+        </div>
       </div>
 
       {/* 統計情報 */}
       <div className="grid grid-cols-4 gap-2 p-4 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded">
           <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-            <CheckCircle2 className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+            <LayoutList className="w-4 h-4 text-slate-600 dark:text-slate-400" />
           </div>
           <div>
             <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{stats.total}</div>

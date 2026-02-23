@@ -175,7 +175,7 @@ export const ChatTimelinePanel = ({
       const messages: TimelineMessage[] = result.items.map((item: UnifiedTimelineEntry) => {
         // inbox 由来のエントリは ParsedMessage に変換
         if (item.source === 'inbox') {
-          return parseMessage({
+          const parsed = parseMessage({
             from: item.from_,
             text: item.content,
             timestamp: item.timestamp,
@@ -184,13 +184,20 @@ export const ChatTimelinePanel = ({
             summary: item.summary,
             to: item.to ?? undefined,
           });
+          // source フィールドを明示的に設定（重要：左右レイアウト判定に使用）
+          return {
+            ...parsed,
+            source: 'inbox' as const,
+          };
         }
         // session 由来のエントリは UnifiedTimelineEntry をそのまま返す
         // from_ -> from, content -> text にマッピング
+        // source フィールドを明示的に保持（重要：左右レイアウト判定に使用）
         return {
           ...item,
           from: item.from_,
           text: item.content,
+          source: 'session' as const,
         };
       });
 
@@ -277,16 +284,37 @@ export const ChatTimelinePanel = ({
 
   /**
    * 時刻昇順にソート済みメッセージ。
+   *
+   * 重複排除ロジックを含む：タイムスタンプ（秒単位）+ 正規化された内容で判定
    */
   const sortedMessages = useMemo(() => {
     if (!searchResults.filtered || !Array.isArray(searchResults.filtered)) {
       return [];
     }
-    return [...searchResults.filtered].sort((a, b) => {
+
+    // 重複判定キー生成関数：タイムスタンプ（秒単位まで）+ 正規化された内容
+    const getDuplicateKey = (msg: TimelineMessage): string => {
+      const timestamp = new Date(msg.timestamp);
+      // 秒単位に切り捨て
+      timestamp.setMilliseconds(0);
+      // 内容を正規化（空白の正規化など）
+      const content = ((msg as ParsedMessage).text || (msg as UnifiedTimelineEntry).content || '').trim().replace(/\s+/g, ' ');
+      return `${timestamp.toISOString()}_${content}`;
+    };
+
+    // まずソート
+    const sorted = [...searchResults.filtered].sort((a, b) => {
       const dateA = new Date(a.timestamp).getTime();
       const dateB = new Date(b.timestamp).getTime();
       return dateA - dateB;
     });
+
+    // 重複排除（後勝ち - より詳細な情報を持つ方を優先）
+    const uniqueMessages = Array.from(
+      new Map(sorted.map(m => [getDuplicateKey(m), m])).values()
+    );
+
+    return uniqueMessages;
   }, [searchResults.filtered]);
 
   /**

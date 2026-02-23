@@ -354,6 +354,8 @@ export interface ParsedMessage extends InboxMessage {
   parsedData?: ProtocolMessage;
   /** 受信者（推定） */
   to?: string;
+  /** データソース（inbox | session） */
+  source?: 'inbox' | 'session';
 }
 
 /**

@@ -11,7 +11,7 @@
 
 import { memo, useCallback, useState, type ReactNode } from 'react';
 import type { ParsedMessage, UnifiedTimelineEntry, FileChangeInfo } from '@/types/message';
-import { getMessageTypeConfig, getMessageTypeColorClass } from '@/types/message';
+import { getMessageTypeConfig, getMessageTypeColorClass, renderMessageByType } from '@/types/message';
 import { clsx } from 'clsx';
 import { BookmarkButton } from './BookmarkButton';
 import { AgentStatusIndicator } from './AgentStatusIndicator';
@@ -29,7 +29,8 @@ export type TimelineMessage = ParsedMessage | UnifiedTimelineEntry;
  * UnifiedTimelineEntry かどうかを判定する型ガード。
  */
 function isUnifiedTimelineEntry(message: TimelineMessage): message is UnifiedTimelineEntry {
-  return 'source' in message && 'parsedType' in message;
+  // source が 'session' の場合は UnifiedTimelineEntry
+  return 'source' in message && message.source === 'session';
 }
 
 /**
@@ -48,6 +49,40 @@ const getMessageTypeIcon = (type: string): string => {
  */
 const getMessageTypeColorClassLocal = (type: string): string => {
   return getMessageTypeColorClass(type as any);
+};
+
+/**
+ * JSON形式のプロトコルメッセージをパースする。
+ *
+ * assistant_message の content が JSON 形式の場合、
+ * プロトコルメッセージとしてパースして表示データを返す。
+ *
+ * @param content - パース対象のテキスト
+ * @returns パース成功時は MessageDisplayData、失敗時は null
+ */
+const parseProtocolMessageFromContent = (content: string): { summary: string; detail?: string } | null => {
+  if (!content || typeof content !== 'string') {
+    return null;
+  }
+
+  try {
+    const data = JSON.parse(content);
+    // プロトコルメッセージの形式かをチェック（type フィールドが必須）
+    if (!data.type || typeof data.type !== 'string') {
+      return null;
+    }
+
+    // renderMessageByType を使用して表示データを取得
+    const displayData = renderMessageByType(data as Record<string, unknown>);
+
+    return {
+      summary: displayData.summary,
+      detail: displayData.detail,
+    };
+  } catch {
+    // JSON パースエラーの場合は null を返す
+    return null;
+  }
 };
 
 /**
@@ -84,6 +119,13 @@ const getMessageDisplayText = (message: TimelineMessage): { summary: string; det
             detail: content,
           };
         case 'assistant_message':
+          // assistant_message の content が JSON 形式のプロトコルメッセージかをチェック
+          const protocolDisplay = parseProtocolMessageFromContent(content);
+          if (protocolDisplay) {
+            // プロトコルメッセージとしてパースできた場合はその表示を使用
+            return protocolDisplay;
+          }
+          // 通常のテキストとして表示
           return {
             summary: msgSummary || (content.slice(0, 50) + (content.length > 50 ? '...' : '')),
             detail: content,
@@ -236,9 +278,9 @@ const getUserAIColor = (
   }
   if (parsedType === 'assistant_message') {
     return {
-      bg: 'bg-purple-100 dark:bg-purple-900/30',
-      text: 'text-purple-800 dark:text-purple-300',
-      border: 'border-purple-200 dark:border-purple-800',
+      bg: 'bg-gray-100 dark:bg-gray-900/30',
+      text: 'text-gray-800 dark:text-gray-300',
+      border: 'border-gray-200 dark:border-gray-800',
       icon: '🤖',
       displayName: 'AI Assistant',
     };
@@ -449,12 +491,12 @@ const MarkdownRenderer = memo<MarkdownRendererProps>(({ content, className }) =>
         // 段落
         '[&>p]:my-1',
         // テーブル（GitHubスタイル）
-        '[&>table]:w-full [&>table]:border-collapse [&>table]:my-2',
-        '[&>table>thead>tr]:border-b [&>table>thead>tr]:border-slate-300 [&>table>thead>tr]:dark:border-slate-600',
-        '[&>table>thead>tr>th]:text-left [&>table>thead>tr>th]:p-2 [&>table>thead>tr>th]:bg-slate-100 [&>table>thead>tr>th]:dark:bg-slate-800 [&>table>thead>tr>th]:font-semibold',
+        '[&>table]:w-full [&>table]:border-collapse [&>table]:my-2 [&>table]:overflow-x-auto',
+        '[&>table>thead>tr]:border-b-2 [&>table>thead>tr]:border-slate-300 [&>table>thead>tr]:dark:border-slate-600',
+        '[&>table>thead>tr>th]:text-left [&>table>thead>tr>th]:p-3 [&>table>thead>tr>th]:bg-slate-100 [&>table>thead>tr>th]:dark:bg-slate-700 [&>table>thead>tr>th]:font-bold [&>table>thead>tr>th]:text-slate-900 [&>table>thead>tr>th]:dark:text-slate-100',
         '[&>table>tbody>tr]:border-b [&>table>tbody>tr]:border-slate-200 [&>table>tbody>tr]:dark:border-slate-700',
-        '[&>table>tbody>tr>td]:p-2 [&>table>tbody>tr>td]:align-top',
-        '[&>table>tbody>tr:nth-child(even)]:bg-slate-50 [&>table>tbody>tr:nth-child(even)]:dark:bg-slate-800/50',
+        '[&>table>tbody>tr>td]:p-3 [&>table>tbody>tr>td]:align-top [&>table>tbody>tr>td]:text-slate-700 [&>table>tbody>tr>td]:dark:text-slate-300',
+        '[&>table>tbody>tr:nth-child(even)]:bg-slate-50 [&>table>tbody>tr:nth-child(even)]:dark:bg-slate-800/70',
         className
       )}
     >
@@ -710,7 +752,6 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
   }) => {
     // データソース判定: sessionは左側、inboxは右側
     const isSession = isUnifiedTimelineEntry(message) && message.source === 'session';
-    const layoutClass = isSession ? 'flex-row' : 'flex-row-reverse';
 
     // fromフィールドがundefinedの場合の安全対策
     const safeFrom = message.from || 'Unknown';
@@ -733,7 +774,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
     const formattedTime = safeFormatDate(message.timestamp);
 
     // メッセージ表示用テキストを生成（タイプ別ロジック）
-    const { summary: messageSummary, detail: messageDetail } = getMessageDisplayText(message);
+    const { summary: messageSummary } = getMessageDisplayText(message);
     const messageText = messageSummary;
 
     // メッセージID（ブックマーク用）
@@ -761,7 +802,8 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
           isSelected && 'bg-blue-50 dark:bg-blue-900/20',
           isHighlighted && 'bg-yellow-50 dark:bg-yellow-900/20 ring-2 ring-yellow-400 dark:ring-yellow-600',
           'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-400',
-          layoutClass
+          // session は左寄せ、inbox は右寄せ
+          isSession ? 'justify-start' : 'justify-end'
         )}
         onClick={handleClick}
         role="button"
@@ -775,40 +817,33 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
         aria-label={`${displayName}からのメッセージ: ${messageText.slice(0, 50)}${messageText.length > 50 ? '...' : ''}`}
         aria-pressed={isSelected}
       >
-        {/* ブックマークボタン（オーバーレイ） */}
-        {showBookmark && (
-          <div className={clsx('absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity z-10', isSession ? 'right-2' : 'left-2')}>
-            <BookmarkButton
-              messageId={messageId}
-              size="sm"
-            />
+        {/* session は左配置（アバター→コンテンツ）、inbox は右配置（コンテンツ→アバター） */}
+        {isSession ? (
+          /* アバター（左側） */
+          <div className="relative flex-shrink-0">
+            <div
+              className={clsx(
+                'w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold',
+                colors.bg,
+                colors.text,
+                colors.border,
+                'border-2'
+              )}
+              title={displayName}
+            >
+              {initials}
+            </div>
+            {/* エージェントステータスインジケーター */}
+            <div className="absolute -bottom-0.5 -right-0.5">
+              <AgentStatusIndicator
+                lastActivity={message.timestamp}
+                size="sm"
+              />
+            </div>
           </div>
-        )}
+        ) : null}
 
-        {/* アバター */}
-        <div className="relative flex-shrink-0">
-          <div
-            className={clsx(
-              'w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold',
-              colors.bg,
-              colors.text,
-              colors.border,
-              'border-2'
-            )}
-            title={displayName}
-          >
-            {initials}
-          </div>
-          {/* エージェントステータスインジケーター */}
-          <div className="absolute -bottom-0.5 -right-0.5">
-            <AgentStatusIndicator
-              lastActivity={message.timestamp}
-              size="sm"
-            />
-          </div>
-        </div>
-
-        {/* メッセージコンテンツ */}
+        {/* メッセージコンテンツ（共通） */}
         <div className="flex-1 min-w-0 max-w-[80%]">
           {/* ヘッダー（送信者→受信者 + タイプ + 時刻） */}
           <div className={clsx('flex items-center gap-2 mb-1', isSession ? 'justify-start' : 'justify-end')}>
@@ -851,21 +886,6 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
             ) : (
               <p className="whitespace-pre-wrap">{messageText}</p>
             )}
-            {/* 詳細情報がある場合は別行で表示 */}
-            {messageDetail && (
-              <div className="mt-2 pt-2 border-t border-current opacity-75">
-                {searchQuery ? (
-                  <p className="whitespace-pre-wrap">
-                    {highlightText(messageDetail, searchQuery)}
-                  </p>
-                ) : isMarkdown(messageDetail) ? (
-                  <MarkdownRenderer content={messageDetail} />
-                ) : (
-                  <p className="whitespace-pre-wrap">{messageDetail}</p>
-                )}
-              </div>
-            )}
-            {/* session 由来の詳細情報を表示 */}
             {isUnifiedTimelineEntry(message) && message.source === 'session' && (
               <SessionDetails
                 details={message.details}
@@ -879,6 +899,41 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
             <MetadataDisplay metadata={metadata} />
           )}
         </div>
+
+        {/* inbox はアバターを右側に配置 */}
+        {!isSession && (
+          <div className="relative flex-shrink-0">
+            <div
+              className={clsx(
+                'w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold',
+                colors.bg,
+                colors.text,
+                colors.border,
+                'border-2'
+              )}
+              title={displayName}
+            >
+              {initials}
+            </div>
+            {/* エージェントステータスインジケーター（メッセージ側に表示） */}
+            <div className="absolute -bottom-0.5 -left-0.5">
+              <AgentStatusIndicator
+                lastActivity={message.timestamp}
+                size="sm"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ブックマークボタン（オーバーレイ） */}
+        {showBookmark && (
+          <div className={clsx('absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity z-10', isSession ? 'right-2' : 'left-2')}>
+            <BookmarkButton
+              messageId={messageId}
+              size="sm"
+            />
+          </div>
+        )}
       </div>
     );
   }
