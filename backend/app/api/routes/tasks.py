@@ -22,6 +22,12 @@ def read_task_file(task_path: Path) -> dict | None:
     指定されたパスの JSON ファイルを読み込み、辞書形式で返します。
     ファイルが存在しない、または JSON 形式でない場合は None を返します。
 
+    Args:
+        task_path: 読み込むタスクファイルのパス
+
+    Returns:
+        タスクデータの辞書、読み込み失敗時は None
+
     """
     if task_path.exists() and task_path.suffix == ".json":
         with open(task_path, "r", encoding="utf-8") as f:
@@ -99,6 +105,14 @@ async def list_team_tasks(team_name: str):
     指定されたチーム名のタスクディレクトリから全タスクを読み込み、
     Task 形式（詳細版）で返します。チームが存在しない場合は 404 エラー。
 
+    Args:
+        team_name: 取得対象のチーム名
+
+    Returns:
+        list[Task]: タスク詳細情報のリスト
+
+    Raises:
+        HTTPException: チームが存在しない場合（404）
 
     """
     tasks = []
@@ -121,6 +135,15 @@ async def get_task(task_id: str, team_name: str | None = None):
     タスクIDを指定してタスク詳細を取得します。team_name が指定された場合は
     そのチーム内で検索し、未指定の場合は全チームから検索します。
 
+    Args:
+        task_id: 取得対象のタスクID
+        team_name: 検索対象のチーム名（省略時は全チーム検索）
+
+    Returns:
+        dict: タスク詳細データ
+
+    Raises:
+        HTTPException: タスクが見つからない場合（404）
 
     """
     if team_name:

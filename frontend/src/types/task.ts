@@ -4,7 +4,7 @@
  * Task、TaskSummary インターフェースを定義し、
  * Claude Code Agent Teams のタスク管理を型安全に行います。
  *
-*/
+ */
 
 /**
  * タスク詳細情報を表すインターフェース。

@@ -849,8 +849,8 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
         <div className={clsx(
           "min-w-0",
           isSession
-            ? "flex-1 max-w-[60%] min-w-[30%] overflow-x-auto"
-            : "w-auto max-w-[60%] min-w-[30%] overflow-x-auto"
+            ? "flex-1 max-w-[70%] min-w-[30%] overflow-x-auto"
+            : "w-auto max-w-[70%] min-w-[30%] overflow-x-auto"
         )}>
           {/* ヘッダー（送信者→受信者 + タイプ + 時刻） */}
           <div className={clsx('flex items-center gap-2 mb-1', isSession ? 'justify-start' : 'justify-end')}>
