@@ -98,29 +98,93 @@ DELETE /api/teams/{team_name}
 
 #### レスポンス形式
 
-**成功:**
+> **注意:** 以下の `{team_name}`、`{status}`、`{project_hash}` は実際の値に置き換えて表示します。
+
+**成功 (200 OK):**
+```json
+{
+  "message": "チーム「{team_name}」を削除しました",
+  "deletedPaths": [
+    "~/.claude/teams/{team_name}",
+    "~/.claude/tasks/{team_name}",
+    "~/.claude/projects/{project_hash}"
+  ]
+}
+```
+
+**例:**
 ```json
 {
   "message": "チーム「my-team」を削除しました",
   "deletedPaths": [
     "~/.claude/teams/my-team",
     "~/.claude/tasks/my-team",
-    "~/.claude/projects/-Users-xxx-project"
+    "~/.claude/projects/-Users-aegeanwang-Coding-my-project"
   ]
 }
 ```
 
-**エラー（ステータス不正）:**
+---
+
+#### エラーレスポンス
+
+**404 Not Found - チームが存在しない:**
 ```json
 {
-  "detail": "ステータスが「active」のチームは削除できません。「stopped」のチームのみ削除可能です。"
+  "detail": "チーム「{team_name}」が見つかりません"
 }
 ```
 
-**エラー（チームなし）:**
+**例:**
 ```json
 {
-  "detail": "チーム「my-team」が見つかりません"
+  "detail": "チーム「unknown-team」が見つかりません"
+}
+```
+
+---
+
+**400 Bad Request - ステータスが stopped 以外:**
+```json
+{
+  "detail": "このチームは削除できません。ステータスが「{status}」です。削除できるのは「stopped」状態のチームのみです。"
+}
+```
+
+**例（active の場合）:**
+```json
+{
+  "detail": "このチームは削除できません。ステータスが「active」です。削除できるのは「stopped」状態のチームのみです。"
+}
+```
+
+**例（unknown の場合）:**
+```json
+{
+  "detail": "このチームは削除できません。ステータスが「unknown」です。削除できるのは「stopped」状態のチームのみです。"
+}
+```
+
+**例（inactive の場合）:**
+```json
+{
+  "detail": "このチームは削除できません。ステータスが「inactive」です。削除できるのは「stopped」状態のチームのみです。"
+}
+```
+
+---
+
+**500 Internal Server Error - 削除処理失敗:**
+```json
+{
+  "detail": "チーム「{team_name}」の削除中にエラーが発生しました: {エラー詳細}"
+}
+```
+
+**例:**
+```json
+{
+  "detail": "チーム「my-team」の削除中にエラーが発生しました: Permission denied"
 }
 ```
 
