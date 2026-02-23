@@ -476,6 +476,11 @@ class TimelineService:
                 "files": files_list,
             }
 
+        # content が 💭 で始まる場合は thinking タイプとして扱う
+        if content and content.startswith("💭"):
+            parsed_type = "thinking"
+            details = {"thinking": content[1:].strip()}
+
         # 色設定
         color_map = {
             "user_message": "#3b82f6",
