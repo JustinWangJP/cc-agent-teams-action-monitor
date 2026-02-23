@@ -10,7 +10,7 @@ import { ThemeToggle } from '@/components/common/ThemeToggle';
 export function Header() {
   return (
     <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 transition-colors duration-300 ease-in-out">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-12">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
