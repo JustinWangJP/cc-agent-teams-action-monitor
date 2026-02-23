@@ -49,6 +49,8 @@ export function useTasks() {
  * @returns refetch - 手動再取得関数
  */
 export function useTeamTasks(teamName: string) {
+  const messagesInterval = useDashboardStore((state) => state.messagesInterval);
+
   const { data: tasks = [], isLoading, error, refetch } = useQuery({
     queryKey: ['tasks', 'team', teamName],
     queryFn: async () => {
@@ -57,6 +59,7 @@ export function useTeamTasks(teamName: string) {
       return response.json() as Promise<Task[]>;
     },
     enabled: !!teamName,
+    refetchInterval: messagesInterval,
     staleTime: 0,
   });
 
