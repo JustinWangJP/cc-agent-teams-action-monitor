@@ -12,7 +12,7 @@
  *
  * 各 AI モデルの提供元を表します。
  */
-export type ModelProvider = 'anthropic' | 'moonshot' | 'zhipu' | 'other';
+export type ModelProvider = "anthropic" | "moonshot" | "zhipu" | "Alibaba Cloud" | "other";
 
 /**
  * モデル設定を表すインターフェース。

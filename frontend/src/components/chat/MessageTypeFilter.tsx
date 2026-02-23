@@ -10,14 +10,14 @@
 
 import { memo, useCallback } from 'react';
 import { Filter, X } from 'lucide-react';
-import type { MessageType } from '@/types/message';
+import type { ExtendedParsedType } from '@/types/message';
 import { clsx } from 'clsx';
 
 /**
  * メッセージタイプのオプション定義。
  */
 export interface MessageTypeOption {
-  value: MessageType;
+  value: ExtendedParsedType;
   label: string;
   icon: string;
 }
@@ -26,15 +26,19 @@ export interface MessageTypeOption {
  * デフォルトのメッセージタイプオプション。
  */
 export const DEFAULT_TYPE_OPTIONS: MessageTypeOption[] = [
+  // inbox 由来
   { value: 'message', label: 'メッセージ', icon: '💬' },
   { value: 'idle_notification', label: 'アイドル通知', icon: '💤' },
   { value: 'shutdown_request', label: 'シャットダウン要求', icon: '🛑' },
   { value: 'shutdown_response', label: 'シャットダウン応答', icon: '✅' },
-  { value: 'shutdown_approved', label: 'シャットダウン了承', icon: '✅' },
   { value: 'plan_approval_request', label: 'プラン承認要求', icon: '📋' },
   { value: 'plan_approval_response', label: 'プラン承認応答', icon: '✅' },
   { value: 'task_assignment', label: 'タスク割り当て', icon: '📝' },
-  { value: 'unknown', label: '不明', icon: '❓' },
+  { value: 'task_completed', label: 'タスク完了', icon: '✅' },
+  // session 由来
+  { value: 'user_message', label: 'ユーザーメッセージ', icon: '👤' },
+  { value: 'assistant_message', label: 'AI応答', icon: '🤖' },
+  { value: 'thinking', label: '思考', icon: '💭' },
 ];
 
 /**
@@ -42,9 +46,9 @@ export const DEFAULT_TYPE_OPTIONS: MessageTypeOption[] = [
  */
 export interface MessageTypeFilterProps {
   /** 選択中のタイプ */
-  selectedTypes: MessageType[];
+  selectedTypes: ExtendedParsedType[];
   /** タイプ選択変更ハンドラー */
-  onChange: (types: MessageType[]) => void;
+  onChange: (types: ExtendedParsedType[]) => void;
   /** 利用可能なタイプオプション */
   options?: MessageTypeOption[];
 }
@@ -94,7 +98,7 @@ export const MessageTypeFilter = memo<MessageTypeFilterProps>(
      * タイプのトグルハンドラー。
      */
     const handleToggle = useCallback(
-      (type: MessageType) => {
+      (type: ExtendedParsedType) => {
         if (selectedTypes.includes(type)) {
           onChange(selectedTypes.filter((t) => t !== type));
         } else {

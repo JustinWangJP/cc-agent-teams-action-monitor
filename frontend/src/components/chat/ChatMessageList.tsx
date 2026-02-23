@@ -14,9 +14,8 @@
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDown, ChevronDown } from 'lucide-react';
-import { ChatMessageBubble } from './ChatMessageBubble';
+import { ChatMessageBubble, type TimelineMessage } from './ChatMessageBubble';
 import { DateSeparator, isSameDate } from './DateSeparator';
-import type { ParsedMessage } from '@/types/message';
 import { clsx } from 'clsx';
 
 /**
@@ -24,7 +23,7 @@ import { clsx } from 'clsx';
  */
 export interface ChatMessageListProps {
   /** メッセージ配列（時刻昇順） */
-  messages: ParsedMessage[];
+  messages: TimelineMessage[];
   /** 選択中のメッセージID */
   selectedMessageId?: string;
   /** ハイライト中のメッセージID（検索結果） */
@@ -32,7 +31,7 @@ export interface ChatMessageListProps {
   /** 検索クエリ（ハイライト用） */
   searchQuery?: string;
   /** メッセージクリックハンドラー */
-  onMessageClick?: (message: ParsedMessage) => void;
+  onMessageClick?: (message: TimelineMessage) => void;
   /** 自動スクロール有効フラグ */
   autoScroll?: boolean;
   /** ローディング状態 */
@@ -147,12 +146,12 @@ EmptyState.displayName = 'EmptyState';
  * 仮想化されたメッセージアイテムコンポーネント。
  */
 interface VirtualMessageItemProps {
-  message: ParsedMessage;
-  previousMessage?: ParsedMessage;
+  message: TimelineMessage;
+  previousMessage?: TimelineMessage;
   isSelected: boolean;
   isHighlighted: boolean;
   searchQuery: string;
-  onMessageClick?: (message: ParsedMessage) => void;
+  onMessageClick?: (message: TimelineMessage) => void;
   index: number;
   total: number;
 }

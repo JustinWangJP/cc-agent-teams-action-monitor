@@ -16,10 +16,10 @@ import { useDashboardStore } from '@/stores/dashboardStore';
 export function useTasks() {
   const tasksInterval = useDashboardStore((state) => state.tasksInterval);
 
-  const { data: tasks = [], isLoading, error, refetch } = useQuery({
+  const { data: tasks = [], isLoading, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['tasks'],
     queryFn: async () => {
-      const response = await fetch('/api/tasks');
+      const response = await fetch('/api/tasks/');
       if (!response.ok) throw new Error('Failed to fetch tasks');
       return response.json() as Promise<TaskSummary[]>;
     },
@@ -32,6 +32,7 @@ export function useTasks() {
     loading: isLoading,
     error: error?.message || null,
     refetch,
+    dataUpdatedAt,
   };
 }
 
@@ -45,9 +46,12 @@ export function useTasks() {
  * @returns tasks - タスク詳細配列
  * @returns loading - ローディング状態
  * @returns error - エラーメッセージ（null 可能）
+ * @returns refetch - 手動再取得関数
  */
 export function useTeamTasks(teamName: string) {
-  const { data: tasks = [], isLoading, error } = useQuery({
+  const messagesInterval = useDashboardStore((state) => state.messagesInterval);
+
+  const { data: tasks = [], isLoading, error, refetch } = useQuery({
     queryKey: ['tasks', 'team', teamName],
     queryFn: async () => {
       const response = await fetch(`/api/tasks/team/${teamName}`);
@@ -55,6 +59,7 @@ export function useTeamTasks(teamName: string) {
       return response.json() as Promise<Task[]>;
     },
     enabled: !!teamName,
+    refetchInterval: messagesInterval,
     staleTime: 0,
   });
 
@@ -62,5 +67,6 @@ export function useTeamTasks(teamName: string) {
     tasks,
     loading: isLoading,
     error: error?.message || null,
+    refetch,
   };
 }

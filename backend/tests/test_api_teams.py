@@ -115,3 +115,200 @@ async def test_get_agent_inbox_success(client: AsyncClient, tmp_path, monkeypatc
     assert len(data) == 1
     assert data[0]["type"] == "message"
     assert data[0]["sender"] == "agent-2"
+
+
+# =============================================================================
+# 削除 API テスト
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_delete_team_not_found(client: AsyncClient):
+    """T-API-009: チーム削除（チームが存在しない）"""
+    response = await client.delete("/api/teams/nonexistent-team")
+    assert response.status_code == 404
+    assert "見つかりません" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_delete_team_status_active(client: AsyncClient, tmp_path, monkeypatch):
+    """T-API-010: チーム削除（active 状態は削除不可）"""
+    import json
+    from app.config import settings
+
+    # テスト用のチームディレクトリを作成
+    test_team_dir = tmp_path / "teams" / "active-team"
+    test_team_dir.mkdir(parents=True)
+
+    # プロジェクトディレクトリとセッションログを作成（active 状態）
+    test_project_dir = tmp_path / "projects" / "-tmp-test-project"
+    test_project_dir.mkdir(parents=True)
+    session_file = test_project_dir / "session-123.jsonl"
+    session_file.write_text('{"type": "user_message", "content": "test"}\n', encoding="utf-8")
+
+    # config.json を作成（メンバーあり、leadSessionId あり）
+    config = {
+        "name": "active-team",
+        "leadAgentId": "lead@session",
+        "leadSessionId": "session-123",
+        "members": [
+            {"agentId": "lead@session", "cwd": "/tmp/test-project"}
+        ]
+    }
+    config_file = test_team_dir / "config.json"
+    config_file.write_text(json.dumps(config), encoding="utf-8")
+
+    # settings をモック
+    monkeypatch.setattr(settings, "teams_dir", tmp_path / "teams")
+    monkeypatch.setattr(settings, "claude_dir", tmp_path)
+    monkeypatch.setattr(settings, "tasks_dir", tmp_path / "tasks")
+
+    response = await client.delete("/api/teams/active-team")
+    assert response.status_code == 400
+    assert "削除できません" in response.json()["detail"]
+    assert "active" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_delete_team_success(client: AsyncClient, tmp_path, monkeypatch):
+    """T-API-011: チーム削除（正常 - stopped 状態）"""
+    import json
+    from datetime import datetime, timezone, timedelta
+    from app.config import settings
+    import os
+
+    # テスト用のチームディレクトリを作成
+    test_team_dir = tmp_path / "teams" / "stopped-team"
+    test_team_dir.mkdir(parents=True)
+
+    # タスクディレクトリを作成
+    test_tasks_dir = tmp_path / "tasks" / "stopped-team"
+    test_tasks_dir.mkdir(parents=True)
+    task_file = test_tasks_dir / "1.json"
+    task_file.write_text('{"id": "1", "subject": "test"}', encoding="utf-8")
+
+    # プロジェクトディレクトリとセッションログを作成（stopped 状態 = mtime が古い）
+    test_project_dir = tmp_path / "projects" / "-tmp-test-project"
+    test_project_dir.mkdir(parents=True)
+    session_file = test_project_dir / "session-456.jsonl"
+    session_file.write_text('{"type": "user_message", "content": "test"}\n', encoding="utf-8")
+
+    # mtime を2時間前に設定
+    old_time = datetime.now(timezone.utc) - timedelta(hours=2)
+    os.utime(session_file, (old_time.timestamp(), old_time.timestamp()))
+
+    # config.json を作成
+    config = {
+        "name": "stopped-team",
+        "leadAgentId": "lead@session",
+        "leadSessionId": "session-456",
+        "members": [
+            {"agentId": "lead@session", "cwd": "/tmp/test-project"}
+        ]
+    }
+    config_file = test_team_dir / "config.json"
+    config_file.write_text(json.dumps(config), encoding="utf-8")
+
+    # settings をモック
+    monkeypatch.setattr(settings, "teams_dir", tmp_path / "teams")
+    monkeypatch.setattr(settings, "claude_dir", tmp_path)
+    monkeypatch.setattr(settings, "tasks_dir", tmp_path / "tasks")
+
+    response = await client.delete("/api/teams/stopped-team")
+    assert response.status_code == 200
+    data = response.json()
+    assert "削除しました" in data["message"]
+    assert "stopped-team" in data["message"]
+    assert len(data["deletedPaths"]) >= 3  # teams, tasks, session file
+
+    # ディレクトリとファイルが削除されたことを確認
+    assert not test_team_dir.exists()
+    assert not test_tasks_dir.exists()
+    assert not session_file.exists()  # セッションファイルは削除
+
+    # プロジェクトディレクトリ自体は残る
+    assert test_project_dir.exists()
+
+
+@pytest.mark.asyncio
+async def test_delete_team_inactive(client: AsyncClient, tmp_path, monkeypatch):
+    """T-API-012: チーム削除（inactive 状態 - メンバーなし）"""
+    import json
+    from app.config import settings
+
+    # テスト用のチームディレクトリを作成
+    test_team_dir = tmp_path / "teams" / "inactive-team"
+    test_team_dir.mkdir(parents=True)
+
+    # タスクディレクトリを作成
+    test_tasks_dir = tmp_path / "tasks" / "inactive-team"
+    test_tasks_dir.mkdir(parents=True)
+
+    # config.json を作成（メンバーなし = inactive）
+    config = {
+        "name": "inactive-team",
+        "leadAgentId": "lead@session",
+        "members": []  # 空のメンバー
+    }
+    config_file = test_team_dir / "config.json"
+    config_file.write_text(json.dumps(config), encoding="utf-8")
+
+    # settings をモック
+    monkeypatch.setattr(settings, "teams_dir", tmp_path / "teams")
+    monkeypatch.setattr(settings, "claude_dir", tmp_path)
+    monkeypatch.setattr(settings, "tasks_dir", tmp_path / "tasks")
+
+    response = await client.delete("/api/teams/inactive-team")
+    assert response.status_code == 200
+    data = response.json()
+    assert "削除しました" in data["message"]
+
+    # ディレクトリが削除されたことを確認
+    assert not test_team_dir.exists()
+    assert not test_tasks_dir.exists()
+
+
+@pytest.mark.asyncio
+async def test_delete_team_unknown(client: AsyncClient, tmp_path, monkeypatch):
+    """T-API-013: チーム削除（unknown 状態 - セッションログなし）"""
+    import json
+    from app.config import settings
+
+    # テスト用のチームディレクトリを作成
+    test_team_dir = tmp_path / "teams" / "unknown-team"
+    test_team_dir.mkdir(parents=True)
+
+    # タスクディレクトリを作成
+    test_tasks_dir = tmp_path / "tasks" / "unknown-team"
+    test_tasks_dir.mkdir(parents=True)
+
+    # プロジェクトディレクトリを作成（セッションファイルなし）
+    test_project_dir = tmp_path / "projects" / "-tmp-test-project"
+    test_project_dir.mkdir(parents=True)
+
+    # config.json を作成（メンバーあり、セッションファイルなし = unknown）
+    config = {
+        "name": "unknown-team",
+        "leadAgentId": "lead@session",
+        "leadSessionId": "nonexistent-session",
+        "members": [
+            {"agentId": "lead@session", "cwd": "/tmp/test-project"}
+        ]
+    }
+    config_file = test_team_dir / "config.json"
+    config_file.write_text(json.dumps(config), encoding="utf-8")
+
+    # settings をモック
+    monkeypatch.setattr(settings, "teams_dir", tmp_path / "teams")
+    monkeypatch.setattr(settings, "claude_dir", tmp_path)
+    monkeypatch.setattr(settings, "tasks_dir", tmp_path / "tasks")
+
+    response = await client.delete("/api/teams/unknown-team")
+    assert response.status_code == 200
+    data = response.json()
+    assert "削除しました" in data["message"]
+
+    # ディレクトリが削除されたことを確認
+    assert not test_team_dir.exists()
+    assert not test_tasks_dir.exists()
+    # プロジェクトディレクトリは残る（セッションファイルがないため削除対象なし）
+    assert test_project_dir.exists()

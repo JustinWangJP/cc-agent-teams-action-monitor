@@ -89,6 +89,7 @@ def get_team_dir(team_name: str) -> Path:
 
     Raises:
         HTTPException: チームが存在しない場合
+
     """
     team_dir = settings.teams_dir / team_name
     if not team_dir.exists():
@@ -177,11 +178,15 @@ def safe_parse_timestamp(timestamp_str: str) -> tuple[Optional[datetime], bool]:
 def parse_message_type(text: str) -> MessageType:
     """メッセージ本文からメッセージタイプを判定する。
 
+    JSON-in-JSON形式のプロトコルメッセージ（idle_notification, shutdown_request等）を
+    解析し、対応する MessageType を返します。
+
     Args:
         text: メッセージ本文
 
     Returns:
-        メッセージタイプ
+        メッセージタイプ（MessageType enum値）
+
     """
     text_stripped = text.strip()
 
@@ -210,12 +215,16 @@ def parse_message_type(text: str) -> MessageType:
 def truncate_text(text: str, max_length: int = 50) -> str:
     """テキストを指定長に切り詰める。
 
+    指定された最大長を超えるテキストを切り詰め、末尾に「...」を付加します。
+    最大長以下の場合は元のテキストをそのまま返します。
+
     Args:
         text: 元テキスト
-        max_length: 最大長
+        max_length: 最大長（デフォルト50文字）
 
     Returns:
         切り詰められたテキスト
+
     """
     if len(text) <= max_length:
         return text
@@ -225,11 +234,14 @@ def truncate_text(text: str, max_length: int = 50) -> str:
 def get_message_class(msg_type: MessageType) -> str:
     """メッセージタイプに対応するCSSクラス名を取得する。
 
+    タイムライン表示で使用するCSSクラス名を MessageType から取得します。
+
     Args:
         msg_type: メッセージタイプ
 
     Returns:
         CSSクラス名
+
     """
     class_map = {
         MessageType.MESSAGE: "timeline-item-message",
@@ -255,17 +267,21 @@ def filter_messages(
 ) -> list[dict]:
     """メッセージをフィルタリングする。
 
+    時間範囲、送信者、タイプ、検索キーワード、未読状態でメッセージを
+    フィルタリングします。各条件は AND 結合で適用されます。
+
     Args:
-        messages: メッセージリスト
-        start_time: 開始時刻
-        end_time: 終了時刻
-        senders: 送信者フィルター
-        types: タイプフィルター
-        search: 検索キーワード
-        unread_only: 未読のみ
+        messages: フィルタリング対象のメッセージリスト
+        start_time: 開始時刻（この時刻以降）
+        end_time: 終了時刻（この時刻以前）
+        senders: 送信者フィルター（リスト）
+        types: メッセージタイプフィルター（リスト）
+        search: 検索キーワード（部分一致）
+        unread_only: 未読のみフィルタリングするか
 
     Returns:
         フィルタリングされたメッセージリスト
+
     """
     filtered = messages
 
@@ -316,11 +332,15 @@ def filter_messages(
 def get_unique_senders(messages: list[dict]) -> list[TimelineGroup]:
     """メッセージから一意の送信者（グループ）リストを取得する。
 
+    メッセージリストから送信者名を抽出し、重複を排除して
+    タイムライン表示用のグループリストを生成します。
+
     Args:
         messages: メッセージリスト
 
     Returns:
-        グループリスト
+        タイムライングループリスト
+
     """
     senders = set(m.get("from") for m in messages if m.get("from"))
     return [
@@ -332,11 +352,15 @@ def get_unique_senders(messages: list[dict]) -> list[TimelineGroup]:
 def get_time_range(messages: list[dict]) -> dict[str, str]:
     """メッセージの時間範囲を取得する。
 
+    メッセージリストの最小・最大タイムスタンプを抽出し、
+    タイムライン表示の時間範囲として返します。
+
     Args:
         messages: メッセージリスト
 
     Returns:
-        最小・最大タイムスタンプを含む辞書
+        最小・最大タイムスタンプを含む辞書（"min", "max"キー）
+
     """
     if not messages:
         return {"min": datetime.now().isoformat(), "max": datetime.now().isoformat()}

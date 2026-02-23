@@ -16,7 +16,8 @@ import { ChatHeader } from './ChatHeader';
 import { ChatMessageList } from './ChatMessageList';
 import { MessageDetailPanel } from './MessageDetailPanel';
 import { useDashboardStore } from '@/stores/dashboardStore';
-import type { ParsedMessage, MessageType, InboxMessage } from '@/types/message';
+import type { TimelineMessage } from './ChatMessageBubble';
+import type { ParsedMessage, ExtendedParsedType, UnifiedTimelineEntry } from '@/types/message';
 
 /**
  * チャットタイムラインパネルのプロパティ。
@@ -99,16 +100,16 @@ export const ChatTimelinePanel = ({
 }: ChatTimelinePanelProps) => {
   // ローカル状態（コンポーネント固有のUI状態のみ）
   const [showFilter, setShowFilter] = useState(false);
-  const [selectedTypes, setSelectedTypes] = useState<MessageType[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<ExtendedParsedType[]>([]);
   const [selectedSenders, setSelectedSenders] = useState<string[]>([]);
+  const [displayLimit, setDisplayLimit] = useState<'500' | 'all'>('500');
 
   // 検索結果ナビゲーション状態
   const [searchResultIndex, setSearchResultIndex] = useState(-1);
   const searchResultIdsRef = useRef<string[]>([]);
 
   // ストアから状態を取得（二重管理を解消）
-  const inboxInterval = useDashboardStore((state) => state.inboxInterval);
-  const setInboxInterval = useDashboardStore((state) => state.setInboxInterval);
+  const messagesInterval = useDashboardStore((state) => state.messagesInterval);
   const messageFilter = useDashboardStore((state) => state.messageFilter);
   const searchQuery = useDashboardStore((state) => state.searchQuery);
   const selectedMessage = useDashboardStore((state) => state.selectedMessage);
@@ -123,7 +124,7 @@ export const ChatTimelinePanel = ({
   /**
    * メッセージタイプフィルター変更ハンドラー。
    */
-  const handleTypeFilterChange = useCallback((types: MessageType[]) => {
+  const handleTypeFilterChange = useCallback((types: ExtendedParsedType[]) => {
     setSelectedTypes(types);
     // ストアのフィルターも更新
     // messageFilter.types = types;
@@ -137,71 +138,75 @@ export const ChatTimelinePanel = ({
   }, []);
 
   /**
-   * タイムラインデータを取得（React Query版）。
+   * タイムラインデータを取得（統合タイムラインAPI版）。
    */
-  const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery({
-    queryKey: ['chat-timeline', teamName],
-    queryFn: async () => {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['unified-timeline', teamName, displayLimit],
+    queryFn: async (): Promise<TimelineMessage[]> => {
       if (!teamName) {
         throw new Error('Team name is required');
       }
 
-      const response = await fetch(`${apiBaseUrl}/teams/${teamName}/messages/timeline`);
+      // 統合タイムラインAPIを使用
+      // displayLimit が 'all' の場合は10000件、それ以外は500件
+      const limit = displayLimit === 'all' ? 10000 : 500;
+      const response = await fetch(`${apiBaseUrl}/timeline/${encodeURIComponent(teamName)}/history?limit=${limit}`);
 
       if (!response.ok) {
         throw new Error(`API エラー: ${response.status} ${response.statusText}`);
       }
 
-      const result = await response.json();
+      const result = {
+        items: [],
+        last_timestamp: '',
+      };
 
-      // ParsedMessageに変換
-      const messages: ParsedMessage[] = (result.items || []).map((item: any) => {
-        // APIレスポンスのitemを直接parseMessageに渡す
-        // receiverフィールドを含めて処理するため、InboxMessage型ではなくanyを使用
-        return parseMessage({
-          from: item.group || item.data?.from || 'unknown',
-          text: item.data?.text || item.content || '',
-          timestamp: item.start || item.data?.timestamp || new Date().toISOString(),
-          color: item.data?.color,
-          read: item.data?.read ?? true,
-          summary: item.data?.summary,
-          // receiverまたはinbox_ownerを受信者として渡す
-          receiver: item.receiver || item.data?.inbox_owner,
-        });
+      try {
+        const json = await response.json();
+        result.items = json.items || [];
+        result.last_timestamp = json.last_timestamp || '';
+      } catch (e) {
+        // JSONパースエラーの場合は空の配列を返す
+        console.warn('Failed to parse timeline response:', e);
+      }
+
+      // UnifiedTimelineEntry[] を TimelineMessage[] に変換
+      const messages: TimelineMessage[] = result.items.map((item: UnifiedTimelineEntry) => {
+        // inbox 由来のエントリは ParsedMessage に変換
+        if (item.source === 'inbox') {
+          const parsed = parseMessage({
+            from: item.from_,
+            text: item.content,
+            timestamp: item.timestamp,
+            color: item.color,
+            read: item.read ?? true,
+            summary: item.summary,
+            to: item.to ?? undefined,
+          });
+          // source フィールドを明示的に設定（重要：左右レイアウト判定に使用）
+          return {
+            ...parsed,
+            source: 'inbox' as const,
+          };
+        }
+        // session 由来のエントリは UnifiedTimelineEntry をそのまま返す
+        // from_ -> from, content -> text, parsed_type -> parsedType にマッピング
+        // source フィールドを明示的に保持（重要：左右レイアウト判定に使用）
+        return {
+          ...item,
+          from: item.from_,
+          text: item.content,
+          parsedType: (item as any).parsed_type || item.parsedType,
+          source: 'session' as const,
+        };
       });
 
-        return messages;
+      return messages;
     },
-    refetchInterval: inboxInterval,
+    refetchInterval: messagesInterval,
     enabled: !!teamName,
     staleTime: 0,
   });
-
-  // Page Visibility API: タブ非アクティブ時にポーリング間隔を延長
-  // refetchをrefで保持して無限ループを回避
-  const refetchRef = useRef(refetch);
-
-  useEffect(() => {
-    refetchRef.current = refetch;
-  }, [refetch]);
-
-  useEffect(() => {
-    const ACTIVE_INTERVAL = 30000; // 30秒（アクティブ時）
-    const BACKGROUND_INTERVAL = 60000; // 60秒（非アクティブ時）
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setInboxInterval(BACKGROUND_INTERVAL);
-      } else {
-        setInboxInterval(ACTIVE_INTERVAL);
-        // アクティブに戻ったときに即時更新（ref経由で呼び出し）
-        refetchRef.current();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [setInboxInterval]);
 
 
   /**
@@ -210,14 +215,15 @@ export const ChatTimelinePanel = ({
    * 検索ロジックの重複実行を回避するため、フィルタリングと検索結果ID生成を統一。
    */
   const searchResults = useMemo(() => {
-    if (!data) {
+    if (!data || !Array.isArray(data)) {
       return { filtered: [], searchIds: [], hasQuery: false };
     }
 
     // ローカルフィルターとストアフィルターをマージ
+    // ストアの types は MessageType[] だが、ExtendedParsedType[] として扱う
     const combinedFilter = {
       ...messageFilter,
-      types: selectedTypes.length > 0 ? selectedTypes : messageFilter.types,
+      types: selectedTypes.length > 0 ? selectedTypes : (messageFilter.types as ExtendedParsedType[]),
       senders: selectedSenders.length > 0 ? selectedSenders : messageFilter.senders,
     };
 
@@ -226,21 +232,23 @@ export const ChatTimelinePanel = ({
     // フィルタリング実行（検索クエリ以外の条件）
     let filtered = [...data];
     if (combinedFilter.senders.length > 0) {
-      filtered = filtered.filter((m) => combinedFilter.senders.includes(m.from));
+      filtered = filtered.filter((m) => m?.from && combinedFilter.senders.includes(m.from));
     }
     if (combinedFilter.types.length > 0) {
-      filtered = filtered.filter((m) => combinedFilter.types.includes(m.parsedType));
+      filtered = filtered.filter((m) => m?.parsedType && combinedFilter.types.includes(m.parsedType as ExtendedParsedType));
     }
 
     // 検索クエリがある場合のみ追加フィルタリング
     let searchIds: string[] = [];
     if (hasQuery) {
       const query = effectiveSearchQuery.toLowerCase();
-      const searchFiltered = filtered.filter((m) =>
-        m.from.toLowerCase().includes(query) ||
-        m.text.toLowerCase().includes(query) ||
-        (m.summary && m.summary.toLowerCase().includes(query))
-      );
+      const searchFiltered = filtered.filter((m) => {
+        if (!m) return false;
+        const fromMatch = m.from?.toLowerCase().includes(query) ?? false;
+        const textMatch = m.text?.toLowerCase().includes(query) ?? false;
+        const summaryMatch = m.summary?.toLowerCase().includes(query) ?? false;
+        return fromMatch || textMatch || summaryMatch;
+      });
       searchIds = searchFiltered.map((m) => `${m.timestamp}-${m.from}`);
       filtered = searchFiltered;
     }
@@ -250,13 +258,37 @@ export const ChatTimelinePanel = ({
 
   /**
    * 時刻昇順にソート済みメッセージ。
+   *
+   * 重複排除ロジックを含む：タイムスタンプ（秒単位）+ 正規化された内容で判定
    */
   const sortedMessages = useMemo(() => {
-    return [...searchResults.filtered].sort((a, b) => {
+    if (!searchResults.filtered || !Array.isArray(searchResults.filtered)) {
+      return [];
+    }
+
+    // 重複判定キー生成関数：タイムスタンプ（秒単位まで）+ 正規化された内容
+    const getDuplicateKey = (msg: TimelineMessage): string => {
+      const timestamp = new Date(msg.timestamp);
+      // 秒単位に切り捨て
+      timestamp.setMilliseconds(0);
+      // 内容を正規化（空白の正規化など）
+      const content = ((msg as ParsedMessage).text || (msg as UnifiedTimelineEntry).content || '').trim().replace(/\s+/g, ' ');
+      return `${timestamp.toISOString()}_${content}`;
+    };
+
+    // まずソート
+    const sorted = [...searchResults.filtered].sort((a, b) => {
       const dateA = new Date(a.timestamp).getTime();
       const dateB = new Date(b.timestamp).getTime();
       return dateA - dateB;
     });
+
+    // 重複排除（後勝ち - より詳細な情報を持つ方を優先）
+    const uniqueMessages = Array.from(
+      new Map(sorted.map(m => [getDuplicateKey(m), m])).values()
+    );
+
+    return uniqueMessages;
   }, [searchResults.filtered]);
 
   /**
@@ -268,10 +300,11 @@ export const ChatTimelinePanel = ({
    * 送信者オプション（メッセージデータから生成）。
    */
   const senderOptions = useMemo(() => {
-    if (!data) return [];
+    if (!data || !Array.isArray(data)) return [];
     // 送信者ごとにメッセージ数を集計
     const senderMap = new Map<string, number>();
     for (const message of data) {
+      if (!message?.from) continue;
       const count = senderMap.get(message.from) ?? 0;
       senderMap.set(message.from, count + 1);
     }
@@ -334,8 +367,8 @@ export const ChatTimelinePanel = ({
   /**
    * メッセージクリックハンドラー。
    */
-  const handleMessageClick = useCallback((message: ParsedMessage) => {
-    setSelectedMessage(message);
+  const handleMessageClick = useCallback((message: TimelineMessage) => {
+    setSelectedMessage(message as ParsedMessage);
     setDetailModalOpen(true);
   }, [setSelectedMessage, setDetailModalOpen]);
 
@@ -346,13 +379,6 @@ export const ChatTimelinePanel = ({
     setDetailModalOpen(false);
     setSelectedMessage(null);
   }, [setDetailModalOpen, setSelectedMessage]);
-
-  /**
-   * リフレッシュハンドラー。
-   */
-  const handleRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
 
   /**
    * 検索クエリ変更ハンドラー（ストアに直接保存）。
@@ -374,10 +400,10 @@ export const ChatTimelinePanel = ({
   }
 
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div className="flex flex-col h-full gap-3">
       {/* ヘッダー */}
       <ChatHeader
-        title="💬 メッセージタイムライン"
+        title="メッセージタイムライン"
         messageCount={sortedMessages.length}
         searchQuery={effectiveSearchQuery}
         onSearchChange={handleSearchChange}
@@ -385,11 +411,8 @@ export const ChatTimelinePanel = ({
         searchResultIndex={searchResultIndex}
         onPrevResult={handlePrevResult}
         onNextResult={handleNextResult}
-        pollingInterval={inboxInterval}
-        onPollingIntervalChange={setInboxInterval}
-        lastUpdateTimestamp={dataUpdatedAt}
-        onRefresh={handleRefresh}
-        isLoading={isLoading}
+        displayLimit={displayLimit}
+        onDisplayLimitChange={setDisplayLimit}
         messageTypeFilter={{
           selectedTypes,
           onChange: handleTypeFilterChange,

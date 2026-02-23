@@ -10,3 +10,4 @@ export { TimelineFilters } from './TimelineFilters';
 export { TimeRangeSlider } from './TimeRangeSlider';
 export { MessageSearch } from './MessageSearch';
 export { TimelinePanel } from './TimelinePanel';
+export { TimelineTaskSplitLayout } from './TimelineTaskSplitLayout';

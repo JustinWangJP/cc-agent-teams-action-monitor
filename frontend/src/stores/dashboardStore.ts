@@ -20,7 +20,7 @@ import type { Task } from '@/types/task';
 /**
  * ビューの種類。
  */
-export type ViewType = 'overview' | 'timeline' | 'tasks';
+export type ViewType = 'overview' | 'timeline' | 'tasks' | 'files';
 
 /**
  * ソート順の種類。
@@ -85,6 +85,8 @@ export interface DashboardState {
   isSidebarOpen: boolean;
   /** タイムラインの自動スクロール */
   autoScrollTimeline: boolean;
+  /** タスクパネルの折りたたみ状態 */
+  isTaskPanelCollapsed: boolean;
 
   // ====================
   // アクション
@@ -133,6 +135,10 @@ export interface DashboardState {
   toggleSidebar: () => void;
   /** タイムライン自動スクロールを切り替え */
   toggleAutoScroll: () => void;
+  /** タスクパネルの折りたたみを切り替え */
+  toggleTaskPanel: () => void;
+  /** タスクパネルの折りたたみを設定 */
+  setTaskPanelCollapsed: (collapsed: boolean) => void;
 
   /** すべてのフィルターをリセット */
   resetFilters: () => void;
@@ -187,6 +193,8 @@ const initialState: Omit<
   | 'setDarkMode'
   | 'toggleSidebar'
   | 'toggleAutoScroll'
+  | 'toggleTaskPanel'
+  | 'setTaskPanelCollapsed'
   | 'resetFilters'
   | 'reset'
 > = {
@@ -206,6 +214,7 @@ const initialState: Omit<
   isDarkMode: false,
   isSidebarOpen: true,
   autoScrollTimeline: true,
+  isTaskPanelCollapsed: false,
 };
 
 /**
@@ -264,6 +273,7 @@ function saveState(state: Partial<DashboardState>) {
       isDarkMode: state.isDarkMode,
       isSidebarOpen: state.isSidebarOpen,
       autoScrollTimeline: state.autoScrollTimeline,
+      isTaskPanelCollapsed: state.isTaskPanelCollapsed,
       teamsInterval: state.teamsInterval,
       tasksInterval: state.tasksInterval,
       inboxInterval: state.inboxInterval,
@@ -429,6 +439,28 @@ export const useDashboardStore = create<DashboardState>()(
           'toggleAutoScroll',
         ),
 
+      toggleTaskPanel: () =>
+        set(
+          (state) => {
+            const newState = { isTaskPanelCollapsed: !state.isTaskPanelCollapsed };
+            saveState(newState);
+            return newState;
+          },
+          false,
+          'toggleTaskPanel',
+        ),
+
+      setTaskPanelCollapsed: (collapsed) =>
+        set(
+          () => {
+            const newState = { isTaskPanelCollapsed: collapsed };
+            saveState(newState);
+            return newState;
+          },
+          false,
+          'setTaskPanelCollapsed',
+        ),
+
       // ====================
       // リセットアクション
       // ====================
@@ -505,10 +537,13 @@ export const useUIState = () =>
     isDarkMode: state.isDarkMode,
     isSidebarOpen: state.isSidebarOpen,
     autoScrollTimeline: state.autoScrollTimeline,
+    isTaskPanelCollapsed: state.isTaskPanelCollapsed,
     toggleDarkMode: state.toggleDarkMode,
     setDarkMode: state.setDarkMode,
     toggleSidebar: state.toggleSidebar,
     toggleAutoScroll: state.toggleAutoScroll,
+    toggleTaskPanel: state.toggleTaskPanel,
+    setTaskPanelCollapsed: state.setTaskPanelCollapsed,
   }));
 
 /**
