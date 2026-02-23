@@ -9,6 +9,14 @@ Real-time monitoring dashboard for Claude Code Agent Teams
 
 ---
 
+## Languages
+
+- [日本語](README.md) (Default)
+- [English](README.en.md)
+- [中文](README.zh.md)
+
+---
+
 ## Design Philosophy
 
 ### Why HTTP Polling?
@@ -346,5 +354,5 @@ MIT License
 ---
 
 *Created: 2026-02-16*
-*Last Updated: 2026-02-23*
-*Version: 2.0.0*
+*Last Updated: 2026-02-24*
+*Version: 2.1.0*

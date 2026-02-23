@@ -149,43 +149,40 @@ App (メイン)
 │   │   ├── ThemeToggle
 │   │   └── PollingIntervalSelector
 │   └── children
-├── Overview (チーム一覧)
+├── Overview (チーム一覧) - View Tab
 │   ├── TeamCard[]
 │   │   ├── ModelBadge
 │   │   └── StatusBadge (active/stopped/unknown/inactive)
 │   └── TeamDetailPanel
 │       └── DeleteTeamButton (stopped時のみ表示)
-├── Tasks (タスク一覧)
-│   └── TaskCard[]
-├── Timeline (統合タイムライン)
-│   ├── TimelinePanel
-│   │   ├── TimelineFilters
-│   │   │   ├── SenderFilter
-│   │   │   └── TypeFilter
-│   │   └── MessageTimeline
-│   │       └── TimelineItem (inbox + session統合)
+├── Timeline (統合タイムライン) - View Tab
+│   ├── TimelineTaskSplitLayout
+│   │   ├── ChatTimelinePanel (左側)
+│   │   │   ├── ChatHeader
+│   │   │   │   ├── ChatSearch
+│   │   │   │   └── SenderFilter
+│   │   │   ├── ChatMessageList
+│   │   │   │   ├── DateSeparator
+│   │   │   │   └── ChatMessageBubble
+│   │   │   │       ├── BookmarkButton
+│   │   │   │       ├── AgentStatusIndicator
+│   │   │   │       └── MarkdownRenderer
+│   │   │   └── TypingIndicator
+│   │   └── TaskMonitorPanel (右側・折りたたみ可能)
+│   │       └── TaskCard[]
 │   └── MessageDetailModal
-└── Chat (チャットパネル)
-    ├── ChatHeader
-    │   ├── ChatSearch
-    │   └── SenderFilter
-    ├── ChatTimelinePanel
-    │   ├── DateSeparator
-    │   ├── ChatMessageList
-    │   │   └── ChatMessageBubble
-    │   │       ├── BookmarkButton
-    │   │       ├── AgentStatusIndicator
-    │   │       └── MarkdownRenderer
-    │   └── TypingIndicator
-    └── MessageDetailPanel
+└── Tasks (タスク一覧) - View Tab (カンバン形式)
+    ├── TaskFilter (チームフィルタ + 検索)
+    └── TaskCard[] (Pending / In Progress / Completed 列)
 ```
 
 ### 3.2 状態管理パターン
 
 - **グローバル状態**: Zustand Store (dashboardStore)
-  - チーム選択、メッセージ選択、フィルター、UI状態、ポーリング設定
+  - チーム選択、メッセージ選択、タスク選択、フィルター、UI状態、ポーリング設定
+  - ローカルストレージへの永続化（ダークモード、ポーリング間隔等）
 - **サーバー状態**: カスタムフック + HTTP ポーリング
-  - `useTeams`, `useTasks`, `useInbox`, `useUnifiedTimeline`
+  - `useTeams`, `useTasks`, `useInbox`, `useUnifiedTimeline`, `useAgentMessages`
 - **ローカル状態**: useState (コンポーネント内)
 
 ### 3.3 データフロー
@@ -203,21 +200,29 @@ Component ← Store/Hook ← State Update ← Response ←────┘
 ```typescript
 interface DashboardState {
   // 選択状態
-  selectedTeamName: string | null;
-  selectedMessageId: string | null;
+  selectedTeam: string | null;
+  selectedMessage: ParsedMessage | null;
+  selectedTask: Task | null;
+  currentView: ViewType;  // 'overview' | 'timeline' | 'tasks' | 'files'
 
   // フィルター
   timeRange: TimeRange;
   messageFilter: MessageFilter;
+  searchQuery: string;
+
+  // ポーリング間隔（各データソースごとに個別設定可能）
+  teamsInterval: number;      // チーム一覧（デフォルト30秒）
+  tasksInterval: number;      // タスク一覧（デフォルト30秒）
+  inboxInterval: number;      // インボックス（デフォルト30秒）
+  messagesInterval: number;   // エージェントメッセージ（デフォルト30秒）
 
   // UI状態
-  currentView: ViewType;
-  theme: ThemeMode;
-  sidebarCollapsed: boolean;
-
-  // ポーリング
-  pollingInterval: number;  // 5s, 10s, 20s, 30s, 60s から選択
-  isPollingPaused: boolean;
+  isDetailModalOpen: boolean;
+  isTaskModalOpen: boolean;
+  isDarkMode: boolean;
+  isSidebarOpen: boolean;
+  autoScrollTimeline: boolean;
+  isTaskPanelCollapsed: boolean;
 }
 ```
 
@@ -368,6 +373,7 @@ main.py
 │   ├── teams.py
 │   │   ├── models/team.py
 │   │   ├── services/cache_service.py
+│   │   ├── services/timeline_service.py
 │   │   └── config.py
 │   ├── tasks.py
 │   │   ├── models/task.py
@@ -380,8 +386,16 @@ main.py
 │   │   ├── services/timeline_service.py
 │   │   ├── services/agent_status_service.py
 │   │   └── models/timeline.py
-│   ├── agents.py
-│   │   └── models/agent.py
+│   └── agents.py
+│       └── models/agent.py
+├── models/
+│   ├── team.py
+│   ├── task.py
+│   ├── message.py
+│   ├── timeline.py
+│   ├── agent.py
+│   ├── chat.py
+│   └── model.py
 └── services/
     ├── cache_service.py
     │   └── config.py
@@ -389,10 +403,13 @@ main.py
     │   ├── config.py
     │   └── services/cache_service.py
     ├── timeline_service.py
-    │   └── config.py
+    │   ├── config.py
+    │   └── models/timeline.py
     ├── agent_status_service.py
-    │   └── models/agent.py
+    │   ├── models/agent.py
+    │   └── models/task.py
     └── message_parser.py
+        └── models/message.py
 ```
 
 ### 6.2 フロントエンド依存関係図
@@ -408,27 +425,62 @@ App.tsx
 │   └── useUnifiedTimeline.ts
 ├── components/
 │   ├── layout/
+│   │   ├── Layout.tsx
+│   │   └── Header.tsx
 │   ├── dashboard/
-│   │   └── TeamCard.tsx (StatusBadge含む)
+│   │   ├── TeamCard.tsx (StatusBadge含む)
+│   │   ├── TeamDetailPanel.tsx
+│   │   └── ActivityFeed.tsx
+│   ├── overview/
+│   │   ├── TeamCard.tsx
+│   │   └── ModelBadge.tsx
 │   ├── tasks/
+│   │   ├── TaskCard.tsx
+│   │   ├── ExpandedTaskCard.tsx
+│   │   └── TaskMonitorPanel.tsx
 │   ├── timeline/
-│   │   └── TimelinePanel.tsx
+│   │   ├── TimelinePanel.tsx
+│   │   ├── TimelineTaskSplitLayout.tsx
+│   │   ├── TimelineFilters.tsx
+│   │   ├── MessageTimeline.tsx
+│   │   └── MessageDetailModal.tsx
 │   ├── chat/
 │   │   ├── ChatMessageBubble.tsx
 │   │   ├── ChatTimelinePanel.tsx
-│   │   └── MessageDetailPanel.tsx
+│   │   ├── ChatHeader.tsx
+│   │   ├── ChatMessageList.tsx
+│   │   ├── DateSeparator.tsx
+│   │   ├── SenderFilter.tsx
+│   │   ├── MessageTypeFilter.tsx
+│   │   ├── ChatSearch.tsx
+│   │   ├── MessageDetailPanel.tsx
+│   │   ├── BookmarkButton.tsx
+│   │   ├── AgentStatusIndicator.tsx
+│   │   └── TypingIndicator.tsx
+│   ├── agent/
+│   │   └── ExpandedAgentCard.tsx
 │   └── common/
 │       ├── StatusBadge.tsx
-│       └── PollingIntervalSelector.tsx
+│       ├── PollingIntervalSelector.tsx
+│       ├── LoadingSpinner.tsx
+│       ├── ErrorDisplay.tsx
+│       └── ThemeToggle.tsx
 ├── types/
 │   ├── team.ts
 │   ├── task.ts
 │   ├── message.ts
 │   ├── timeline.ts
 │   ├── agent.ts
-│   └── model.ts
-└── config/
-    └── models.ts
+│   ├── model.ts
+│   ├── theme.ts
+│   └── css.d.ts
+├── config/
+│   └── models.ts
+├── utils/
+│   └── teamModels.ts
+└── lib/
+    ├── queryClient.ts
+    └── utils.ts
 ```
 
 ---
@@ -535,5 +587,5 @@ App.tsx
 ---
 
 *作成日: 2026-02-16*
-*最終更新日: 2026-02-23*
-*バージョン: 2.0.0*
+*最終更新日: 2026-02-24*
+*バージョン: 2.1.0*
