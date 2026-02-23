@@ -115,7 +115,7 @@ const getMessageDisplayText = (message: TimelineMessage): { summary: string; det
           };
         case 'user_message':
           return {
-            summary: content.slice(0, 50) + (content.length > 50 ? '...' : ''),
+            summary: content,
             detail: content,
           };
         case 'assistant_message':
@@ -127,7 +127,7 @@ const getMessageDisplayText = (message: TimelineMessage): { summary: string; det
           }
           // 通常のテキストとして表示
           return {
-            summary: msgSummary || (content.slice(0, 50) + (content.length > 50 ? '...' : '')),
+            summary: msgSummary || content,
             detail: content,
           };
         default:
@@ -896,8 +896,8 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
             ) : (
               <p className="whitespace-pre-wrap">{messageText}</p>
             )}
-            {/* detail（description）がある場合は表示 */}
-            {messageDetail && (
+            {/* detail（description）がある場合は表示（session由来のメッセージは除く） */}
+            {messageDetail && !isSession && (
               <div className="mt-2 text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap border-t border-slate-200 dark:border-slate-700 pt-2">
                 {isMarkdown(messageDetail) ? (
                   <MarkdownRenderer content={messageDetail} />

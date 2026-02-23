@@ -190,12 +190,13 @@ export const ChatTimelinePanel = ({
           };
         }
         // session 由来のエントリは UnifiedTimelineEntry をそのまま返す
-        // from_ -> from, content -> text にマッピング
+        // from_ -> from, content -> text, parsed_type -> parsedType にマッピング
         // source フィールドを明示的に保持（重要：左右レイアウト判定に使用）
         return {
           ...item,
           from: item.from_,
           text: item.content,
+          parsedType: (item as any).parsed_type || item.parsedType,
           source: 'session' as const,
         };
       });
