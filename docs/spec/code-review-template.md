@@ -1,5 +1,39 @@
 # コードレビューテンプレート
 
+**対象バージョン**: 2.0.0
+**最終更新日**: 2026-02-23
+
+---
+
+## 設計思想（レビュー時の重要観点）
+
+本プロジェクトの主要な設計原則を理解した上でレビューを行ってください。
+
+### リアルタイム更新の実現方式
+
+- **HTTPポーリング**を採用（WebSocket ではない）
+- ポーリング間隔: 5秒〜60秒（デフォルト30秒）
+- TanStack Query の `refetchInterval` と `staleTime` で制御
+
+### チームステータス判定
+
+セッションログの mtime で判定：
+- `active`: mtime ≤ 1時間
+- `stopped`: mtime > 1時間
+- `unknown`: セッションログなし
+- `inactive`: members なし
+
+### データソース
+
+| データ | パス |
+|--------|------|
+| チーム設定 | `~/.claude/teams/{team_name}/config.json` |
+| ステータス判定 | `~/.claude/projects/{project-hash}/{sessionId}.jsonl` |
+| インボックス | `~/.claude/teams/{team_name}/inboxes/{agent_name}.json` |
+| タスク | `~/.claude/tasks/{team_name}/{task_id}.json` |
+
+---
+
 ## レビュー対象
 
 - **PR/コミット**: #{番号}
@@ -39,6 +73,13 @@
 - [ ] 単体テストが十分
 - [ ] テストが読みやすい
 - [ ] テストが独立している
+
+### プロジェクト固有
+
+- [ ] WebSocket 参照が含まれていない（HTTPポーリングを使用）
+- [ ] チームステータス判定が mtime ベースで実装されている
+- [ ] ファイルパスが `~/.claude/` 配下を正しく参照している
+- [ ] ポーリング関連のフックが `staleTime` と `refetchInterval` を正しく設定している
 
 ### ドキュメント
 

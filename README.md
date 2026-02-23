@@ -9,6 +9,38 @@ Claude Code Agent Teams のリアルタイム監視ダッシュボード
 
 ---
 
+## 設計思想
+
+### なぜ HTTP ポーリングなのか
+
+本システムは **WebSocket ではなく HTTP ポーリング** を採用しています。理由は以下の通りです：
+
+1. **シンプルなアーキテクチャ**: WebSocket 接続管理が不要で、ステートレスな API サーバーとして運用可能
+2. **キャッシュの活用**: TanStack Query のキャッシュ機能（staleTime: 10秒）により、不要なリクエストを削減
+3. **スケーラビリティ**: ポーリング間隔（5秒〜60秒）をユーザーが調整可能で、サーバー負荷を制御
+
+### チームステータス判定ロジック
+
+チームのステータスは **セッションログの mtime** で判定します：
+
+| ステータス | 判定条件 | 削除可否 |
+|-----------|---------|---------|
+| `active` | セッションログ mtime ≤ 1時間 | ❌ 不可 |
+| `stopped` | セッションログ mtime > 1時間 | ✅ 可能 |
+| `unknown` | セッションログなし | ❌ 不可 |
+| `inactive` | members 配列が空 | ❌ 不可 |
+
+### データソース
+
+| データ | ファイルパス |
+|--------|------------|
+| チーム設定 | `~/.claude/teams/{team_name}/config.json` |
+| ステータス判定 | `~/.claude/projects/{project-hash}/{sessionId}.jsonl` |
+| インボックス | `~/.claude/teams/{team_name}/inboxes/{agent_name}.json` |
+| タスク | `~/.claude/tasks/{team_name}/{task_id}.json` |
+
+---
+
 ## 目次
 
 - [概要](#概要)
@@ -58,10 +90,15 @@ Agent Teams Dashboard は、Claude Code の Agent Teams 機能をリアルタイ
 |------|------|
 | チーム一覧表示 | アクティブなエージェントチームをカード形式で表示 |
 | チーム詳細表示 | メンバー情報、ステータス、最終活動時刻 |
+| チームステータス判定 | セッションログ mtime による自動判定（active/stopped/unknown/inactive） |
+| チーム削除 | stopped 状態のチームのみ削除可能 |
 | タスク一覧表示 | ステータス別（Pending/In Progress/Completed）タスク表示 |
 | タスク詳細表示 | 説明、所有者、依存関係の表示 |
+| 統合タイムライン | inbox + セッションログの統合表示 |
+| エージェント状態推論 | タスク状態・活動時刻からの状態推論（working/idle/waiting/completed/error） |
 | アクティビティフィード | リアルタイムのエージェント活動履歴 |
-| 自動更新 | HTTP Polling によるデータ自動更新（間隔設定可） |
+| 自動更新 | HTTP Polling によるデータ自動更新（間隔設定可: 5秒〜60秒） |
+| ダークモード | テーマ切り替え対応 |
 
 ---
 
@@ -222,6 +259,31 @@ VITE v5.0.0  ready in 500 ms
 | ● 黄色 | Connecting | 再接続中 |
 | ● 赤色 | Disconnected | 接続切断 |
 
+### チームステータス
+
+| バッジ | ステータス | 説明 |
+|--------|-----------|------|
+| 🟢 active | セッションログ mtime ≤ 1時間 | チームが活動中 |
+| ⚫ stopped | セッションログ mtime > 1時間 | チームが停止（削除可能） |
+| ⚪ unknown | セッションログなし | ステータス不明 |
+| ⚫ inactive | members なし | メンバー不在 |
+
+### エージェント状態
+
+| 表示 | 状態 | 説明 |
+|------|------|------|
+| 🔵 working | in_progress タスクあり | 作業中 |
+| 💤 idle | 5分以上無活動 | 待機中 |
+| ⏳ waiting | blocked タスクあり | 待ち状態 |
+| ✅ completed | 全タスク完了 | 完了 |
+| ❌ error | 30分以上無活動 | エラー状態 |
+
+### ポーリング間隔調整
+
+ヘッダーからポーリング間隔を調整できます：
+- 5秒 / 10秒 / 20秒 / 30秒（デフォルト）/ 60秒
+- staleTime: 10秒（キャッシュ有効期間）
+
 ---
 
 ## 操作方法
@@ -231,6 +293,20 @@ VITE v5.0.0  ready in 500 ms
 1. 表示されているチームカードをクリック
 2. 選択されたチームがハイライト表示されます
 3. もう一度クリックすると選択が解除されます
+
+### チームの削除
+
+1. stopped 状態のチームカードに表示される🗑️アイコンをクリック
+2. 確認ダイアログで「削除」をクリック
+3. チーム設定、タスク、セッションログが削除されます
+
+**注意**: active 状態のチームは削除できません。
+
+### ポーリング間隔の変更
+
+1. ヘッダーのポーリング間隔セレクターを使用
+2. 5秒〜60秒から選択可能
+3. デフォルトは30秒
 
 ### タスクの確認
 
@@ -526,6 +602,69 @@ GET /api/teams/{team_name}/inboxes
       "read": false
     }
   ]
+}
+```
+
+#### チーム削除
+
+```http
+DELETE /api/teams/{team_name}
+```
+
+**条件**: stopped 状態のチームのみ削除可能
+
+**成功レスポンス (200):**
+```json
+{
+  "message": "Team deleted successfully",
+  "deleted_files": {
+    "team_dir": true,
+    "tasks_dir": true,
+    "session_logs": ["session-1.jsonl", "session-2.jsonl"]
+  }
+}
+```
+
+**エラーレスポンス (400):**
+```json
+{
+  "detail": "Cannot delete team with status 'active'. Only stopped teams can be deleted."
+}
+```
+
+#### 統合タイムライン
+
+```http
+GET /api/history?team_name={team_name}&limit=50&types=message,task_assignment
+```
+
+**レスポンス:**
+```json
+[
+  {
+    "id": "event-1",
+    "type": "message",
+    "timestamp": "2026-02-23T12:00:00Z",
+    "source": "inbox",
+    "data": {
+      "from": "agent-1",
+      "text": "Hello!"
+    }
+  }
+]
+```
+
+#### 差分更新
+
+```http
+GET /api/updates?team_name={team_name}&since=2026-02-23T11:00:00Z
+```
+
+**レスポンス:**
+```json
+{
+  "events": [...],
+  "has_more": false
 }
 ```
 
@@ -1006,8 +1145,11 @@ Component ← Hook ← State Update ← Response ←────┘
 | `GET /api/tasks` | タスク一覧取得 | 30秒 |
 | `GET /api/teams/{name}/inboxes` | インボックス取得 | 30秒 |
 | `GET /api/teams/{name}/inboxes/{agent}` | エージェント別メッセージ | 30秒 |
+| `GET /api/history` | 統合タイムライン | 30秒 |
+| `GET /api/updates` | 差分更新 | 30秒 |
 
 ポーリング間隔は Zustand Store で管理し、UIから5秒/10秒/20秒/30秒/60秒から選択可能。
+staleTime: 10秒（キャッシュ有効期間）
 
 ## ファイル監視パターン
 
@@ -1042,4 +1184,5 @@ MIT License
 ---
 
 *作成日: 2026-02-16*
-*バージョン: 1.0.0*
+*最終更新日: 2026-02-23*
+*バージョン: 2.0.0*
