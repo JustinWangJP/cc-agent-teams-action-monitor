@@ -154,8 +154,8 @@ npm run dev
 | `/api/teams/{name}` | GET | 团队详情 |
 | `/api/teams/{name}` | DELETE | 删除团队（非 active） |
 | `/api/tasks` | GET | 任务列表 |
-| `/api/history` | GET | 统一时间线 |
-| `/api/updates` | GET | 增量更新 |
+| `/api/timeline/{name}/history` | GET | 统一时间线 |
+| `/api/timeline/{name}/updates` | GET | 增量更新 |
 
 > 完整 API 规格请参考 [docs/spec/system-design.md](docs/spec/system-design.md) §6
 

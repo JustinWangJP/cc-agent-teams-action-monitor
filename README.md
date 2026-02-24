@@ -154,8 +154,8 @@ npm run dev
 | `/api/teams/{name}` | GET | チーム詳細 |
 | `/api/teams/{name}` | DELETE | チーム削除（active以外） |
 | `/api/tasks` | GET | タスク一覧 |
-| `/api/history` | GET | 統合タイムライン |
-| `/api/updates` | GET | 差分更新 |
+| `/api/timeline/{name}/history` | GET | 統合タイムライン |
+| `/api/timeline/{name}/updates` | GET | 差分更新 |
 
 > 完全なAPI仕様は [docs/spec/system-design.md](docs/spec/system-design.md) §6 を参照
 

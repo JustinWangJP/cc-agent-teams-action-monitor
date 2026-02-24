@@ -345,31 +345,26 @@ graph TB
 
 | エンドポイント | メソッド | 説明 | レスポンス |
 |----------------|----------|------|-----------|
-| `/api/teams/{team_name}/messages/timeline` | GET | メッセージタイムライン取得 | `TimelineItem[]` |
-| `/api/history` | GET | 統合履歴取得 | `TimelineItem[]` |
-| `/api/updates` | GET | 差分更新取得（since パラメータ必須） | `TimelineItem[]` |
+| `/api/timeline/{team_name}/history` | GET | 統合タイムライン履歴取得 | `UnifiedTimelineResponse` |
+| `/api/timeline/{team_name}/updates` | GET | 差分更新取得（since パラメータ使用） | `UnifiedTimelineResponse` |
 | `/api/file-changes/{team}` | GET | ファイル変更一覧 | `FileChange[]` |
 
 ### 6.2 クエリパラメータ
 
-#### `/api/teams/{team_name}/messages/timeline`
-
-| パラメータ | 型 | 説明 |
-|-----------|-----|------|
-| `start_time` | string | 開始時刻（ISO形式） |
-| `end_time` | string | 終了時刻（ISO形式） |
-| `since` | string | 差分取得用の基準時刻 |
-| `senders` | string | 送信者フィルター（カンマ区切り） |
-| `types` | string | メッセージタイプフィルター（カンマ区切り） |
-| `search` | string | 全文検索クエリ |
-| `limit` | int | 取得件数上限 |
-
-#### `/api/updates`
+#### `/api/timeline/{team_name}/history`
 
 | パラメータ | 型 | 必須 | 説明 |
 |-----------|-----|------|------|
-| `team_name` | string | はい | チーム名 |
-| `since` | string | はい | 基準時刻（ISO8601） |
+| `limit` | int | いいえ | 最大取得件数（1-10000、デフォルト100） |
+| `types` | string | いいえ | タイプフィルター（カンマ区切り、例: message,thinking,tool_use） |
+| `before_event_id` | string | いいえ | ページネーション用（このイベントIDより古いエントリを取得） |
+
+#### `/api/timeline/{team_name}/updates`
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `since` | string | いいえ | 基準時刻（ISO8601形式、この時刻以降のエントリのみ取得） |
+| `limit` | int | いいえ | 最大取得件数（1-200、デフォルト50） |
 
 ### 6.3 データフォーマット
 
@@ -431,20 +426,22 @@ interface TaskSummary {
 }
 ```
 
-#### TimelineItem
+#### UnifiedTimelineEntry
 
 ```typescript
-interface TimelineItem {
+interface UnifiedTimelineEntry {
   id: string;
-  type: TimelineMessageType | SessionLogType;
-  from: string;
+  content: string;
+  from_: string;  // Python の from は予約語のため from_ を使用
   to?: string;
-  receiver?: string;
   timestamp: string;
-  text: string;
+  color?: string;
+  read: boolean;
   summary?: string;
-  parsedType?: string;
-  parsedData?: Record<string, unknown>;
+  source: 'inbox' | 'session';
+  parsed_type: string;
+  parsed_data?: Record<string, unknown>;
+  details?: Record<string, unknown>;
 }
 
 type TimelineMessageType =
@@ -462,9 +459,8 @@ type TimelineMessageType =
 type SessionLogType =
   | 'user_message'
   | 'assistant_message'
-  | 'thinking'
-  | 'tool_use'
-  | 'file_change';
+  | 'thinking';
+  // 注意: tool_use と file-history-snapshot はタイムラインで除外されます
 ```
 
 #### DeleteResult

@@ -154,8 +154,8 @@ For detailed information, refer to the documents in `docs/spec/`:
 | `/api/teams/{name}` | GET | Team details |
 | `/api/teams/{name}` | DELETE | Delete team (non-active only) |
 | `/api/tasks` | GET | Task list |
-| `/api/history` | GET | Unified timeline |
-| `/api/updates` | GET | Incremental updates |
+| `/api/timeline/{name}/history` | GET | Unified timeline |
+| `/api/timeline/{name}/updates` | GET | Incremental updates |
 
 > For complete API specifications, see [docs/spec/system-design.md](docs/spec/system-design.md) §6
 
