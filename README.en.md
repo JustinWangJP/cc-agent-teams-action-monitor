@@ -130,7 +130,7 @@ Team status is determined by **session log mtime**:
 | `unknown` | No session log | ✅ Yes |
 | `inactive` | Empty members array | ✅ Yes |
 
-> See [docs/spec/system-design.md](docs/spec/system-design.md) §2.2 for details
+> See [docs/spec/system-design.en.md](docs/spec/system-design.en.md) §2.2 for details
 
 ---
 
@@ -193,7 +193,7 @@ For detailed information, refer to the documents in `docs/spec/`:
 | `/api/timeline/{name}/history` | GET | Unified timeline |
 | `/api/timeline/{name}/updates` | GET | Incremental updates |
 
-> For complete API specifications, see [docs/spec/system-design.md](docs/spec/system-design.md) §6
+> For complete API specifications, see [docs/spec/system-design.en.md](docs/spec/system-design.en.md) §6
 
 ---
 
@@ -243,7 +243,7 @@ npm run build
 | Page not loading | Frontend not started | Run `npm run dev` |
 | Real-time updates not working | Port blocked | Check firewall settings |
 
-> For details, see [docs/spec/user-guide.md](docs/spec/user-guide.md) §Troubleshooting
+> For details, see [docs/spec/user-guide.en.md](docs/spec/user-guide.en.md) §Troubleshooting
 
 ---
 

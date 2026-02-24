@@ -130,7 +130,7 @@ npm run dev
 | `unknown` | 无会话日志 | ✅ 是 |
 | `inactive` | members 数组为空 | ✅ 是 |
 
-> 详细请参考 [docs/spec/system-design.md](docs/spec/system-design.md) §2.2
+> 详细请参考 [docs/spec/system-design.zh.md](docs/spec/system-design.zh.md) §2.2
 
 ---
 
@@ -193,7 +193,7 @@ npm run dev
 | `/api/timeline/{name}/history` | GET | 统一时间线 |
 | `/api/timeline/{name}/updates` | GET | 增量更新 |
 
-> 完整 API 规格请参考 [docs/spec/system-design.md](docs/spec/system-design.md) §6
+> 完整 API 规格请参考 [docs/spec/system-design.zh.md](docs/spec/system-design.zh.md) §6
 
 ---
 
@@ -243,7 +243,7 @@ npm run build
 | 页面无法加载 | 前端未启动 | 运行 `npm run dev` |
 | 实时更新不工作 | 端口被阻止 | 检查防火墙设置 |
 
-> 详细请参考 [docs/spec/user-guide.md](docs/spec/user-guide.md) §故障排除
+> 详细请参考 [docs/spec/user-guide.zh.md](docs/spec/user-guide.zh.md) §故障排除
 
 ---
 
