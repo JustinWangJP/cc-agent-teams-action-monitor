@@ -91,7 +91,7 @@ Click on a team to view detailed information including members and session statu
 
 ### Timeline View
 
-![Team Timeline Page](docs/images/dashboard-timeline-page.png)
+![Team Timeline Page](docs/images/dashboard-team-timeline-page.png)
 
 Unified timeline showing agent messages and session logs in an integrated view.
 
