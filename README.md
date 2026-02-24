@@ -93,8 +93,8 @@ npm run dev
 |-----------|---------|---------|
 | `active` | セッションログ mtime ≤ 1時間 | ❌ 不可 |
 | `stopped` | セッションログ mtime > 1時間 | ✅ 可能 |
-| `unknown` | セッションログなし | ❌ 不可 |
-| `inactive` | members 配列が空 | ❌ 不可 |
+| `unknown` | セッションログなし | ✅ 可能 |
+| `inactive` | members 配列が空 | ✅ 可能 |
 
 > 詳細は [docs/spec/system-design.md](docs/spec/system-design.md) §2.2 を参照
 
@@ -152,7 +152,7 @@ npm run dev
 | `/api/health` | GET | ヘルスチェック |
 | `/api/teams` | GET | チーム一覧（ステータス付き） |
 | `/api/teams/{name}` | GET | チーム詳細 |
-| `/api/teams/{name}` | DELETE | チーム削除（stoppedのみ） |
+| `/api/teams/{name}` | DELETE | チーム削除（active以外） |
 | `/api/tasks` | GET | タスク一覧 |
 | `/api/history` | GET | 統合タイムライン |
 | `/api/updates` | GET | 差分更新 |

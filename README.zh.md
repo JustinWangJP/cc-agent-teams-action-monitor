@@ -93,8 +93,8 @@ npm run dev
 |------|------|--------|
 | `active` | 会话日志 mtime ≤ 1小时 | ❌ 否 |
 | `stopped` | 会话日志 mtime > 1小时 | ✅ 是 |
-| `unknown` | 无会话日志 | ❌ 否 |
-| `inactive` | members 数组为空 | ❌ 否 |
+| `unknown` | 无会话日志 | ✅ 是 |
+| `inactive` | members 数组为空 | ✅ 是 |
 
 > 详细请参考 [docs/spec/system-design.md](docs/spec/system-design.md) §2.2
 
@@ -152,7 +152,7 @@ npm run dev
 | `/api/health` | GET | 健康检查 |
 | `/api/teams` | GET | 团队列表（含状态） |
 | `/api/teams/{name}` | GET | 团队详情 |
-| `/api/teams/{name}` | DELETE | 删除团队（仅 stopped） |
+| `/api/teams/{name}` | DELETE | 删除团队（非 active） |
 | `/api/tasks` | GET | 任务列表 |
 | `/api/history` | GET | 统一时间线 |
 | `/api/updates` | GET | 增量更新 |

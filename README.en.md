@@ -93,8 +93,8 @@ Team status is determined by **session log mtime**:
 |--------|-----------|------------|
 | `active` | Session log mtime ≤ 1 hour | ❌ No |
 | `stopped` | Session log mtime > 1 hour | ✅ Yes |
-| `unknown` | No session log | ❌ No |
-| `inactive` | Empty members array | ❌ No |
+| `unknown` | No session log | ✅ Yes |
+| `inactive` | Empty members array | ✅ Yes |
 
 > See [docs/spec/system-design.md](docs/spec/system-design.md) §2.2 for details
 
@@ -152,7 +152,7 @@ For detailed information, refer to the documents in `docs/spec/`:
 | `/api/health` | GET | Health check |
 | `/api/teams` | GET | Team list (with status) |
 | `/api/teams/{name}` | GET | Team details |
-| `/api/teams/{name}` | DELETE | Delete team (stopped only) |
+| `/api/teams/{name}` | DELETE | Delete team (non-active only) |
 | `/api/tasks` | GET | Task list |
 | `/api/history` | GET | Unified timeline |
 | `/api/updates` | GET | Incremental updates |
