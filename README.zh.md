@@ -97,7 +97,7 @@ npm run dev
 
 ### 消息详情视图
 
-![Message Detail Page](docs/images/dashboard-message-detail-page.png)
+![Message Detail Page](docs/images/dashboard-team-message-detail-page.png)
 
 点击消息查看其完整内容和元数据。
 
