@@ -9,11 +9,13 @@ Real-time monitoring dashboard for Claude Code Agent Teams
 
 ---
 
-## Languages / 语言
+<div align="center">
 
-- [日本語](README.md) (Default)
-- [English](README.en.md)
-- [中文](README.zh.md)
+[![日本語](https://img.shields.io/badge/日本語-日本語-blue?style=for-the-badge)](README.md)
+[![English](https://img.shields.io/badge/English-default-white?style=for-the-badge)](README.en.md)
+[![中文](https://img.shields.io/badge/中文-中文-red?style=for-the-badge)](README.zh.md)
+
+</div>
 
 ---
 
