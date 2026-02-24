@@ -13,4 +13,4 @@ export ENABLE_LSP_TOOLS=1
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 # Launch Claude Code
-claude "$@"
+claude --mcp-config=mcp.json "$@"
