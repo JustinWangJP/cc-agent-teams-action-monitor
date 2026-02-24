@@ -316,38 +316,53 @@ graph TB
 
 ### 6.1 REST API一覧
 
-#### チーム関連
+#### ヘルス・システム関連
 
 | エンドポイント | メソッド | 説明 | レスポンス |
 |----------------|----------|------|-----------|
 | `/api/health` | GET | ヘルスチェック | `{"status": "ok"}` |
-| `/api/teams` | GET | 全チーム一覧取得（ステータス付き） | `TeamSummary[]` |
+| `/api/models` | GET | 利用可能なモデル一覧取得 | `ModelListResponse` |
+| `/api/cache/stats` | GET | キャッシュ統計情報取得 | `object` |
+
+#### チーム関連
+
+| エンドポイント | メソッド | 説明 | レスポンス |
+|----------------|----------|------|-----------|
+| `/api/teams/` | GET | 全チーム一覧取得（ステータス付き） | `TeamSummary[]` |
 | `/api/teams/{team_name}` | GET | 特定チーム詳細取得 | `Team` |
 | `/api/teams/{team_name}` | DELETE | チーム削除（stopped/inactive/unknownのみ） | `DeleteResult` |
-| `/api/teams/{team_name}/inboxes` | GET | チームインボックス取得 | `InboxMessage[]` |
-| `/api/teams/{team_name}/inboxes/{agent}` | GET | エージェント別インボックス取得 | `InboxMessage[]` |
+| `/api/teams/{team_name}/inboxes` | GET | チームインボックス取得 | `object` |
+| `/api/teams/{team_name}/inboxes/{agent_name}` | GET | エージェント別インボックス取得 | `object` |
 
 #### タスク関連
 
 | エンドポイント | メソッド | 説明 | レスポンス |
 |----------------|----------|------|-----------|
-| `/api/tasks` | GET | 全タスク一覧取得 | `TaskSummary[]` |
-| `/api/tasks/team/{team_name}` | GET | チーム別タスク取得 | `TaskSummary[]` |
-| `/api/tasks/{team}/{task_id}` | GET | 特定タスク詳細取得 | `Task` |
+| `/api/tasks/` | GET | 全タスク一覧取得 | `TaskSummary[]` |
+| `/api/tasks/team/{team_name}` | GET | チーム別タスク取得（詳細版） | `Task[]` |
+| `/api/tasks/{task_id}` | GET | 特定タスク詳細取得（team_name はクエリパラメータ） | `Task` |
 
 #### エージェント関連
 
 | エンドポイント | メソッド | 説明 | レスポンス |
 |----------------|----------|------|-----------|
-| `/api/agents` | GET | 全エージェント一覧取得 | `AgentSummary[]` |
+| `/api/teams/{team_name}/agents/status` | GET | チーム内エージェントステータス取得 | `AgentStatusList` |
+| `/api/teams/{team_name}/agents/typing` | GET | 入力中エージェント一覧取得 | `TypingIndicators` |
 
-#### タイムライン・履歴関連
+#### メッセージ関連
+
+| エンドポイント | メソッド | 説明 | レスポンス |
+|----------------|----------|------|-----------|
+| `/api/teams/{team_name}/messages/timeline` | GET | タイムライン表示用メッセージ取得 | `TimelineData` |
+| `/api/teams/{team_name}/messages` | GET | メッセージ一覧取得（生データ） | `object` |
+| `/api/teams/{team_name}/messages/chat` | GET | チャット形式メッセージ取得 | `ChatMessageList` |
+
+#### 統合タイムライン関連
 
 | エンドポイント | メソッド | 説明 | レスポンス |
 |----------------|----------|------|-----------|
 | `/api/timeline/{team_name}/history` | GET | 統合タイムライン履歴取得 | `UnifiedTimelineResponse` |
 | `/api/timeline/{team_name}/updates` | GET | 差分更新取得（since パラメータ使用） | `UnifiedTimelineResponse` |
-| `/api/file-changes/{team}` | GET | ファイル変更一覧 | `FileChange[]` |
 
 ### 6.2 クエリパラメータ
 
@@ -365,6 +380,34 @@ graph TB
 |-----------|-----|------|------|
 | `since` | string | いいえ | 基準時刻（ISO8601形式、この時刻以降のエントリのみ取得） |
 | `limit` | int | いいえ | 最大取得件数（1-200、デフォルト50） |
+
+#### `/api/teams/{team_name}/messages/timeline`
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `start_time` | string | いいえ | 開始時刻（ISO 8601形式） |
+| `end_time` | string | いいえ | 終了時刻（ISO 8601形式） |
+| `since` | string | いいえ | 差分更新用の基準時刻（ISO 8601形式） |
+| `senders` | string | いいえ | 送信者フィルター（カンマ区切り） |
+| `types` | string | いいえ | タイプフィルター（カンマ区切り） |
+| `search` | string | いいえ | 全文検索クエリ |
+| `unread_only` | boolean | いいえ | 未読のみ取得（デフォルト: false） |
+| `limit` | int | いいえ | 取得件数上限（最大500、デフォルト100） |
+| `offset` | int | いいえ | オフセット（デフォルト0） |
+
+#### `/api/teams/{team_name}/messages/chat`
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `start_time` | string | いいえ | 開始時刻（ISO 8601形式） |
+| `end_time` | string | いいえ | 終了時刻（ISO 8601形式） |
+| `since` | string | いいえ | 差分更新用の基準時刻（ISO 8601形式） |
+| `senders` | string | いいえ | 送信者フィルター（カンマ区切り） |
+| `types` | string | いいえ | タイプフィルター（カンマ区切り） |
+| `search` | string | いいえ | 全文検索クエリ |
+| `unread_only` | boolean | いいえ | 未読のみ取得（デフォルト: false） |
+| `limit` | int | いいえ | 取得件数上限（最大500、デフォルト100） |
+| `offset` | int | いいえ | オフセット（デフォルト0） |
 
 ### 6.3 データフォーマット
 
@@ -469,6 +512,98 @@ type SessionLogType =
 interface DeleteResult {
   message: string;
   deletedPaths: string[];
+}
+```
+
+#### ChatMessage
+
+```typescript
+interface ChatMessage {
+  id: string;
+  from: string;
+  to?: string;
+  text: string;
+  summary?: string;
+  timestamp: string;
+  type: string;  // default: 'message'
+  isPrivate: boolean;  // default: false
+  visibleTo: string[];  // default: []
+  read: boolean;  // default: false
+  color?: string;
+}
+
+interface ChatMessageList {
+  messages: ChatMessage[];
+  count: number;  // default: 0
+  hasMore: boolean;  // default: false
+}
+```
+
+#### AgentStatus
+
+```typescript
+interface AgentStatus {
+  name: string;
+  status: 'online' | 'idle' | 'offline';
+  lastActivity?: string;  // ISO 8601形式
+}
+
+interface AgentStatusList {
+  agents: AgentStatus[];  // default: []
+}
+```
+
+#### TypingIndicators
+
+```typescript
+interface TypingIndicators {
+  typing: string[];  // default: []
+}
+```
+
+#### TimelineData (vis-timeline用)
+
+```typescript
+interface TimelineData {
+  items: TimelineItem[];
+  groups: TimelineGroup[];
+  timeRange: { [key: string]: string };
+  count: number;  // default: 0
+  total: number;  // default: 0
+  hasMore: boolean;  // default: false
+}
+
+interface TimelineItem {
+  id: string;
+  content: string;
+  start: string;
+  type: 'box' | 'point';  // default: 'box'
+  className: string;  // default: 'timeline-item'
+  group: string;
+  receiver?: string;
+  data: Record<string, unknown>;
+}
+
+interface TimelineGroup {
+  id: string;
+  content: string;
+  className?: string;  // default: 'timeline-group'
+}
+```
+
+#### ModelConfig
+
+```typescript
+interface ModelConfig {
+  id: string;
+  color: string;
+  icon: string;
+  label: string;
+  provider: 'anthropic' | 'moonshot' | 'zhipu' | 'other';
+}
+
+interface ModelListResponse {
+  models: ModelConfig[];
 }
 ```
 
