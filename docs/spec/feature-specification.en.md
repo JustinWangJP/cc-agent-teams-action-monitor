@@ -1,134 +1,136 @@
-# Agent Teams Dashboard 機能設計書
+# Agent Teams Dashboard Feature Specification
 
-## 1. 概要
+[日本語](feature-specification.md) | [English](feature-specification.en.md) | [中文](feature-specification.zh.md)
 
-### 1.1 目的
+## 1. Overview
 
-Claude Code の Agent Teams 機能をリアルタイムに監視・管理するための Web ベースダッシュボード。
-`~/.claude/` ディレクトリの JSON ファイルを監視し、チーム構成、タスク進捗、エージェント間通信を可視化する。
+### 1.1 Purpose
 
-### 1.2 検証済みの事実
+A web-based dashboard for real-time monitoring and management of Claude Code's Agent Teams functionality.
+Monitors JSON files in the `~/.claude/` directory to visualize team configuration, task progress, and inter-agent communication.
 
-本設計書は以下の検証結果に基づく：
+### 1.2 Verified Facts
+
+This specification is based on the following verified findings:
 
 ```
 ~/.claude/
 ├── teams/{team_name}/
-│   ├── config.json          # チーム構成、メンバー定義、モデル情報
+│   ├── config.json          # Team configuration, member definitions, model information
 │   └── inboxes/
-│       └── {agent_name}.json # エージェント別メッセージ受信箱（JSON配列）
+│       └── {agent_name}.json # Per-agent message inbox (JSON array)
 ├── tasks/{team_name}/
-│   └── {task_id}.json       # タスク定義・ステータス
+│   └── {task_id}.json       # Task definition and status
 └── projects/{project-hash}/
-    └── {sessionId}.jsonl    # セッションログ（ユーザー対話、ツール使用等）
+    └── {sessionId}.jsonl    # Session logs (user interactions, tool usage, etc.)
 ```
 
-**メッセージ形式**:
-- 通常メッセージ: `text` フィールドにプレーンテキスト
-- プロトコルメッセージ: `text` フィールドに JSON-in-JSON（`idle_notification`, `shutdown_request` など）
+**Message Formats**:
+- Regular messages: `text` field contains plain text
+- Protocol messages: `text` field contains JSON-in-JSON (`idle_notification`, `shutdown_request`, etc.)
 
-### 1.3 参照リソース
+### 1.3 Reference Resources
 
-- [sinjorjob/claude-code-agent-teams-dashboard](https://github.com/sinjorjob/claude-code-agent-teams-dashboard) - ターミナル版実装
-- [Claude Code Agent Teams 公式ガイド](https://claudefa.st/blog/guide/agents/agent-teams)
+- [sinjorjob/claude-code-agent-teams-dashboard](https://github.com/sinjorjob/claude-code-agent-teams-dashboard) - Terminal implementation
+- [Claude Code Agent Teams Official Guide](https://claudefa.st/blog/guide/agents/agent-teams)
 
-### 1.4 設計思想
+### 1.4 Design Philosophy
 
-#### なぜHTTPポーリング + キャッシュ無効化か
+#### Why HTTP Polling + Cache Invalidation
 
-Claude Code がファイルを直接更新するため、サーバーからの Push 通知ができません。そのため、以下の2層構造を採用：
+Since Claude Code directly updates files, push notifications from the server are not possible. Therefore, a two-layer structure is adopted:
 
-1. **FileWatcherService**: ファイル変更を検知し、キャッシュを無効化
-2. **HTTPポーリング**: フロントエンドが定期的にデータを取得
+1. **FileWatcherService**: Detects file changes and invalidates cache
+2. **HTTP Polling**: Frontend periodically fetches data
 
-| 方式 | メリット | デメリット |
-|------|---------|-----------|
-| HTTP ポーリング（採用） | シンプル、Claude Code と相性良い | リアルタイム性は劣る |
-| WebSocket Push | 高いリアルタイム性 | Claude Code から通知できない |
+| Approach | Pros | Cons |
+|----------|------|------|
+| HTTP Polling (adopted) | Simple, works well with Claude Code | Lower real-time capability |
+| WebSocket Push | High real-time capability | Cannot receive notifications from Claude Code |
 
-ポーリング間隔は **5秒〜60秒** から選択可能（デフォルト30秒）。
+Polling interval can be selected from **5 seconds to 60 seconds** (default: 30 seconds).
 
-#### なぜセッションログのmtimeでステータス判定か
+#### Why Team Status Based on Session Log mtime
 
-チームのアクティビティを正確に反映するため、**セッションログの最終更新時刻（mtime）** を使用：
+To accurately reflect team activity, the **last modification time (mtime) of the session log** is used:
 
-- `config.json` の mtime は更新タイミングが異なる場合がある
-- セッションログがチーム活動の真の指標
+- `config.json` mtime may be updated at different timings
+- Session log is the true indicator of team activity
 
-#### データソース対応表
+#### Data Source Mapping
 
-| 機能 | 監視/読み込み対象 | 説明 |
-|------|------------------|------|
-| **チーム一覧** | `~/.claude/teams/{team_name}/config.json` | チーム設定、メンバー情報 |
-| **チームステータス判定** | `~/.claude/projects/{project-hash}/{sessionId}.jsonl` | セッションログの mtime で判定 |
-| **インボックス** | `~/.claude/teams/{team_name}/inboxes/{agent_name}.json` | エージェント別メッセージ受信箱 |
-| **タスク** | `~/.claude/tasks/{team_name}/{task_id}.json` | タスク定義・ステータス |
-| **統合タイムライン** | 上記すべて + セッションログ | inbox + セッションログ統合 |
-
----
-
-## 2. 設計方針
-
-### 2.1 設計アプローチ: 完全リデザイン
-
-既存の実装をベースにしつつ、可視化特化のデザインに刷新する。
-
-**理由**:
-- インタラクティビティを最大限に活かすため、コンポーネント構造を見直し
-- D3.js / vis-timeline の活用により、リッチな可視化を実現
-- ユーザー体験を一貫して設計可能
-
-### 2.2 技術選定: ハイブリッド構成
-
-| 用途 | ライブラリ | 理由 |
-|------|-----------|------|
-| タイムライン可視化 | **vis-timeline** | 時間範囲指定、ズーム、ドラッグが標準搭載 |
-| ネットワークグラフ | **D3.js** | エージェント通信関係の自由度高い可視化 |
-| タスク依存グラフ | **D3.js** | DAG描画の柔軟性 |
-| UIコンポーネント | **Radix UI** | アクセシビリティ準拠 |
-| 状態管理 | **Zustand** | 軽量でシンプル |
-| アニメーション | **Framer Motion** | リッチなトランジション |
+| Feature | Monitored/Read From | Description |
+|---------|---------------------|-------------|
+| **Team List** | `~/.claude/teams/{team_name}/config.json` | Team settings, member information |
+| **Team Status Determination** | `~/.claude/projects/{project-hash}/{sessionId}.jsonl` | Based on session log mtime |
+| **Inboxes** | `~/.claude/teams/{team_name}/inboxes/{agent_name}.json` | Per-agent message inboxes |
+| **Tasks** | `~/.claude/tasks/{team_name}/{task_id}.json` | Task definition and status |
+| **Unified Timeline** | All above + session logs | inbox + session log integration |
 
 ---
 
-## 3. 機能一覧
+## 2. Design Approach
 
-### 3.1 コア機能（既存）
+### 2.1 Design Approach: Complete Redesign
 
-| カテゴリ | 機能 | 優先度 | 状態 |
-|---------|------|--------|------|
-| チーム監視 | チーム一覧表示 | **P0** | ✅ 実装完了 |
-| チーム監視 | チーム詳細表示 | **P0** | ✅ 実装完了 |
-| チーム監視 | チームステータス判定 | **P0** | ✅ セッションログ mtime で判定 |
-| チーム監視 | チーム削除機能 | **P0** | ✅ stopped 状態のみ削除可能 |
-| タスク管理 | タスク一覧表示 | **P0** | ✅ 実装完了 |
-| タスク管理 | 依存関係表示 | **P1** | ✅ D3.js実装完了 |
-| 通信監視 | インボックス表示 | **P0** | ✅ タイムライン実装完了 |
-| 通信監視 | 統合タイムライン | **P0** | ✅ inbox + セッションログ統合 |
-| エージェント | エージェント状態推論 | **P0** | ✅ idle/working/waiting/error/completed |
-| リアルタイム | HTTPポーリング更新 | **P0** | ✅ 5秒〜60秒で設定可能 |
+While based on existing implementation, the design is refreshed for visualization-focused approach.
 
-### 3.2 新規機能
+**Reasons**:
+- Review component structure to maximize interactivity
+- Rich visualization through D3.js / vis-timeline
+- Consistent user experience design
 
-| カテゴリ | 機能 | 優先度 | 状態 | 説明 |
-|---------|------|--------|------|------|
-| **モデル可視化** | チーム別モデル表示 | **P0** | ✅ 完了 | チームカードにモデルバッジ表示 |
-| **モデル可視化** | モデル別色分けアイコン | **P0** | ✅ 完了 | 各モデルに固有の色とアイコン |
-| **メッセージ可視化** | タイムライン表示 | **P0** | ✅ 完了 | vis-timeline による時系列表示 |
-| **メッセージ可視化** | 詳細展開モーダル | **P0** | ✅ 完了 | メッセージクリックで全文表示 |
-| **メッセージ可視化** | 時間範囲指定 | **P0** | ✅ 完了 | スライダーで特定時間帯フィルタ |
-| **メッセージ可視化** | フィルター機能 | **P1** | ✅ 完了 | 送信者/受信者/タイプでフィルタ |
-| **メッセージ可視化** | 検索機能 | **P1** | ✅ 完了 | メッセージ本文キーワード検索 |
-| **グラフ可視化** | タスク依存グラフ | **P1** | ✅ 完了 | D3.js による DAG 表示 |
-| **グラフ可視化** | エージェント通信ネットワーク | **P2** | ✅ 完了 | D3.js による通信関係図 |
-| **UI/UX** | ダークモード | **P1** | ✅ 完了 | テーマ切り替え |
-| **UI/UX** | リアルタイムインジケーター | **P1** | ✅ 完了 | Live バッジ、接続状態表示 |
+### 2.2 Technology Selection: Hybrid Configuration
+
+| Purpose | Library | Reason |
+|---------|---------|--------|
+| Timeline Visualization | **vis-timeline** | Time range selection, zoom, drag built-in |
+| Network Graph | **D3.js** | High flexibility for agent communication visualization |
+| Task Dependency Graph | **D3.js** | DAG drawing flexibility |
+| UI Components | **Radix UI** | Accessibility compliant |
+| State Management | **Zustand** | Lightweight and simple |
+| Animation | **Framer Motion** | Rich transitions |
 
 ---
 
-## 4. UI/UX 設計
+## 3. Feature List
 
-### 4.1 レイアウト構成
+### 3.1 Core Features (Existing)
+
+| Category | Feature | Priority | Status |
+|----------|---------|----------|--------|
+| Team Monitoring | Team list display | **P0** | ✅ Completed |
+| Team Monitoring | Team detail display | **P0** | ✅ Completed |
+| Team Monitoring | Team status determination | **P0** | ✅ Based on session log mtime |
+| Team Monitoring | Team deletion | **P0** | ✅ Only stopped teams can be deleted |
+| Task Management | Task list display | **P0** | ✅ Completed |
+| Task Management | Dependency visualization | **P1** | ✅ D3.js implementation completed |
+| Communication Monitoring | Inbox display | **P0** | ✅ Timeline implementation completed |
+| Communication Monitoring | Unified timeline | **P0** | ✅ inbox + session log integration |
+| Agent | Agent status inference | **P0** | ✅ idle/working/waiting/error/completed |
+| Real-time | HTTP polling updates | **P0** | ✅ Configurable 5s-60s |
+
+### 3.2 New Features
+
+| Category | Feature | Priority | Status | Description |
+|----------|---------|----------|--------|-------------|
+| **Model Visualization** | Per-team model display | **P0** | ✅ Completed | Model badge on team cards |
+| **Model Visualization** | Model-specific colored icons | **P0** | ✅ Completed | Unique color and icon per model |
+| **Message Visualization** | Timeline display | **P0** | ✅ Completed | vis-timeline chronological display |
+| **Message Visualization** | Detail expansion modal | **P0** | ✅ Completed | Click to view full message |
+| **Message Visualization** | Time range selection | **P0** | ✅ Completed | Slider to filter specific time range |
+| **Message Visualization** | Filter functionality | **P1** | ✅ Completed | Filter by sender/receiver/type |
+| **Message Visualization** | Search functionality | **P1** | ✅ Completed | Keyword search in message body |
+| **Graph Visualization** | Task dependency graph | **P1** | ✅ Completed | D3.js DAG display |
+| **Graph Visualization** | Agent communication network | **P2** | ✅ Completed | D3.js communication diagram |
+| **UI/UX** | Dark mode | **P1** | ✅ Completed | Theme switching |
+| **UI/UX** | Real-time indicator | **P1** | ✅ Completed | Live badge, connection status display |
+
+---
+
+## 4. UI/UX Design
+
+### 4.1 Layout Structure
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -141,8 +143,8 @@ Claude Code がファイルを直接更新するため、サーバーからの P
 │  │                              │  │                                    │  │
 │  │    ┌──────────────────────┐  │  │    ▲ 17:05:45                     │  │
 │  │    │ dashboard-dev-v2     │  │  │    │ architect ──▶ team-lead      │  │
-│  │    │ 🟣 Opus×5 🟡 Kimi×2  │  │  │    │ 💬 "API設計完了..."         │  │
-│  │    │ 👥 7 members          │  │  │    │    [クリックで詳細展開]      │  │
+│  │    │ 🟣 Opus×5 🟡 Kimi×2  │  │  │    │ 💬 "API design complete..."  │  │
+│  │    │ 👥 7 members          │  │  │    │    [Click for detail]        │  │
 │  │    │ 📋 12 tasks          │  │  │    │                              │  │
 │  │    └──────────────────────┘  │  │    ├ 17:04:30                     │  │
 │  │    ┌──────────────────────┐  │  │    │ python-eng ──▶ team-lead    │  │
@@ -164,23 +166,23 @@ Claude Code がファイルを直接更新するため、サーバーからの P
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.2 レスポンシブブレークポイント
+### 4.2 Responsive Breakpoints
 
-| ブレークポイント | 幅 | レイアウト |
-|-----------------|-----|-----------|
-| Mobile | < 640px | 1カラム（Overview → Timeline → Tasks） |
-| Tablet | 640-1024px | 2カラム（Overview + Timeline） |
-| Desktop | > 1024px | 3ペイン構成 |
+| Breakpoint | Width | Layout |
+|------------|-------|--------|
+| Mobile | < 640px | 1 column (Overview → Timeline → Tasks) |
+| Tablet | 640-1024px | 2 columns (Overview + Timeline) |
+| Desktop | > 1024px | 3-pane structure |
 
-### 4.3 カラーシステム
+### 4.3 Color System
 
 ```css
-/* テーマカラー */
+/* Theme colors */
 --color-primary: #3B82F6;      /* blue-500 */
 --color-secondary: #8B5CF6;    /* violet-500 */
 --color-accent: #F59E0B;       /* amber-500 */
 
-/* ステータスカラー */
+/* Status colors */
 --color-active: #10B981;       /* green-500 */
 --color-idle: #F59E0B;         /* amber-500 */
 --color-pending: #6B7280;      /* gray-500 */
@@ -188,41 +190,41 @@ Claude Code がファイルを直接更新するため、サーバーからの P
 --color-completed: #10B981;    /* green-500 */
 --color-error: #EF4444;        /* red-500 */
 
-/* モデル別カラー */
+/* Model-specific colors */
 --model-opus: #8B5CF6;         /* violet-500 */
 --model-sonnet: #3B82F6;       /* blue-500 */
 --model-haiku: #10B981;        /* green-500 */
 --model-kimi: #F59E0B;         /* amber-500 */
 --model-glm: #EF4444;          /* red-500 */
 
-/* ダークモード */
+/* Dark mode */
 --bg-dark: #0F172A;            /* slate-900 */
 --bg-dark-card: #1E293B;       /* slate-800 */
 --text-dark-primary: #F1F5F9;  /* slate-100 */
 --text-dark-secondary: #94A3B8; /* slate-400 */
 ```
 
-### 4.4 アニメーション仕様
+### 4.4 Animation Specifications
 
-| 種類 | アニメーション | 時間 | Easing |
-|------|--------------|------|--------|
-| カード選択 | scale + shadow | 150ms | ease-out |
-| ステータス変更 | fade + color | 300ms | ease-in-out |
-| 新規メッセージ | slide-in from top | 250ms | spring |
-| モーダル展開 | scale + fade | 200ms | ease-out |
-| タイムラインズーム | smooth scroll | 400ms | ease-in-out |
+| Type | Animation | Duration | Easing |
+|------|-----------|----------|--------|
+| Card selection | scale + shadow | 150ms | ease-out |
+| Status change | fade + color | 300ms | ease-in-out |
+| New message | slide-in from top | 250ms | spring |
+| Modal expansion | scale + fade | 200ms | ease-out |
+| Timeline zoom | smooth scroll | 400ms | ease-in-out |
 
 ---
 
-## 5. 機能詳細設計
+## 5. Detailed Feature Design
 
-### 5.1 モデル可視化機能
+### 5.1 Model Visualization Feature
 
-#### 5.1.1 ModelBadge コンポーネント
+#### 5.1.1 ModelBadge Component
 
-**目的**: 各 AI モデルを一意に識別できる視覚的バッジを提供
+**Purpose**: Provide visual badges to uniquely identify each AI model
 
-**モデル設定定義**:
+**Model Configuration Definition**:
 ```typescript
 interface ModelConfig {
   id: string;
@@ -278,9 +280,9 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
 };
 ```
 
-#### 5.1.2 TeamCard モデル表示
+#### 5.1.2 TeamCard Model Display
 
-**表示内容**:
+**Display Content**:
 ```
 ┌────────────────────────────────────┐
 │  dashboard-dev-v2                  │
@@ -292,18 +294,18 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
 └────────────────────────────────────┘
 ```
 
-**データ構造**:
+**Data Structure**:
 ```typescript
 interface TeamModels {
   teamName: string;
   models: {
     config: ModelConfig;
     count: number;
-    agents: string[];  // モデルを使用するエージェント名
+    agents: string[];  // Agent names using this model
   }[];
 }
 
-// 算出ロジック
+// Computation logic
 function computeTeamModels(team: Team): TeamModels {
   const modelCounts = new Map<string, { config: ModelConfig; agents: string[] }>();
 
@@ -328,27 +330,27 @@ function computeTeamModels(team: Team): TeamModels {
 }
 ```
 
-### 5.2 メッセージタイムライン機能
+### 5.2 Message Timeline Feature
 
-#### 5.2.1 タイムライン表示仕様
+#### 5.2.1 Timeline Display Specification
 
-**vis-timeline 設定**:
+**vis-timeline Configuration**:
 ```typescript
 const timelineOptions: TimelineOptions = {
-  // 基本設定
+  // Basic settings
   orientation: { axis: 'top', item: 'top' },
   verticalScroll: true,
   horizontalScroll: true,
 
-  // ズーム設定
-  zoomMin: 1000 * 60 * 1,      // 最小: 1分
-  zoomMax: 1000 * 60 * 60 * 24, // 最大: 24時間
+  // Zoom settings
+  zoomMin: 1000 * 60 * 1,      // Minimum: 1 minute
+  zoomMax: 1000 * 60 * 60 * 24, // Maximum: 24 hours
 
-  // インタラクション
+  // Interaction
   editable: false,
   selectable: true,
 
-  // スタイル
+  // Style
   margin: { item: { horizontal: 10, vertical: 5 } },
   format: {
     minorLabels: { minute: 'HH:mm', hour: 'HH:mm' },
@@ -357,24 +359,24 @@ const timelineOptions: TimelineOptions = {
 };
 ```
 
-**メッセージアイテム形式**:
+**Message Item Format**:
 ```typescript
 interface TimelineItem {
   id: string;
-  content: string;           // 表示テキスト（短縮版）
-  start: Date;               // タイムスタンプ
+  content: string;           // Display text (shortened)
+  start: Date;               // Timestamp
   type: 'box' | 'point';
-  className: string;         // スタイルクラス（message, idle, etc.）
-  group: string;             // 送信者でグループ化
-  data: ParsedMessage;       // 元メッセージデータ
+  className: string;         // Style class (message, idle, etc.)
+  group: string;             // Group by sender
+  data: ParsedMessage;       // Original message data
 }
 ```
 
-#### 5.2.2 詳細展開モーダル（P0）
+#### 5.2.2 Detail Expansion Modal (P0)
 
-**トリガー**: タイムラインアイテムクリック
+**Trigger**: Click on timeline item
 
-**モーダル内容**:
+**Modal Content**:
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Message Detail                              [×]    │
@@ -385,12 +387,12 @@ interface TimelineItem {
 │  Type: 💬 Message                                   │
 │                                                     │
 │  ┌─────────────────────────────────────────────┐   │
-│  │  API設計が完了しました。                     │   │
+│  │  API design complete.                      │   │
 │  │                                             │   │
-│  │  変更内容:                                   │   │
-│  │  - エンドポイント構成の見直し                │   │
-│  │  - レスポンス形式の統一                      │   │
-│  │  - エラーハンドリングの追加                  │   │
+│  │  Changes:                                   │   │
+│  │  - Endpoint structure review                │   │
+│  │  - Response format standardization          │   │
+│  │  - Error handling added                     │   │
 │  └─────────────────────────────────────────────┘   │
 │                                                     │
 │  Metadata:                                          │
@@ -401,7 +403,7 @@ interface TimelineItem {
 └─────────────────────────────────────────────────────┘
 ```
 
-**実装**:
+**Implementation**:
 ```typescript
 interface MessageDetailModalProps {
   isOpen: boolean;
@@ -451,9 +453,9 @@ const MessageDetailModal: React.FC<MessageDetailModalProps> = ({
 };
 ```
 
-#### 5.2.3 時間範囲指定（P0）
+#### 5.2.3 Time Range Selection (P0)
 
-**UI コンポーネント**:
+**UI Component**:
 ```typescript
 interface TimeRangeSliderProps {
   startTime: Date;
@@ -489,15 +491,15 @@ const TimeRangeSlider: React.FC<TimeRangeSliderProps> = ({
 };
 ```
 
-#### 5.2.4 フィルター機能（P1）
+#### 5.2.4 Filter Functionality (P1)
 
-**フィルター条件**:
+**Filter Criteria**:
 ```typescript
 interface MessageFilter {
-  senders: string[];        // 送信者でフィルタ
-  receivers: string[];      // 受信者でフィルタ
-  types: MessageType[];     // メッセージタイプでフィルタ
-  unreadOnly: boolean;      // 未読のみ
+  senders: string[];        // Filter by sender
+  receivers: string[];      // Filter by receiver
+  types: MessageType[];     // Filter by message type
+  unreadOnly: boolean;      // Unread only
 }
 
 type MessageType =
@@ -540,9 +542,9 @@ const TimelineFilters: React.FC<{
 };
 ```
 
-#### 5.2.5 検索機能（P1）
+#### 5.2.5 Search Functionality (P1)
 
-**検索実装**:
+**Search Implementation**:
 ```typescript
 interface SearchProps {
   query: string;
@@ -574,7 +576,7 @@ const MessageSearch: React.FC<SearchProps> = ({
   );
 };
 
-// 検索フィルター関数
+// Search filter function
 function filterMessagesByQuery(
   messages: ParsedMessage[],
   query: string
@@ -594,11 +596,11 @@ function filterMessagesByQuery(
 }
 ```
 
-### 5.3 タスク依存グラフ機能
+### 5.3 Task Dependency Graph Feature
 
-#### 5.3.1 D3.js グラフ仕様
+#### 5.3.1 D3.js Graph Specification
 
-**ノード定義**:
+**Node Definition**:
 ```typescript
 interface TaskNode extends d3.SimulationNodeDatum {
   id: string;
@@ -615,7 +617,7 @@ interface TaskEdge extends d3.SimulationLinkDatum<TaskNode> {
 }
 ```
 
-**グラフ設定**:
+**Graph Configuration**:
 ```typescript
 const graphConfig = {
   nodeRadius: 25,
@@ -630,7 +632,7 @@ const graphConfig = {
   }
 };
 
-// D3.js フォースシミュレーション
+// D3.js force simulation
 function createForceSimulation(
   nodes: TaskNode[],
   edges: TaskEdge[]
@@ -643,7 +645,7 @@ function createForceSimulation(
 }
 ```
 
-**表示例**:
+**Display Example**:
 ```
          ┌─────────┐
          │ Task 1  │
@@ -672,9 +674,9 @@ function createForceSimulation(
          └─────────┘
 ```
 
-### 5.4 ダークモード機能
+### 5.4 Dark Mode Feature
 
-#### 5.4.1 テーマ定義
+#### 5.4.1 Theme Definition
 
 ```typescript
 interface Theme {
@@ -686,7 +688,7 @@ interface Theme {
     textSecondary: string;
     border: string;
     accent: string;
-    // ... その他
+    // ... others
   };
 }
 
@@ -716,10 +718,10 @@ const themes: Record<string, Theme> = {
 };
 ```
 
-#### 5.4.2 テーマ切り替え
+#### 5.4.2 Theme Toggle
 
 ```typescript
-// Zustand ストア
+// Zustand store
 interface ThemeStore {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
@@ -734,7 +736,7 @@ const useThemeStore = create<ThemeStore>((set) => ({
   setTheme: (theme) => set({ theme })
 }));
 
-// ThemeToggle コンポーネント
+// ThemeToggle component
 const ThemeToggle: React.FC = () => {
   const { theme, toggleTheme } = useThemeStore();
 
@@ -748,62 +750,62 @@ const ThemeToggle: React.FC = () => {
 
 ---
 
-## 6. コンポーネント設計
+## 6. Component Design
 
-### 6.1 ディレクトリ構成
+### 6.1 Directory Structure
 
 ```
 src/components/
 ├── layout/
-│   ├── DashboardLayout.tsx      # 新レイアウト（3ペイン構成）
-│   ├── Header.tsx               # 更新（ダークモード切り替え追加）
-│   └── Sidebar.tsx              # 新規（ナビゲーション）
+│   ├── DashboardLayout.tsx      # New layout (3-pane structure)
+│   ├── Header.tsx               # Updated (dark mode toggle added)
+│   └── Sidebar.tsx              # New (navigation)
 │
-├── overview/                    # 新規ディレクトリ
-│   ├── OverviewPanel.tsx        # チーム一覧パネル
-│   ├── TeamCard.tsx             # リデザイン（モデルバッジ付き）
-│   └── ModelBadge.tsx           # 新規（モデル別色分けアイコン）
+├── overview/                    # New directory
+│   ├── OverviewPanel.tsx        # Team list panel
+│   ├── TeamCard.tsx             # Redesigned (with model badge)
+│   └── ModelBadge.tsx           # New (model-specific colored icons)
 │
-├── timeline/                    # 新規ディレクトリ
-│   ├── MessageTimeline.tsx      # vis-timeline ラッパー
-│   ├── TimelineFilters.tsx      # フィルター・検索 UI
-│   ├── TimeRangeSlider.tsx      # 時間範囲指定
-│   └── MessageDetailModal.tsx   # 詳細展開モーダル
+├── timeline/                    # New directory
+│   ├── MessageTimeline.tsx      # vis-timeline wrapper
+│   ├── TimelineFilters.tsx      # Filter and search UI
+│   ├── TimeRangeSlider.tsx      # Time range selection
+│   └── MessageDetailModal.tsx   # Detail expansion modal
 │
-├── graph/                       # 新規ディレクトリ
-│   ├── TaskDependencyGraph.tsx  # D3.js タスク依存グラフ
-│   └── AgentNetworkGraph.tsx    # D3.js エージェント通信ネットワーク
+├── graph/                       # New directory
+│   ├── TaskDependencyGraph.tsx  # D3.js task dependency graph
+│   └── AgentNetworkGraph.tsx    # D3.js agent communication network
 │
-├── stats/                       # 新規ディレクトリ
-│   ├── StatsPanel.tsx           # 統計サマリー
-│   └── ActivityFeed.tsx         # リデザイン
+├── stats/                       # New directory
+│   ├── StatsPanel.tsx           # Statistics summary
+│   └── ActivityFeed.tsx         # Redesigned
 │
 └── common/
-    ├── StatusIndicator.tsx      # リアルタイム状態インジケーター
-    ├── SearchInput.tsx          # 新規
-    ├── ThemeToggle.tsx          # 新規（ダークモード）
-    └── Modal.tsx                # 新規（Radix UI Dialog）
+    ├── StatusIndicator.tsx      # Real-time status indicator
+    ├── SearchInput.tsx          # New
+    ├── ThemeToggle.tsx          # New (dark mode)
+    └── Modal.tsx                # New (Radix UI Dialog)
 ```
 
-### 6.2 状態管理設計（Zustand）
+### 6.2 State Management Design (Zustand)
 
 ```typescript
 // stores/dashboardStore.ts
 interface DashboardState {
-  // 選択状態
+  // Selection state
   selectedTeam: string | null;
   selectedMessage: ParsedMessage | null;
 
-  // フィルター
+  // Filters
   timeRange: { start: Date; end: Date };
   messageFilter: MessageFilter;
   searchQuery: string;
 
-  // UI状態
+  // UI state
   isDetailModalOpen: boolean;
   isDarkMode: boolean;
 
-  // アクション
+  // Actions
   setSelectedTeam: (team: string | null) => void;
   setSelectedMessage: (message: ParsedMessage | null) => void;
   setTimeRange: (range: { start: Date; end: Date }) => void;
@@ -834,20 +836,20 @@ const useDashboardStore = create<DashboardState>((set) => ({
 
 ---
 
-## 7. API 設計
+## 7. API Design
 
-### 7.1 REST API 更新
+### 7.1 REST API Updates
 
-| エンドポイント | メソッド | 説明 | 変更 |
-|---------------|---------|------|------|
-| `GET /api/teams` | GET | チーム一覧 | モデル情報追加 |
-| `GET /api/teams/{name}` | GET | チーム詳細 | モデル情報追加 |
-| `GET /api/teams/{name}/messages` | GET | メッセージ一覧 | **新規** |
-| `GET /api/teams/{name}/messages/timeline` | GET | タイムライン用 | **新規** |
-| `GET /api/teams/{name}/stats` | GET | チーム統計 | **新規** |
-| `GET /api/models` | GET | モデル一覧 | **新規** |
+| Endpoint | Method | Description | Changes |
+|----------|--------|-------------|---------|
+| `GET /api/teams` | GET | Team list | Model information added |
+| `GET /api/teams/{name}` | GET | Team detail | Model information added |
+| `GET /api/teams/{name}/messages` | GET | Message list | **New** |
+| `GET /api/teams/{name}/messages/timeline` | GET | For timeline | **New** |
+| `GET /api/teams/{name}/stats` | GET | Team statistics | **New** |
+| `GET /api/models` | GET | Model list | **New** |
 
-### 7.2 新規 API: メッセージタイムライン
+### 7.2 New API: Message Timeline
 
 ```python
 @router.get("/teams/{team_name}/messages/timeline")
@@ -855,14 +857,14 @@ async def get_message_timeline(
     team_name: str,
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
-    senders: Optional[str] = None,      # カンマ区切り
-    types: Optional[str] = None,        # カンマ区切り
+    senders: Optional[str] = None,      # Comma-separated
+    types: Optional[str] = None,        # Comma-separated
     search: Optional[str] = None,
     unread_only: bool = False
 ):
-    """タイムライン表示用のメッセージを取得"""
+    """Get messages for timeline display"""
 
-    # フィルター適用
+    # Apply filters
     messages = await filter_messages(
         team_name=team_name,
         start_time=start_time,
@@ -873,7 +875,7 @@ async def get_message_timeline(
         unread_only=unread_only
     )
 
-    # タイムラインアイテム形式に変換
+    # Convert to timeline item format
     timeline_items = [
         {
             "id": f"{msg['from']}-{idx}",
@@ -897,12 +899,12 @@ async def get_message_timeline(
     }
 ```
 
-### 7.3 新規 API: モデル一覧
+### 7.3 New API: Model List
 
 ```python
 @router.get("/models")
 async def get_available_models():
-    """利用可能なモデル一覧と設定を取得"""
+    """Get list of available models and their configurations"""
     return {
         "models": [
             {"id": "claude-opus-4-6", "color": "#8B5CF6", "icon": "🟣", "label": "Opus 4.6", "provider": "anthropic"},
@@ -916,9 +918,9 @@ async def get_available_models():
 
 ---
 
-## 8. データモデル
+## 8. Data Models
 
-### 8.1 Team モデル（拡張）
+### 8.1 Team Model (Extended)
 
 ```typescript
 interface Team {
@@ -928,7 +930,7 @@ interface Team {
   leadAgentId: string;
   leadSessionId: string;
   members: Member[];
-  // 算出値
+  // Computed values
   modelSummary?: TeamModelSummary;
 }
 
@@ -951,16 +953,16 @@ interface TeamModelSummary {
     count: number;
     agents: string[];
   }[];
-  primaryModel: string;  // 最も多いモデル
+  primaryModel: string;  // Most used model
 }
 ```
 
-### 8.2 Message モデル（拡張）
+### 8.2 Message Model (Extended)
 
 ```typescript
 interface Message {
   from: string;
-  to?: string;            // 受信者（推定）
+  to?: string;            // Receiver (inferred)
   text: string;
   timestamp: string;
   color: string;
@@ -988,7 +990,7 @@ type MessageType =
   | 'unknown';
 ```
 
-### 8.3 TimelineItem モデル（新規）
+### 8.3 TimelineItem Model (New)
 
 ```typescript
 interface TimelineItem {
@@ -1019,184 +1021,184 @@ interface TimelineData {
 
 ---
 
-## 9. 技術スタック
+## 9. Technology Stack
 
-### 9.1 バックエンド
+### 9.1 Backend
 
-| 技術 | バージョン | 用途 |
-|-----|-----------|------|
-| Python | 3.11+ | メイン言語 |
-| FastAPI | 0.109+ | Webフレームワーク |
-| Pydantic | 2.5+ | データ検証 |
-| watchdog | 4.0+ | ファイル監視 |
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Python | 3.11+ | Main language |
+| FastAPI | 0.109+ | Web framework |
+| Pydantic | 2.5+ | Data validation |
+| watchdog | 4.0+ | File monitoring |
 
-### 9.2 フロントエンド
+### 9.2 Frontend
 
-| 技術 | バージョン | 用途 |
-|-----|-----------|------|
-| React | 18.2+ | UIライブラリ |
-| TypeScript | 5.3+ | 型安全 |
-| Vite | 5.0+ | ビルドツール |
-| Tailwind CSS | 3.4+ | スタイリング |
-| **vis-timeline** | 7.x | タイムライン可視化 |
-| **D3.js** | 7.x | ネットワーク/依存グラフ |
-| **Radix UI** | 1.x | アクセシブルコンポーネント |
-| **Zustand** | 5.x | 状態管理 |
-| **Framer Motion** | 11.x | アニメーション |
-
----
-
-## 10. 制限事項
-
-### 10.1 Agent Teams の仕様による制限
-
-| 制限 | 影響 | 対応 |
-|-----|------|------|
-| セッション終了でデータ削除 | 履歴保持不可 | リアルタイム監視専用とする |
-| ファイルロック機構が弱い | 競合可能性 | 読み取り専用で運用 |
-| タスク間通信が turn 間のみ | リアルタイム性 | HTTPポーリング で補完 |
-| Claude Code がファイル直接更新 | Push通知不可 | HTTPポーリング + キャッシュ無効化 |
-
-### 10.2 Dashboard の制限
-
-| 制限 | 説明 |
-|-----|------|
-| チーム削除制限 | stopped, inactive, unknown 状態のみ削除可能 |
-| ローカルのみ | リモート監視非対応 |
-| セッションログ依存 | チームステータス判定はセッションログ mtime に依存 |
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| React | 18.2+ | UI library |
+| TypeScript | 5.3+ | Type safety |
+| Vite | 5.0+ | Build tool |
+| Tailwind CSS | 3.4+ | Styling |
+| **vis-timeline** | 7.x | Timeline visualization |
+| **D3.js** | 7.x | Network/dependency graphs |
+| **Radix UI** | 1.x | Accessible components |
+| **Zustand** | 5.x | State management |
+| **Framer Motion** | 11.x | Animation |
 
 ---
 
-## 10.5 セッションログ統合仕様
+## 10. Limitations
 
-### セッションログの場所
+### 10.1 Limitations Due to Agent Teams Specification
+
+| Limitation | Impact | Mitigation |
+|------------|--------|------------|
+| Data deleted on session end | Cannot preserve history | Real-time monitoring only |
+| Weak file locking | Possible conflicts | Read-only operation |
+| Inter-task communication only between turns | Real-time capability | Complemented by HTTP polling |
+| Claude Code directly updates files | Cannot push notifications | HTTP polling + cache invalidation |
+
+### 10.2 Dashboard Limitations
+
+| Limitation | Description |
+|------------|-------------|
+| Team deletion restriction | Only stopped, inactive, unknown statuses can be deleted |
+| Local only | Remote monitoring not supported |
+| Session log dependency | Team status determination depends on session log mtime |
+
+---
+
+## 10.5 Session Log Integration Specification
+
+### Session Log Location
 
 ```
 ~/.claude/projects/{project-hash}/{sessionId}.jsonl
 ```
 
-- **project-hash**: cwd（作業ディレクトリ）から生成（先頭に `-` を付与し、`/` を `-` に置換）
-- **sessionId**: チーム設定（`config.json`）の `leadSessionId` から取得
+- **project-hash**: Generated from cwd (working directory) with `-` prefix and `/` replaced by `-`
+- **sessionId**: Obtained from `leadSessionId` in team configuration (`config.json`)
 
-### セッションログエントリタイプ
+### Session Log Entry Types
 
-| タイプ | 内容 | 表示アイコン |
-|--------|------|-------------|
-| `user_message` | ユーザー入力 | 👤 |
-| `assistant_message` | アシスタント応答 | 🤖 |
-| `thinking` | 思考プロセス | 💭 |
-| `tool_use` | ツール呼び出し | 🔧 |
-| `file_change` | ファイル変更 | 📁 |
+| Type | Content | Display Icon |
+|------|---------|--------------|
+| `user_message` | User input | 👤 |
+| `assistant_message` | Assistant response | 🤖 |
+| `thinking` | Thinking process | 💭 |
+| `tool_use` | Tool call | 🔧 |
+| `file_change` | File change | 📁 |
 
-### 統合タイムライン
+### Unified Timeline
 
-**TimelineService** が2つのデータソースを統合：
+**TimelineService** integrates two data sources:
 
-1. **inbox メッセージ**: エージェント間通信
-2. **セッションログ**: ユーザー対話、ツール使用
+1. **inbox messages**: Inter-agent communication
+2. **session logs**: User interactions, tool usage
 
 ---
 
-## 10.6 チームステータス判定仕様
+## 10.6 Team Status Determination Specification
 
-### 判定ロジック
+### Determination Logic
 
 ```
-1. members 配列が空 → inactive
-2. セッションログなし → unknown
-3. セッションログ mtime > 1時間 → stopped
-4. セッションログ mtime ≤ 1時間 → active
+1. members array empty → inactive
+2. No session log → unknown
+3. Session log mtime > 1 hour → stopped
+4. Session log mtime ≤ 1 hour → active
 ```
 
-### ステータス一覧
+### Status List
 
-| ステータス | 判定条件 | 削除ボタン | 表示色 |
-|-----------|---------|-----------|-------|
-| **active** | セッションログ mtime ≤ 1時間 | 非表示 | 🟢 緑 |
-| **stopped** | セッションログ mtime > 1時間 | **表示** | 🟡 黄 |
-| **unknown** | セッションログなし | 非表示 | ⚪ 白 |
-| **inactive** | members なし | 非表示 | ⚫ 黒 |
-
----
-
-## 10.7 エージェント状態推論仕様
-
-### 推論ロジック
-
-| 状態 | 判定条件 | 表示 |
-|------|---------|-----|
-| `idle` | 5分以上無活動 | 💤 待機中 |
-| `working` | in_progress タスクあり | 🔵 作業中 |
-| `waiting` | blocked なタスクあり | ⏳ 待ち状態 |
-| `error` | 30分以上無活動 | ❌ エラー |
-| `completed` | 全タスク完了 | ✅ 完了 |
-
-### 使用データ
-
-- inbox メッセージ（task_assignment, task_completed 等）
-- タスク定義（owner, status, blockedBy）
-- セッションログ（最終活動時刻、使用モデル）
+| Status | Determination Condition | Delete Button | Display Color |
+|--------|-------------------------|---------------|---------------|
+| **active** | Session log mtime ≤ 1 hour | Hidden | 🟢 Green |
+| **stopped** | Session log mtime > 1 hour | **Visible** | 🟡 Yellow |
+| **unknown** | No session log | Hidden | ⚪ White |
+| **inactive** | No members | Hidden | ⚫ Black |
 
 ---
 
-## 10.8 チーム削除 API 仕様
+## 10.7 Agent Status Inference Specification
 
-### エンドポイント
+### Inference Logic
+
+| Status | Determination Condition | Display |
+|--------|-------------------------|---------|
+| `idle` | No activity for 5+ minutes | 💤 Idle |
+| `working` | Has in_progress tasks | 🔵 Working |
+| `waiting` | Has blocked tasks | ⏳ Waiting |
+| `error` | No activity for 30+ minutes | ❌ Error |
+| `completed` | All tasks completed | ✅ Completed |
+
+### Data Used
+
+- inbox messages (task_assignment, task_completed, etc.)
+- Task definitions (owner, status, blockedBy)
+- Session logs (last activity time, model used)
+
+---
+
+## 10.8 Team Deletion API Specification
+
+### Endpoint
 
 ```
 DELETE /api/teams/{team_name}
 ```
 
-### 削除可能なステータス
+### Deletable Statuses
 
 - `stopped`
 - `inactive`
 - `unknown`
 
-### 削除対象ファイル
+### Files to Delete
 
-1. `~/.claude/teams/{team-name}/` - チーム設定全体
-2. `~/.claude/tasks/{team-name}/` - タスク定義
-3. `~/.claude/projects/{project-hash}/{session}.jsonl` - セッションログ（ディレクトリは残す）
+1. `~/.claude/teams/{team-name}/` - Entire team configuration
+2. `~/.claude/tasks/{team-name}/` - Task definitions
+3. `~/.claude/projects/{project-hash}/{session}.jsonl` - Session log (directory remains)
 
-### エラーレスポンス
+### Error Responses
 
-| ステータスコード | 条件 |
-|-----------------|------|
-| 404 Not Found | チームが存在しない |
-| 400 Bad Request | ステータスが `stopped` 以外 |
-
----
-
-## 11. ロードマップ
-
-### Phase 1: 基盤リデザイン ✅ 完了
-- [x] 新レイアウト構成への移行（App.tsx で4ビュー切替実装）
-- [x] Zustand 状態管理導入（dashboardStore.ts）
-- [x] ダークモード対応（ThemeToggle.tsx）
-- [x] ModelBadge コンポーネント実装（ModelBadge.tsx）
-
-### Phase 2: タイムライン機能 ✅ 完了
-- [x] vis-timeline 統合（MessageTimeline.tsx）
-- [x] 詳細展開モーダル（MessageDetailModal.tsx）
-- [x] 時間範囲指定（TimeRangeSlider.tsx）
-- [x] フィルター・検索機能（TimelineFilters.tsx）
-
-### Phase 3: グラフ可視化 ✅ 完了
-- [x] D3.js タスク依存グラフ（TaskDependencyGraph.tsx）
-- [x] エージェント通信ネットワーク（AgentNetworkGraph.tsx）
-- [x] インタラクティブ機能強化（ドラッグ、ズーム、パン対応）
+| Status Code | Condition |
+|-------------|-----------|
+| 404 Not Found | Team does not exist |
+| 400 Bad Request | Status is not `stopped` |
 
 ---
 
-## 12. 変更履歴
+## 11. Roadmap
 
-| 日付 | バージョン | 変更内容 |
-|------|-----------|---------|
-| 2026-02-16 | 1.0.0 | 初版作成 |
-| 2026-02-16 | 2.0.0 | ブレインストーミング結果を反映：完全リデザイン、モデル可視化、タイムライン機能、インタラクティビティ強化 |
-| 2026-02-16 | 2.1.0 | 実装完了状態を反映：Phase 1-2完了、Phase 3進行中（D3.jsグラフ実装済み、通信ネットワーク未実装） |
-| 2026-02-16 | 2.2.0 | 全機能実装完了：Phase 3完了（エージェント通信ネットワーク実装）、TypeScriptエラー修正 |
-| 2026-02-23 | 3.0.0 | 設計思想追加、セッションログ統合仕様、チームステータス判定（mtime基準）、エージェント状態推論、チーム削除API、HTTPポーリング説明追加 |
+### Phase 1: Foundation Redesign ✅ Completed
+- [x] Migration to new layout structure (4-view switching in App.tsx)
+- [x] Zustand state management (dashboardStore.ts)
+- [x] Dark mode support (ThemeToggle.tsx)
+- [x] ModelBadge component implementation (ModelBadge.tsx)
 
-*作成者: Claude Code Agent Teams*
+### Phase 2: Timeline Features ✅ Completed
+- [x] vis-timeline integration (MessageTimeline.tsx)
+- [x] Detail expansion modal (MessageDetailModal.tsx)
+- [x] Time range selection (TimeRangeSlider.tsx)
+- [x] Filter and search functionality (TimelineFilters.tsx)
+
+### Phase 3: Graph Visualization ✅ Completed
+- [x] D3.js task dependency graph (TaskDependencyGraph.tsx)
+- [x] Agent communication network (AgentNetworkGraph.tsx)
+- [x] Interactive feature enhancements (drag, zoom, pan support)
+
+---
+
+## 12. Change History
+
+| Date | Version | Changes |
+|------|---------|---------|
+| 2026-02-16 | 1.0.0 | Initial release |
+| 2026-02-16 | 2.0.0 | Reflecting brainstorming results: complete redesign, model visualization, timeline features, enhanced interactivity |
+| 2026-02-16 | 2.1.0 | Reflecting implementation completion: Phase 1-2 complete, Phase 3 in progress (D3.js graph implemented, communication network not implemented) |
+| 2026-02-16 | 2.2.0 | All features implementation complete: Phase 3 complete (agent communication network implemented), TypeScript errors fixed |
+| 2026-02-23 | 3.0.0 | Design philosophy added, session log integration specification, team status determination (mtime-based), agent status inference, team deletion API, HTTP polling explanation added |
+
+*Created by: Claude Code Agent Teams*

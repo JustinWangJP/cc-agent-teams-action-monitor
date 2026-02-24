@@ -1,6 +1,16 @@
 {
   "version": 1,
   "skills": {
+    "crafting-effective-readmes": {
+      "source": "softaworks/agent-toolkit",
+      "sourceType": "github",
+      "computedHash": "c931a8c22160e8925400778fcb2266b5d1df762f3052edba65f72479f79f2d6c"
+    },
+    "draw-io": {
+      "source": "davila7/claude-code-templates",
+      "sourceType": "github",
+      "computedHash": "ff19cab2266a29cbfd39defe0ced1999e9eaeddb1a23dc4fb418f9665646abd7"
+    },
     "pi-planning-with-files": {
       "source": "othmanadi/planning-with-files",
       "sourceType": "github",
@@ -10,6 +20,11 @@
       "source": "wshobson/agents",
       "sourceType": "github",
       "computedHash": "4ffe23560a80e45aec947fbd3e7c54a8c180bfa40985b81065f1e0e326af1e62"
+    },
+    "qa-test-planner": {
+      "source": "softaworks/agent-toolkit",
+      "sourceType": "github",
+      "computedHash": "c7a27e535b0a21a9ed22578ca0e37a00a00f43b775efe791a2d4be849ce8ffa9"
     }
   }
 }

@@ -1,8 +1,10 @@
-# アプリアーキテクチャ設計書
+# 应用架构设计文档
 
-## 1. アーキテクチャ概要
+**语言:** [English](architecture.en.md) | [日本語](architecture.md) | [中文](architecture.zh.md)
 
-### 1.1 システム全体像
+## 1. 架构概述
+
+### 1.1 系统全貌
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -21,20 +23,20 @@
 │  │  └───────────┘  └───────────┘  └────────────────────────┘   │   │
 │  │  ┌───────────────────────────────────────────────────────┐   │   │
 │  │  │              Zustand Store (dashboardStore)            │   │   │
-│  │  │  - HTTP ポーリングで定期的にデータ更新                  │   │   │
+│  │  │  - 通过 HTTP 轮询定期更新数据                           │   │   │
 │  │  └───────────────────────────────────────────────────────┘   │   │
 │  └─────────────────────────────────────────────────────────────┘   │
-│         │ HTTP ポーリング（リアルタイム更新）                         │
+│         │ HTTP 轮询（实时更新）                                    │
 │         ▼                                                           │
 │  ┌─────────────────────────────────────────────────────────────┐   │
 │  │                    Backend (FastAPI)                         │   │
 │  │  ┌───────────┐  ┌────────────────────────────────────────┐   │   │
 │  │  │API Routes │  │ Services                               │   │   │
-│  │  │ - teams   │  │ - FileWatcherService (キャッシュ無効化) │   │   │
-│  │  │ - tasks   │  │ - CacheService (TTL付きメモリキャッシュ)│   │   │
-│  │  │ - messages│  │ - TimelineService (統合タイムライン)   │   │   │
-│  │  │ - agents  │  │ - AgentStatusService (状態推論)        │   │   │
-│  │  │ - timeline│  │ - MessageParser (メッセージ解析)       │   │   │
+│  │  │ - teams   │  │ - FileWatcherService (缓存失效)        │   │   │
+│  │  │ - tasks   │  │ - CacheService (基于TTL的内存缓存)      │   │   │
+│  │  │ - messages│  │ - TimelineService (统一时间线)          │   │   │
+│  │  │ - agents  │  │ - AgentStatusService (状态推断)         │   │   │
+│  │  │ - timeline│  │ - MessageParser (消息解析)              │   │   │
 │  │  └───────────┘  └────────────────────────────────────────┘   │   │
 │  │  ┌───────────┐  ┌───────────┐                                │   │
 │  │  │  Models   │  │  Config   │                                │   │
@@ -46,118 +48,118 @@
 │  │  └───────────┘  └───────────┘                                │   │
 │  └─────────────────────────────────────────────────────────────┘   │
 │         │                                                           │
-│         ▼ ファイル監視（キャッシュ無効化・ログ出力）                   │
+│         ▼ 文件监控（缓存失效 & 日志输出）                            │
 │  ┌─────────────────────────────────────────────────────────────┐   │
-│  │ ~/.claude/ Directory                        │   │
-│  │  ├── teams/{team_name}/config.json       # チーム設定         │   │
-│  │  │   └── inboxes/{agent_name}.json       # エージェント別受信箱│   │
-│  │  ├── tasks/{team_name}/{task_id}.json    # タスク定義         │   │
-│  │  └── projects/{project-hash}/            # セッションログ     │   │
-│  │      └── {sessionId}.jsonl               # セッション履歴     │   │
+│  │ ~/.claude/ 目录结构                                           │   │
+│  │  ├── teams/{team_name}/config.json       # 团队配置          │   │
+│  │  │   └── inboxes/{agent_name}.json       # 代理收件箱        │   │
+│  │  ├── tasks/{team_name}/{task_id}.json    # 任务定义          │   │
+│  │  └── projects/{project-hash}/            # 会话日志           │   │
+│  │      └── {sessionId}.jsonl               # 会话历史           │   │
 │  └─────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 各機能とデータソース対応表
+### 1.2 功能与数据源映射表
 
-| 機能 | 読み込み対象ファイル | 説明 |
-|------|---------------------|------|
-| **チーム一覧** | `~/.claude/teams/{team_name}/config.json` | チーム設定、メンバー情報 |
-| **チームステータス判定** | `~/.claude/projects/{project-hash}/{sessionId}.jsonl` | セッションログの mtime で判定 |
-| **インボックス** | `~/.claude/teams/{team_name}/inboxes/{agent_name}.json` | エージェント別メッセージ受信箱 |
-| **タスク** | `~/.claude/tasks/{team_name}/{task_id}.json` | タスク定義・ステータス |
-| **統合タイムライン** | 上記すべて + セッションログ | inbox + セッションログ統合 |
-| **エージェント状態** | タスク + インボックス + セッションログ | 状態推論ロジックで判定 |
+| 功能 | 读取目标文件 | 说明 |
+|------|-------------|------|
+| **团队列表** | `~/.claude/teams/{team_name}/config.json` | 团队配置、成员信息 |
+| **团队状态判定** | `~/.claude/projects/{project-hash}/{sessionId}.jsonl` | 根据会话日志 mtime 判定 |
+| **收件箱** | `~/.claude/teams/{team_name}/inboxes/{agent_name}.json` | 代理专属消息收件箱 |
+| **任务** | `~/.claude/tasks/{team_name}/{task_id}.json` | 任务定义、状态 |
+| **统一时间线** | 以上全部 + 会话日志 | inbox + 会话日志整合 |
+| **代理状态** | 任务 + 收件箱 + 会话日志 | 根据推断逻辑判定 |
 
-### 1.3 レイヤー構成
+### 1.3 分层结构
 
-| レイヤー | コンポーネント | 責務 |
+| 层级 | 组件 | 职责 |
 |----------|---------------|------|
-| プレゼンテーション | React Components | UI描画、ユーザー操作 |
-| 状態管理 | Zustand Store (v5.0.2+) | グローバル状態管理、ポーリング制御 |
-| データ取得 | Custom Hooks + TanStack Query (v5.90.21+) | API通信、サーバー状態キャッシュ |
-| 通信 | HTTP ポーリング | 定期的なデータ更新（5秒〜60秒） |
-| API | FastAPI Routes | エンドポイント処理 |
-| キャッシュ | CacheService | メモリキャッシュ管理（TTL付き） |
-| ファイル監視 | FileWatcherService | ファイル変更検知、キャッシュ無効化 |
-| データ | Pydantic Models | データ定義・検証 |
-| ストレージ | File System | データ永続化 |
+| 展示层 | React Components | UI 渲染、用户交互 |
+| 状态管理 | Zustand Store (v5.0.2+) | 全局状态管理、轮询控制 |
+| 数据获取 | Custom Hooks + TanStack Query (v5.90.21+) | API 通信、服务端状态缓存 |
+| 通信 | HTTP 轮询 | 定期数据更新（5秒-60秒） |
+| API | FastAPI Routes | 端点处理 |
+| 缓存 | CacheService | 内存缓存管理（带 TTL） |
+| 文件监控 | FileWatcherService | 文件变更检测、缓存失效 |
+| 数据 | Pydantic Models | 数据定义、验证 |
+| 存储 | File System | 数据持久化 |
 
 ---
 
-## 2. 設計思想
+## 2. 设计思想
 
-### 2.1 なぜHTTPポーリング + キャッシュ無効化か
+### 2.1 为什么选择 HTTP 轮询 + 缓存失效
 
-**背景と課題:**
-Claude Code が `~/.claude/` 配下のファイルを直接更新するため、外部からの Webhook や Push 通知が使えない。また、ファイル数が増加すると頻繁なファイル読み込みがパフォーマンスに影響する。
+**背景与挑战:**
+Claude Code 直接更新 `~/.claude/` 下的文件，无法使用外部的 Webhook 或 Push 通知。此外，文件数量增加时，频繁的文件读取会影响性能。
 
-**選択したアプローチ:**
-1. **FileWatcherService** で `~/.claude/` を監視し、ファイル変更を検知
-2. 変更検知時に該当する **キャッシュを無効化**（ログ出力も行う）
-3. フロントエンドは **HTTP ポーリング** で定期的に最新データを取得
-4. キャッシュにより、同一データの再読み込みを回避
+**选择的方案:**
+1. 使用 **FileWatcherService** 监控 `~/.claude/`，检测文件变更
+2. 检测到变更时**使相应缓存失效**（同时输出日志）
+3. 前端通过 **HTTP 轮询** 定期获取最新数据
+4. 通过缓存避免重复读取相同数据
 
-**トレードオフ:**
-- リアルタイム性は WebSocket Push より劣るが、ポーリング間隔（最小5秒）で十分な更新頻度を確保
-- サーバー負荷は増加するが、キャッシュにより実質的なファイルアクセスを削減
+**权衡:**
+- 实时性不如 WebSocket Push，但轮询间隔（最短 5 秒）保证了足够的更新频率
+- 服务器负载增加，但缓存有效减少了实际文件访问
 
-### 2.2 なぜセッションログのmtimeでステータス判定か
+### 2.2 为什么用会话日志的 mtime 判定状态
 
-**背景と課題:**
-チームの「アクティブ状態」を判定するために、`config.json` の mtime を使用していたが、チーム活動と関係ないタイミングで更新される場合があった。
+**背景与挑战:**
+为了判定团队的"活跃状态"，之前使用 `config.json` 的 mtime，但有时会在与团队活动无关的时间被更新。
 
-**選択したアプローチ:**
-セッションログ（`{sessionId}.jsonl`）の mtime を使用：
-- **セッションログ** はエージェントの実際の活動（思考、ツール実行、ファイル変更）を記録
-- したがって、セッションログの更新時刻 = チームの最終活動時刻 とみなせる
-- 1時間以内の更新 → `active`、1時間超過 → `stopped`
+**选择的方案:**
+使用会话日志（`{sessionId}.jsonl`）的 mtime：
+- **会话日志** 记录了代理的实际活动（思考、工具执行、文件变更）
+- 因此，会话日志的更新时间 = 团队的最后活动时间
+- 1 小时内有更新 → `active`，超过 1 小时 → `stopped`
 
-**判定フロー:**
+**判定流程:**
 ```
-1. members が空？ → 'inactive'
-2. セッションログなし？ → 'unknown'
-3. セッションログ mtime > 1時間？ → 'stopped'
-4. それ以外 → 'active'
+1. members 为空？ → 'inactive'
+2. 没有会话日志？ → 'unknown'
+3. 会话日志 mtime > 1 小时？ → 'stopped'
+4. 其他情况 → 'active'
 ```
 
-### 2.3 なぜ統合タイムラインサービスか
+### 2.3 为什么需要统一时间线服务
 
-**背景と課題:**
-エージェント間のメッセージ（inbox）とセッションログ（活動履歴）が別々の場所に保存されており、統一されたビューがなかった。
+**背景与挑战:**
+代理之间的消息（inbox）和会话日志（活动历史）分别保存在不同位置，没有统一的视图。
 
-**選択したアプローチ:**
-`TimelineService` で両者を統合：
-- **inbox**: エージェント間のタスク割り当て、完了通知、アイドル通知
-- **セッションログ**: 思考プロセス、ツール実行、ファイル変更
-- 統合タイムラインで時系列順にソートして返却
+**选择的方案:**
+通过 `TimelineService` 整合两者：
+- **inbox**: 代理之间的任务分配、完成通知、空闲通知
+- **会话日志**: 思考过程、工具执行、文件变更
+- 返回按时间顺序排序的统一时间线
 
-**拡張性:**
-将来的に新しいデータソース（例：外部API呼び出しログ）を追加する場合、`TimelineService` に統合ロジックを追加するだけで対応可能。
+**扩展性:**
+未来添加新数据源（如：外部 API 调用日志）时，只需在 `TimelineService` 中扩展整合逻辑即可。
 
 ---
 
-## 3. フロントエンドアーキテクチャ
+## 3. 前端架构
 
-### 3.1 コンポーネント階層
+### 3.1 组件层级
 
 ```
-App (メイン)
+App (主程序)
 ├── Layout
 │   ├── Header
 │   │   ├── ThemeToggle
 │   │   └── PollingIntervalSelector
 │   └── children
-├── Overview (チーム一覧) - View Tab
+├── Overview (团队列表) - View Tab
 │   ├── TeamCard[]
 │   │   ├── ModelBadge
 │   │   └── StatusBadge (active/stopped/unknown/inactive)
 │   └── TeamDetailPanel
-│       └── DeleteTeamButton (stopped時のみ表示)
-├── Timeline (統合タイムライン) - View Tab
+│       └── DeleteTeamButton (仅在 stopped 时显示)
+├── Timeline (统一时间线) - View Tab
 │   ├── TimelineTaskSplitLayout
-│   │   ├── ChatTimelinePanel (左側)
+│   │   ├── ChatTimelinePanel (左侧)
 │   │   │   ├── ChatHeader
 │   │   │   │   ├── ChatSearch
 │   │   │   │   └── SenderFilter
@@ -168,55 +170,55 @@ App (メイン)
 │   │   │   │       ├── AgentStatusIndicator
 │   │   │   │       └── MarkdownRenderer
 │   │   │   └── TypingIndicator
-│   │   └── TaskMonitorPanel (右側・折りたたみ可能)
+│   │   └── TaskMonitorPanel (右侧、可折叠)
 │   │       └── TaskCard[]
 │   └── MessageDetailModal
-└── Tasks (タスク一覧) - View Tab (カンバン形式)
-    ├── TaskFilter (チームフィルタ + 検索)
+└── Tasks (任务列表) - View Tab (看板形式)
+    ├── TaskFilter (团队筛选 + 搜索)
     └── TaskCard[] (Pending / In Progress / Completed 列)
 ```
 
-### 3.2 状態管理パターン
+### 3.2 状态管理模式
 
-- **グローバル状態**: Zustand Store (dashboardStore)
-  - チーム選択、メッセージ選択、タスク選択、フィルター、UI状態、ポーリング設定
-  - ローカルストレージへの永続化（ダークモード、ポーリング間隔等）
-- **サーバー状態**: カスタムフック + HTTP ポーリング
+- **全局状态**: Zustand Store (dashboardStore)
+  - 团队选择、消息选择、任务选择、过滤器、UI 状态、轮询设置
+  - 持久化到本地存储（暗黑模式、轮询间隔等）
+- **服务端状态**: 自定义 Hooks + HTTP 轮询
   - `useTeams`, `useTasks`, `useInbox`, `useUnifiedTimeline`, `useAgentMessages`
-- **ローカル状態**: useState (コンポーネント内)
+- **本地状态**: useState（组件内）
 
-### 3.3 データフロー
+### 3.3 数据流
 
 ```
-User Action → Component → Store/Hook → HTTP API → Backend
+用户操作 → 组件 → Store/Hook → HTTP API → 后端
                                             ↓
-Component ← Store/Hook ← State Update ← Response ←────┘
+组件 ← Store/Hook ← 状态更新 ← 响应 ←────────┘
                 ↑
-                └── ポーリングタイマーで定期更新
+                └── 轮询定时器定期更新
 ```
 
-### 3.4 Zustand Store 構成
+### 3.4 Zustand Store 结构
 
 ```typescript
 interface DashboardState {
-  // 選択状態
+  // 选择状态
   selectedTeam: string | null;
   selectedMessage: ParsedMessage | null;
   selectedTask: Task | null;
   currentView: ViewType;  // 'overview' | 'timeline' | 'tasks' | 'files'
 
-  // フィルター
+  // 过滤器
   timeRange: TimeRange;
   messageFilter: MessageFilter;
   searchQuery: string;
 
-  // ポーリング間隔（各データソースごとに個別設定可能）
-  teamsInterval: number;      // チーム一覧（デフォルト30秒）
-  tasksInterval: number;      // タスク一覧（デフォルト30秒）
-  inboxInterval: number;      // インボックス（デフォルト30秒）
-  messagesInterval: number;   // エージェントメッセージ（デフォルト30秒）
+  // 轮询间隔（各数据源可单独配置）
+  teamsInterval: number;      // 团队列表（默认 30 秒）
+  tasksInterval: number;      // 任务列表（默认 30 秒）
+  inboxInterval: number;      // 收件箱（默认 30 秒）
+  messagesInterval: number;   // 代理消息（默认 30 秒）
 
-  // UI状態
+  // UI 状态
   isDetailModalOpen: boolean;
   isTaskModalOpen: boolean;
   isDarkMode: boolean;
@@ -228,29 +230,29 @@ interface DashboardState {
 
 ---
 
-## 4. バックエンドアーキテクチャ
+## 4. 后端架构
 
-### 4.1 レイヤー構成
+### 4.1 分层结构
 
 ```
 ┌─────────────────────────────────────────┐
-│              API Layer                   │
+│              API 层                      │
 │  (FastAPI Routes: teams, tasks,         │
 │   messages, agents, timeline)           │
 ├─────────────────────────────────────────┤
-│             Service Layer                │
-│  - FileWatcherService (監視・無効化)    │
-│  - CacheService (TTLキャッシュ)         │
-│  - TimelineService (統合タイムライン)   │
-│  - AgentStatusService (状態推論)        │
-│  - MessageParser (メッセージ解析)       │
+│              服务层                      │
+│  - FileWatcherService (监控 & 失效)     │
+│  - CacheService (TTL 缓存)               │
+│  - TimelineService (统一时间线)          │
+│  - AgentStatusService (状态推断)         │
+│  - MessageParser (消息解析)              │
 ├─────────────────────────────────────────┤
-│              Model Layer                 │
+│              模型层                      │
 │  (Pydantic: Team, Task, Message,        │
 │   Timeline, Agent, Chat)                │
 ├─────────────────────────────────────────┤
-│            Storage Layer                 │
-│  (File System: ~/.claude/)              │
+│              存储层                      │
+│  (文件系统: ~/.claude/)                 │
 │  - teams/*/config.json                  │
 │  - teams/*/inboxes/*.json               │
 │  - tasks/*/*.json                       │
@@ -258,113 +260,113 @@ interface DashboardState {
 └─────────────────────────────────────────┘
 ```
 
-### 4.2 ルーティング設計
+### 4.2 路由设计
 
-| パス | メソッド | ハンドラ | 用途 |
+| 路径 | 方法 | 处理器 | 用途 |
 |------|---------|----------|------|
-| /api/health | GET | health_check | ヘルスチェック |
-| /api/teams | GET | list_teams | チーム一覧（ステータス付き） |
-| /api/teams/{name} | GET | get_team | チーム詳細 |
-| /api/teams/{name} | DELETE | delete_team | チーム削除（stopped時のみ） |
-| /api/teams/{name}/inboxes | GET | get_team_inboxes | インボックス一覧 |
-| /api/teams/{name}/inboxes/{agent} | GET | get_agent_inbox | エージェント別インボックス |
-| /api/teams/{name}/messages/timeline | GET | get_team_messages_timeline | 統合タイムライン |
-| /api/tasks | GET | list_tasks | タスク一覧 |
-| /api/tasks/{team}/{task_id} | GET | get_task | タスク詳細 |
-| /api/agents | GET | list_agents | エージェント一覧 |
-| /api/timeline/{team_name}/history | GET | get_history | 統合履歴取得 |
-| /api/timeline/{team_name}/updates | GET | get_updates | 差分更新取得 |
-| /api/file-changes/{team} | GET | get_file_changes | ファイル変更一覧 |
+| /api/health | GET | health_check | 健康检查 |
+| /api/teams | GET | list_teams | 团队列表（含状态） |
+| /api/teams/{name} | GET | get_team | 团队详情 |
+| /api/teams/{name} | DELETE | delete_team | 删除团队（仅 stopped） |
+| /api/teams/{name}/inboxes | GET | get_team_inboxes | 收件箱列表 |
+| /api/teams/{name}/inboxes/{agent} | GET | get_agent_inbox | 代理专属收件箱 |
+| /api/teams/{name}/messages/timeline | GET | get_team_messages_timeline | 统一时间线 |
+| /api/tasks | GET | list_tasks | 任务列表 |
+| /api/tasks/{team}/{task_id} | GET | get_task | 任务详情 |
+| /api/agents | GET | list_agents | 代理列表 |
+| /api/timeline/{team_name}/history | GET | get_history | 统一历史 |
+| /api/timeline/{team_name}/updates | GET | get_updates | 差异更新 |
+| /api/file-changes/{team} | GET | get_file_changes | 文件变更列表 |
 
-### 4.3 サービス構成
+### 4.3 服务结构
 
 #### CacheService
-- **役割**: メモリキャッシュによるファイルアクセス削減
-- **TTL**: チーム設定 30秒、インボックス 60秒
-- **機能**: 自動期限切れ、手動無効化、統計情報
-- **無効化トリガー**: FileWatcherService からのファイル変更通知
+- **职责**: 通过内存缓存减少文件访问
+- **TTL**: 团队配置 30 秒、收件箱 60 秒
+- **功能**: 自动过期、手动失效、统计信息
+- **失效触发**: 来自 FileWatcherService 的文件变更通知
 
 #### FileWatcherService
-- **役割**: `~/.claude/` ディレクトリの変更監視
-- **主目的**: **キャッシュ無効化 + ログ出力**（UI更新は HTTP ポーリング）
-- **デバウンス**: 500ms
-- **検知パターン**:
-  - `teams/*/config.json` → キャッシュ無効化 + ログ出力
-  - `teams/*/inboxes/*.json` → キャッシュ無効化 + ログ出力
-  - `tasks/*/*.json` → ログ出力のみ
+- **职责**: 监控 `~/.claude/` 目录的变更
+- **主要目的**: **缓存失效 + 日志输出**（UI 更新通过 HTTP 轮询）
+- **防抖**: 500 毫秒
+- **检测模式**:
+  - `teams/*/config.json` → 缓存失效 + 日志输出
+  - `teams/*/inboxes/*.json` → 缓存失效 + 日志输出
+  - `tasks/*/*.json` → 仅日志输出
 
 #### TimelineService
-- **役割**: inbox + セッションログの統合
-- **入力**:
+- **职责**: 整合 inbox + 会话日志
+- **输入**:
   - `teams/{name}/inboxes/{agent}.json`
   - `projects/{hash}/{sessionId}.jsonl`
-- **出力**: 時系列ソート済みの統合タイムライン
+- **输出**: 按时间排序的统一时间线
 
 #### AgentStatusService
-- **役割**: エージェント状態の推論
-- **入力**: タスク定義、インボックス、セッションログ
-- **判定ロジック**:
-  - `idle`: 5分以上無活動
-  - `working`: in_progress タスクあり
-  - `waiting`: blocked タスクあり
-  - `error`: 30分以上無活動
-  - `completed`: 全タスク完了
+- **职责**: 推断代理状态
+- **输入**: 任务定义、收件箱、会话日志
+- **推断逻辑**:
+  - `idle`: 5 分钟以上无活动
+  - `working`: 有 in_progress 任务
+  - `waiting`: 有 blocked 任务
+  - `error`: 30 分钟以上无活动
+  - `completed`: 所有任务完成
 
 #### MessageParser
-- **役割**: メッセージの解析・分類
-- **対応タイプ**: message, task_assignment, task_completed, idle_notification 等
+- **职责**: 解析和分类消息
+- **支持类型**: message, task_assignment, task_completed, idle_notification 等
 
-### 4.4 チーム削除 API
+### 4.4 团队删除 API
 
-**エンドポイント**: `DELETE /api/teams/{team_name}`
+**端点**: `DELETE /api/teams/{team_name}`
 
-**削除可能なステータス**: `stopped`, `inactive`, `unknown`
+**可删除的状态**: `stopped`, `inactive`, `unknown`
 
-**削除対象**:
-1. `teams/{team_name}/` ディレクトリ全体
-2. `tasks/{team_name}/` ディレクトリ全体
-3. セッションファイル（`projects/{hash}/{session}.jsonl`）のみ
-   - プロジェクトディレクトリ自体は残す（他チームの可能性）
+**删除目标**:
+1. 整个 `teams/{team_name}/` 目录
+2. 整个 `tasks/{team_name}/` 目录
+3. 仅会话文件（`projects/{hash}/{session}.jsonl`）
+   - 项目目录本身保留（可能属于其他团队）
 
-**エラーレスポンス**:
-- `404 Not Found`: チームが存在しない
-- `400 Bad Request`: ステータスが `active`（削除不可）
+**错误响应**:
+- `404 Not Found`: 团队不存在
+- `400 Bad Request`: 状态为 `active`（不可删除）
 
-### 4.5 ミドルウェア構成
+### 4.5 中间件结构
 
-| ミドルウェア | 用途 |
+| 中间件 | 用途 |
 |-------------|------|
-| CORSMiddleware | クロスオリジン許可 |
-| Lifespan | 起動/終了時処理（FileWatcher, CacheService） |
+| CORSMiddleware | 跨域许可 |
+| Lifespan | 启动/关闭处理（FileWatcher, CacheService） |
 
 ---
 
-## 5. 通信プロトコル
+## 5. 通信协议
 
 ### 5.1 REST API
 
-- **形式**: JSON
-- **メソッド**: GET, DELETE（読み取り + チーム削除のみ）
-- **エラー**: HTTP ステータスコード + detail メッセージ
+- **格式**: JSON
+- **方法**: GET, DELETE（仅读取 + 团队删除）
+- **错误**: HTTP 状态码 + detail 消息
 
-### 5.2 HTTP ポーリング（リアルタイム更新）
+### 5.2 HTTP 轮询（实时更新）
 
-フロントエンドは以下のフックで定期的にデータを更新：
+前端通过以下 Hooks 定期更新数据：
 
-| フック | API | デフォルト間隔 |
-|--------|-----|---------------|
-| useTeams | GET /api/teams | 30秒 |
-| useTasks | GET /api/tasks | 30秒 |
-| useInbox | GET /api/teams/{name}/inboxes | 30秒 |
-| useUnifiedTimeline | GET /api/timeline/{team_name}/history | 30秒 |
+| Hook | API | 默认间隔 |
+|--------|-----|--------------|
+| useTeams | GET /api/teams | 30 秒 |
+| useTasks | GET /api/tasks | 30 秒 |
+| useInbox | GET /api/teams/{name}/inboxes | 30 秒 |
+| useUnifiedTimeline | GET /api/timeline/{team_name}/history | 30 秒 |
 
-**差分更新**: `/api/timeline/{team_name}/updates?since={timestamp}` で前回以降の変更のみ取得可能
+**差异更新**: `/api/timeline/{team_name}/updates?since={timestamp}` 仅获取自上次请求以来的变更
 
 ---
 
-## 6. モジュール間の依存関係
+## 6. 模块依赖关系
 
-### 6.1 バックエンド依存関係図
+### 6.1 后端依赖图
 
 ```
 main.py
@@ -412,7 +414,7 @@ main.py
         └── models/message.py
 ```
 
-### 6.2 フロントエンド依存関係図
+### 6.2 前端依赖图
 
 ```
 App.tsx
@@ -428,7 +430,7 @@ App.tsx
 │   │   ├── Layout.tsx
 │   │   └── Header.tsx
 │   ├── dashboard/
-│   │   ├── TeamCard.tsx (StatusBadge含む)
+│   │   ├── TeamCard.tsx (包含 StatusBadge)
 │   │   ├── TeamDetailPanel.tsx
 │   │   └── ActivityFeed.tsx
 │   ├── overview/
@@ -485,9 +487,9 @@ App.tsx
 
 ---
 
-## 7. デプロイ構成
+## 7. 部署配置
 
-### 7.1 開発環境
+### 7.1 开发环境
 
 ```
 ┌──────────────────┐     ┌──────────────────┐
@@ -500,26 +502,26 @@ App.tsx
                      ▼
          ┌──────────────────┐
          │   ~/.claude/     │
-         │   (File System)  │
+         │   (文件系统)      │
          │   - teams/       │
          │   - tasks/       │
          │   - projects/    │
          └──────────────────┘
 ```
 
-### 7.2 本番環境（想定）
+### 7.2 生产环境（计划）
 
 ```
 ┌──────────────────────────────────────────────┐
-│                Reverse Proxy                 │
+│                反向代理                       │
 │                (nginx / Caddy)               │
 └──────────────────────────────────────────────┘
          │                    │
          ▼                    ▼
 ┌──────────────────┐  ┌──────────────────┐
 │  Frontend        │  │ Backend          │
-│  (Static Files)  │  │ (Uvicorn/Gunicorn)│
-│  Build Output    │  │ Multiple Workers │
+│  (静态文件)       │  │ (Uvicorn/Gunicorn)│
+│  构建输出         │  │ 多进程           │
 └──────────────────┘  └──────────────────┘
                               │
                               ▼
@@ -531,61 +533,61 @@ App.tsx
                     └──────────────────┘
 ```
 
-### 7.3 インフラ要件
+### 7.3 基础设施要求
 
-| 項目 | 要件 |
+| 项目 | 要求 |
 |------|------|
 | Python | 3.11+ |
 | Node.js | 18+ |
-| メモリ | 最小512MB |
-| ディスク | ~/.claude/へのアクセス |
+| 内存 | 最小 512MB |
+| 磁盘 | 可访问 ~/.claude/ |
 
 ---
 
-## 8. セキュリティ設計
+## 8. 安全设计
 
-### 8.1 現在の実装
+### 8.1 当前实现
 
-| 項目 | 実装状況 |
-|------|----------|
-| CORS | 許可オリジン制限 |
-| 入力検証 | Pydantic バリデーション |
-| エラーハンドリング | HTTP例外処理 |
-| 削除保護 | active チームの削除禁止 |
-
-### 8.2 将来の拡張予定
-
-| 項目 | 計画 |
+| 项目 | 状态 |
 |------|------|
-| 認証 | API Key / OAuth |
-| 認可 | ロールベースアクセス制御 |
-| 暗号化 | HTTPS / WSS |
-| ログ | 監査ログ |
+| CORS | 源限制 |
+| 输入验证 | Pydantic 验证 |
+| 错误处理 | HTTP 异常处理 |
+| 删除保护 | 阻止删除活跃团队 |
+
+### 8.2 未来扩展
+
+| 项目 | 计划 |
+|------|------|
+| 认证 | API Key / OAuth |
+| 授权 | 基于角色的访问控制 |
+| 加密 | HTTPS / WSS |
+| 日志 | 审计日志 |
 
 ---
 
-## 9. 拡張性
+## 9. 扩展性
 
-### 9.1 拡張ポイント
+### 9.1 扩展点
 
-| レイヤー | 拡張ポイント |
+| 层级 | 扩展点 |
 |----------|-------------|
-| Frontend | 新規コンポーネント追加、新規ビュー追加 |
-| Store | 新規状態スライス追加 |
-| API | 新規エンドポイント追加 |
-| Service | 新規データソース統合（TimelineService拡張） |
-| Cache | 新規キャッシュタイプ追加 |
+| Frontend | 添加新组件、添加新视图 |
+| Store | 添加新状态切片 |
+| API | 添加新端点 |
+| Service | 整合新数据源（扩展 TimelineService） |
+| Cache | 添加新缓存类型 |
 
-### 9.2 設計原則
+### 9.2 设计原则
 
-- **単一責任**: 各モジュールは単一の責務を持つ
-- **依存性注入**: 設定は環境変数から注入
-- **インターフェース分離**: 明確なモジュール境界
-- **関心の分離**: UI、状態管理、データ取得を分離
-- **YAGNI**: 必要な機能のみ実装、過剰な抽象化を避ける
+- **单一职责**: 每个模块只负责单一职责
+- **依赖注入**: 配置从环境变量注入
+- **接口隔离**: 清晰的模块边界
+- **关注点分离**: UI、状态管理、数据获取分离
+- **YAGNI**: 仅实现必要功能，避免过度抽象
 
 ---
 
-*作成日: 2026-02-16*
-*最終更新日: 2026-02-24*
-*バージョン: 2.1.0*
+*创建日期: 2026-02-16*
+*最后更新: 2026-02-24*
+*版本: 2.1.0*

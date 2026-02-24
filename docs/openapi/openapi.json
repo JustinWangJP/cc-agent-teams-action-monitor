@@ -1,0 +1,1387 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Agent Teams Dashboard API",
+    "description": "Real-time monitoring API for Claude Code Agent Teams",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/teams/": {
+      "get": {
+        "tags": ["teams"],
+        "summary": "List Teams",
+        "description": "全チーム一覧を取得するエンドポイント。\n\n~/.claude/teams/ ディレクトリ内の全チームの config.json を読み込み、\nTeamSummary 形式で返します。\n\nステータス判定基準:\n- inactive: members が空\n- unknown: セッションログが存在しない\n- stopped: セッションログ mtime が1時間超過\n- active: セッションログ mtime が1時間以内\n\nReturns:\n    list[TeamSummary]: チーム概要情報のリスト",
+        "operationId": "list_teams_api_teams__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/TeamSummary" },
+                  "type": "array",
+                  "title": "Response List Teams Api Teams  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_name}": {
+      "get": {
+        "tags": ["teams"],
+        "summary": "Get Team",
+        "description": "指定チームの詳細を取得するエンドポイント。\n\nチーム名を指定してチーム設定とメンバーリストを取得し、Team 形式で返します。\nチームまたは設定ファイルが存在しない場合は 404 エラーを返します。\n\nArgs:\n    team_name: 取得対象のチーム名\n\nReturns:\n    Team: チーム詳細情報\n\nRaises:\n    HTTPException: チームが存在しない場合 (404)",
+        "operationId": "get_team_api_teams__team_name__get",
+        "parameters": [
+          {
+            "name": "team_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Team Name" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Team" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["teams"],
+        "summary": "Delete Team",
+        "description": "チームを削除するエンドポイント。\n\n指定されたチームと関連ファイルを削除します。\n削除できるのは「stopped」状態のチームのみです。\n\n削除対象:\n- teams/{team_name}/ ディレクトリ\n- tasks/{team_name}/ ディレクトリ\n- projects/{project_hash}/ ディレクトリ\n\nArgs:\n    team_name: 削除対象のチーム名\n\nReturns:\n    dict: 削除結果（メッセージと削除パス一覧）\n\nRaises:\n    HTTPException:\n        - 404: チームが存在しない\n        - 400: ステータスが stopped 以外\n        - 500: 削除処理中にエラー",
+        "operationId": "delete_team_api_teams__team_name__delete",
+        "parameters": [
+          {
+            "name": "team_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Team Name" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_name}/inboxes": {
+      "get": {
+        "tags": ["teams"],
+        "summary": "Get Team Inboxes Api",
+        "description": "チームのインボックスメッセージを取得するエンドポイント。\n\n指定されたチームの inboxes/ ディレクトリから全エージェントのメッセージを取得し、\nエージェント名をキーとする辞書形式で返します。チーム不存在時は 404 エラー。\n\nArgs:\n    team_name: チーム名\n\nReturns:\n    dict: エージェント名をキーとするメッセージリストの辞書\n\nRaises:\n    HTTPException: チームが存在しない場合 (404)",
+        "operationId": "get_team_inboxes_api_api_teams__team_name__inboxes_get",
+        "parameters": [
+          {
+            "name": "team_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Team Name" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_name}/inboxes/{agent_name}": {
+      "get": {
+        "tags": ["teams"],
+        "summary": "Get Agent Inbox",
+        "description": "特定エージェントのインボックスメッセージを取得するエンドポイント。\n\n指定されたチーム・エージェントのインボックスファイルからメッセージを取得し、\nJSON形式で返します。チームまたはファイルが存在しない場合は404エラー。\n\nArgs:\n    team_name: チーム名\n    agent_name: エージェント名\n\nReturns:\n    エージェントのインボックスメッセージリスト",
+        "operationId": "get_agent_inbox_api_teams__team_name__inboxes__agent_name__get",
+        "parameters": [
+          {
+            "name": "team_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Team Name" }
+          },
+          {
+            "name": "agent_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Agent Name" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tasks/": {
+      "get": {
+        "tags": ["tasks"],
+        "summary": "List Tasks",
+        "description": "全チームの全タスク一覧を取得するエンドポイント。\n\n~/.claude/tasks/ ディレクトリ内の全チームのタスクを読み込み、\nTaskSummary 形式で返します。チーム名も各タスクに含まれます。\n24時間以上更新のないタスクは 'stopped' ステータスに変換します。\n\nReturns:\n    list[TaskSummary]: タスク概要情報のリスト",
+        "operationId": "list_tasks_api_tasks__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/TaskSummary" },
+                  "type": "array",
+                  "title": "Response List Tasks Api Tasks  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tasks/team/{team_name}": {
+      "get": {
+        "tags": ["tasks"],
+        "summary": "List Team Tasks",
+        "description": "指定チームのタスク一覧を取得するエンドポイント。\n\n指定されたチーム名のタスクディレクトリから全タスクを読み込み、\nTask 形式（詳細版）で返します。チームが存在しない場合は 404 エラー。\n\nArgs:\n    team_name: 取得対象のチーム名\n\nReturns:\n    list[Task]: タスク詳細情報のリスト\n\nRaises:\n    HTTPException: チームが存在しない場合（404）",
+        "operationId": "list_team_tasks_api_tasks_team__team_name__get",
+        "parameters": [
+          {
+            "name": "team_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Team Name" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Task" },
+                  "title": "Response List Team Tasks Api Tasks Team  Team Name  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tasks/{task_id}": {
+      "get": {
+        "tags": ["tasks"],
+        "summary": "Get Task",
+        "description": "特定のタスク詳細を取得するエンドポイント。\n\nタスクIDを指定してタスク詳細を取得します。team_name が指定された場合は\nそのチーム内で検索し、未指定の場合は全チームから検索します。\n\nArgs:\n    task_id: 取得対象のタスクID\n    team_name: 検索対象のチーム名（省略時は全チーム検索）\n\nReturns:\n    dict: タスク詳細データ\n\nRaises:\n    HTTPException: タスクが見つからない場合（404）",
+        "operationId": "get_task_api_tasks__task_id__get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Task Id" }
+          },
+          {
+            "name": "team_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "title": "Team Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models": {
+      "get": {
+        "tags": ["messages"],
+        "summary": "Get Available Models",
+        "description": "利用可能なモデル一覧と設定を取得する。\n\n各AIモデルの色、アイコン、ラベル等の設定情報を返します。\nフロントエンドでのモデル可視化に使用します。\n\nReturns:\n    モデル設定リスト",
+        "operationId": "get_available_models_api_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ModelListResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cache/stats": {
+      "get": {
+        "tags": ["messages"],
+        "summary": "Get Cache Stats",
+        "description": "キャッシュ統計情報を取得します。\n\nキャッシュのヒット率、キャッシュ済みアイテム数などを返します。\nモニタリングやデバッグに使用します。\n\nReturns:\n    キャッシュ統計辞書",
+        "operationId": "get_cache_stats_api_cache_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_name}/messages/timeline": {
+      "get": {
+        "tags": ["messages"],
+        "summary": "Get Message Timeline",
+        "description": "タイムライン表示用のメッセージを取得する。\n\n指定されたチームのメッセージをタイムライン形式で返します。\n時間範囲、送信者、タイプ、検索キーワードでフィルタリング可能です。\n\nArgs:\n    team_name: チーム名\n    start_time: 開始時刻 (ISO 8601形式)\n    end_time: 終了時刻 (ISO 8601形式)\n    since: 差分更新用: 前回取得時刻 (ISO 8601形式)。指定するとこの時刻以降のメッセージのみ返却\n    senders: 送信者（カンマ区切り）\n    types: メッセージタイプ（カンマ区切り）\n    search: 検索キーワード\n    unread_only: 未読のみ取得するか\n    limit: 取得件数上限 (最大500)\n    offset: オフセット\n\nReturns:\n    タイムラインデータ（アイテム、グループ、時間範囲）",
+        "operationId": "get_message_timeline_api_teams__team_name__messages_timeline_get",
+        "parameters": [
+          {
+            "name": "team_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Team Name" }
+          },
+          {
+            "name": "start_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "開始時刻 (ISO 8601)",
+              "title": "Start Time"
+            },
+            "description": "開始時刻 (ISO 8601)"
+          },
+          {
+            "name": "end_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "終了時刻 (ISO 8601)",
+              "title": "End Time"
+            },
+            "description": "終了時刻 (ISO 8601)"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)",
+              "title": "Since"
+            },
+            "description": "差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)"
+          },
+          {
+            "name": "senders",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "送信者（カンマ区切り）",
+              "title": "Senders"
+            },
+            "description": "送信者（カンマ区切り）"
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "タイプ（カンマ区切り）",
+              "title": "Types"
+            },
+            "description": "タイプ（カンマ区切り）"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "検索キーワード",
+              "title": "Search"
+            },
+            "description": "検索キーワード"
+          },
+          {
+            "name": "unread_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "未読のみ",
+              "default": false,
+              "title": "Unread Only"
+            },
+            "description": "未読のみ"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "description": "取得件数上限",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "取得件数上限"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "オフセット",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "オフセット"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TimelineData" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_name}/messages": {
+      "get": {
+        "tags": ["messages"],
+        "summary": "Get Messages",
+        "description": "メッセージ一覧を取得する（生データ形式）。\n\nタイムライン形式ではなく、元のメッセージデータをそのまま返します。\n\nArgs:\n    team_name: チーム名\n    start_time: 開始時刻 (ISO 8601形式)\n    end_time: 終了時刻 (ISO 8601形式)\n    since: 差分更新用: 前回取得時刻 (ISO 8601形式)。指定するとこの時刻以降のメッセージのみ返却\n    senders: 送信者（カンマ区切り）\n    types: メッセージタイプ（カンマ区切り）\n    search: 検索キーワード\n    unread_only: 未読のみ取得するか\n\nReturns:\n    メッセージリスト",
+        "operationId": "get_messages_api_teams__team_name__messages_get",
+        "parameters": [
+          {
+            "name": "team_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Team Name" }
+          },
+          {
+            "name": "start_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "開始時刻 (ISO 8601)",
+              "title": "Start Time"
+            },
+            "description": "開始時刻 (ISO 8601)"
+          },
+          {
+            "name": "end_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "終了時刻 (ISO 8601)",
+              "title": "End Time"
+            },
+            "description": "終了時刻 (ISO 8601)"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)",
+              "title": "Since"
+            },
+            "description": "差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)"
+          },
+          {
+            "name": "senders",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "送信者（カンマ区切り）",
+              "title": "Senders"
+            },
+            "description": "送信者（カンマ区切り）"
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "タイプ（カンマ区切り）",
+              "title": "Types"
+            },
+            "description": "タイプ（カンマ区切り）"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "検索キーワード",
+              "title": "Search"
+            },
+            "description": "検索キーワード"
+          },
+          {
+            "name": "unread_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "未読のみ",
+              "default": false,
+              "title": "Unread Only"
+            },
+            "description": "未読のみ"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_name}/messages/chat": {
+      "get": {
+        "tags": ["messages"],
+        "summary": "Get Chat Messages",
+        "description": "チャット形式表示用のメッセージを取得する。\n\n指定されたチームのメッセージをチャット形式で返します。\n秘密メッセージ（DM）の判定、閲覧可能エージェントの設定を含みます。\n\nArgs:\n    team_name: チーム名\n    start_time: 開始時刻 (ISO 8601形式)\n    end_time: 終了時刻 (ISO 8601形式)\n    since: 差分更新用: 前回取得時刻 (ISO 8601形式)。指定するとこの時刻以降のメッセージのみ返却\n    senders: 送信者（カンマ区切り）\n    types: メッセージタイプ（カンマ区切り）\n    search: 検索キーワード\n    unread_only: 未読のみ取得するか\n    limit: 取得件数上限 (最大500)\n    offset: オフセット\n\nReturns:\n    チャットメッセージリスト",
+        "operationId": "get_chat_messages_api_teams__team_name__messages_chat_get",
+        "parameters": [
+          {
+            "name": "team_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Team Name" }
+          },
+          {
+            "name": "start_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "開始時刻 (ISO 8601)",
+              "title": "Start Time"
+            },
+            "description": "開始時刻 (ISO 8601)"
+          },
+          {
+            "name": "end_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "終了時刻 (ISO 8601)",
+              "title": "End Time"
+            },
+            "description": "終了時刻 (ISO 8601)"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)",
+              "title": "Since"
+            },
+            "description": "差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)"
+          },
+          {
+            "name": "senders",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "送信者（カンマ区切り）",
+              "title": "Senders"
+            },
+            "description": "送信者（カンマ区切り）"
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "タイプ（カンマ区切り）",
+              "title": "Types"
+            },
+            "description": "タイプ（カンマ区切り）"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "検索キーワード",
+              "title": "Search"
+            },
+            "description": "検索キーワード"
+          },
+          {
+            "name": "unread_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "未読のみ",
+              "default": false,
+              "title": "Unread Only"
+            },
+            "description": "未読のみ"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "description": "取得件数上限",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "取得件数上限"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "オフセット",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "オフセット"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChatMessageList" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_name}/agents/status": {
+      "get": {
+        "tags": ["agents"],
+        "summary": "Get Agents Status",
+        "description": "チーム内の全エージェントステータスを取得するエンドポイント。\n\nインボックスメッセージのタイムスタンプを解析し、各エージェントの\nオンライン状態 (online/idle/offline) を判定して返します。\n\nArgs:\n    team_name: チーム名\n\nReturns:\n    AgentStatusList: 全エージェントのステータスリスト\n\nRaises:\n    HTTPException: チームが存在しない場合 (404)",
+        "operationId": "get_agents_status_api_teams__team_name__agents_status_get",
+        "parameters": [
+          {
+            "name": "team_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Team Name" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AgentStatusList" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_name}/agents/typing": {
+      "get": {
+        "tags": ["agents"],
+        "summary": "Get Typing Indicators",
+        "description": "現在入力中のエージェントリストを取得するエンドポイント。\n\n現在の実装では空のリストを返します。\n将来的には、エージェントの入力状態を検出して返すよう拡張可能です。\n\nArgs:\n    team_name: チーム名\n\nReturns:\n    TypingIndicators: 入力中のエージェント名のリスト\n\nRaises:\n    HTTPException: チームが存在しない場合 (404)",
+        "operationId": "get_typing_indicators_api_teams__team_name__agents_typing_get",
+        "parameters": [
+          {
+            "name": "team_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Team Name" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TypingIndicators" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/timeline/{team_name}/history": {
+      "get": {
+        "tags": ["timeline", "timeline"],
+        "summary": "Get Timeline History",
+        "description": "統合タイムライン履歴を取得します。\n\ninbox メッセージとセッションログを統合して返します。\nタイムスタンプの降順（新しい順）でソートされます。\n\nArgs:\n    team_name: チーム名\n    limit: 最大取得件数（1-500、デフォルト100）\n    types: フィルタリングするタイプ（カンマ区切り）\n    before_event_id: このイベントIDより古いエントリを取得（ページネーション用）\n\nReturns:\n    統合タイムラインレスポンス\n\nRaises:\n    HTTPException: チームが存在しない場合",
+        "operationId": "get_timeline_history_api_timeline__team_name__history_get",
+        "parameters": [
+          {
+            "name": "team_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Team Name" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10000,
+              "minimum": 1,
+              "description": "最大取得件数",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "最大取得件数"
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "カンマ区切りでタイプ指定（例: message,thinking,tool_use）",
+              "title": "Types"
+            },
+            "description": "カンマ区切りでタイプ指定（例: message,thinking,tool_use）"
+          },
+          {
+            "name": "before_event_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "このイベントIDより古いエントリを取得（ページネーション用）",
+              "title": "Before Event Id"
+            },
+            "description": "このイベントIDより古いエントリを取得（ページネーション用）"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnifiedTimelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/timeline/{team_name}/updates": {
+      "get": {
+        "tags": ["timeline", "timeline"],
+        "summary": "Get Timeline Updates",
+        "description": "差分更新用エンドポイントです。\n\nsince 以降の新規エントリのみ返します。\n\nArgs:\n    team_name: チーム名\n    since: 基準タイムスタンプ（ISO 8601形式、例: 2026-02-21T10:00:00Z）\n    limit: 最大取得件数（1-200、デフォルト50）\n\nReturns:\n    統合タイムラインレスポンス（since 以降のエントリのみ）\n\nRaises:\n    HTTPException: チームが存在しない場合",
+        "operationId": "get_timeline_updates_api_timeline__team_name__updates_get",
+        "parameters": [
+          {
+            "name": "team_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "title": "Team Name" }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "このタイムスタンプ以降のエントリのみ取得（ISO 8601形式）",
+              "title": "Since"
+            },
+            "description": "このタイムスタンプ以降のエントリのみ取得（ISO 8601形式）"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "description": "最大取得件数",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "最大取得件数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnifiedTimelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "サーバーのヘルスチェック用エンドポイント。\n\nサーバーが正常に動作しているか確認するため、ステータスとバージョンを返します。\nロードバランサーや監視システムからのヘルスチェックに使用します。",
+        "operationId": "health_check_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AgentStatus": {
+        "properties": {
+          "name": { "type": "string", "title": "Name" },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "online | idle | offline"
+          },
+          "lastActivity": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Lastactivity"
+          }
+        },
+        "type": "object",
+        "required": ["name", "status"],
+        "title": "AgentStatus",
+        "description": "個別エージェントのステータスモデル。\n\nエージェント名、オンライン状態、最終アクティビティ時刻を含みます。\nステータスは最終アクティビティ時刻から自動判定されます。\n\nAttributes:\n    name: エージェント名\n    status: オンライン状態 (online/idle/offline)\n    lastActivity: 最終アクティビティ時刻 (ISO 8601形式)"
+      },
+      "AgentStatusList": {
+        "properties": {
+          "agents": {
+            "items": { "$ref": "#/components/schemas/AgentStatus" },
+            "type": "array",
+            "title": "Agents",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "AgentStatusList",
+        "description": "チーム内の全エージェントステータスリスト。\n\n複数のエージェントステータスを含むレスポンスモデルです。\n\nAttributes:\n    agents: エージェントステータスのリスト"
+      },
+      "ChatMessage": {
+        "properties": {
+          "id": { "type": "string", "title": "Id" },
+          "from": { "type": "string", "title": "From" },
+          "to": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "To"
+          },
+          "text": { "type": "string", "title": "Text" },
+          "summary": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Summary"
+          },
+          "timestamp": { "type": "string", "title": "Timestamp" },
+          "type": { "type": "string", "title": "Type", "default": "message" },
+          "isPrivate": {
+            "type": "boolean",
+            "title": "Isprivate",
+            "default": false
+          },
+          "visibleTo": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Visibleto",
+            "default": []
+          },
+          "read": { "type": "boolean", "title": "Read", "default": false },
+          "color": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Color"
+          }
+        },
+        "type": "object",
+        "required": ["id", "from", "text", "timestamp"],
+        "title": "ChatMessage",
+        "description": "チャット形式メッセージのデータモデル。\n\n送信者、受信者、メッセージ本文、タイムスタンプ、メッセージタイプ、\n秘密メッセージフラグ等を含みます。\n\nAttributes:\n    id: メッセージ一意ID\n    from: 送信者エージェント名\n    to: 受信者エージェント名（特定受信者がいる場合）\n    text: メッセージ本文\n    summary: メッセージ要約\n    timestamp: タイムスタンプ (ISO 8601形式)\n    type: メッセージタイプ\n    isPrivate: 秘密メッセージ（DM）かどうか\n    visibleTo: 閲覧可能なエージェント名リスト\n    read: 既読フラグ"
+      },
+      "ChatMessageList": {
+        "properties": {
+          "messages": {
+            "items": { "$ref": "#/components/schemas/ChatMessage" },
+            "type": "array",
+            "title": "Messages",
+            "default": []
+          },
+          "count": { "type": "integer", "title": "Count", "default": 0 },
+          "hasMore": { "type": "boolean", "title": "Hasmore", "default": false }
+        },
+        "type": "object",
+        "title": "ChatMessageList",
+        "description": "チャットメッセージリストのレスポンスモデル。\n\n複数のチャットメッセージとメタ情報を含みます。\n\nAttributes:\n    messages: チャットメッセージのリスト\n    count: メッセージ数\n    hasMore: さらにメッセージがあるかどうか"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": { "$ref": "#/components/schemas/ValidationError" },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Member": {
+        "properties": {
+          "agentId": { "type": "string", "title": "Agentid" },
+          "name": { "type": "string", "title": "Name" },
+          "agentType": { "type": "string", "title": "Agenttype" },
+          "model": { "type": "string", "title": "Model", "default": "unknown" },
+          "joinedAt": { "type": "integer", "title": "Joinedat", "default": 0 },
+          "tmuxPaneId": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Tmuxpaneid",
+            "default": ""
+          },
+          "cwd": { "type": "string", "title": "Cwd", "default": "" },
+          "subscriptions": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Subscriptions",
+            "default": []
+          },
+          "color": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Color"
+          },
+          "status": { "type": "string", "title": "Status", "default": "idle" },
+          "lastActivity": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Lastactivity"
+          },
+          "prompt": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Prompt"
+          },
+          "backendType": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Backendtype"
+          }
+        },
+        "type": "object",
+        "required": ["agentId", "name", "agentType"],
+        "title": "Member",
+        "description": "チームメンバーのデータモデル。\n\nエージェントID、名前、タイプ、モデル、参加日時、ステータス（active/idle）、\n色設定、tmux ペインID、作業ディレクトリ等を含みます。"
+      },
+      "ModelConfig": {
+        "properties": {
+          "id": { "type": "string", "title": "Id" },
+          "color": { "type": "string", "title": "Color" },
+          "icon": { "type": "string", "title": "Icon" },
+          "label": { "type": "string", "title": "Label" },
+          "provider": {
+            "type": "string",
+            "enum": ["anthropic", "moonshot", "zhipu", "other"],
+            "title": "Provider"
+          }
+        },
+        "type": "object",
+        "required": ["id", "color", "icon", "label", "provider"],
+        "title": "ModelConfig",
+        "description": "個別モデルの設定情報。\n\nモデルID、色、アイコン、ラベル、プロバイダーを含みます。\nフロントエンドでの視覚的表現に使用します。"
+      },
+      "ModelListResponse": {
+        "properties": {
+          "models": {
+            "items": { "$ref": "#/components/schemas/ModelConfig" },
+            "type": "array",
+            "title": "Models"
+          }
+        },
+        "type": "object",
+        "required": ["models"],
+        "title": "ModelListResponse",
+        "description": "モデル一覧のレスポンスモデル。\n\n利用可能な全モデルの設定リストを返します。"
+      },
+      "Task": {
+        "properties": {
+          "id": { "type": "string", "title": "Id" },
+          "subject": { "type": "string", "title": "Subject" },
+          "description": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Description",
+            "default": ""
+          },
+          "activeForm": {
+            "type": "string",
+            "title": "Activeform",
+            "default": ""
+          },
+          "status": { "type": "string", "title": "Status" },
+          "owner": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Owner"
+          },
+          "blocks": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Blocks",
+            "default": []
+          },
+          "blockedBy": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Blockedby",
+            "default": []
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": ["id", "subject", "status"],
+        "title": "Task",
+        "description": "タスクの完全なデータモデル。\n\nタスクのID、件名、説明、ステータス、担当者、依存関係（blocks/blockedBy）、\nメタデータを含みます。ステータスは pending/in_progress/completed/deleted です。"
+      },
+      "TaskSummary": {
+        "properties": {
+          "id": { "type": "string", "title": "Id" },
+          "subject": { "type": "string", "title": "Subject" },
+          "status": { "type": "string", "title": "Status" },
+          "owner": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Owner"
+          },
+          "blockedCount": { "type": "integer", "title": "Blockedcount" },
+          "teamName": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Teamname"
+          }
+        },
+        "type": "object",
+        "required": ["id", "subject", "status", "blockedCount"],
+        "title": "TaskSummary",
+        "description": "タスク一覧表示用のサマリーモデル。\n\nタスクID、件名、ステータス、担当者、依存タスク数、チーム名を含みます。\n一覧画面での高速表示に最適化された軽量モデルです。"
+      },
+      "Team": {
+        "properties": {
+          "name": { "type": "string", "title": "Name" },
+          "description": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Description",
+            "default": ""
+          },
+          "createdAt": {
+            "type": "integer",
+            "title": "Createdat",
+            "default": 0
+          },
+          "leadAgentId": { "type": "string", "title": "Leadagentid" },
+          "leadSessionId": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Leadsessionid",
+            "default": ""
+          },
+          "members": {
+            "items": { "$ref": "#/components/schemas/Member" },
+            "type": "array",
+            "title": "Members",
+            "default": []
+          },
+          "lastActivity": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Lastactivity"
+          }
+        },
+        "type": "object",
+        "required": ["name", "leadAgentId"],
+        "title": "Team",
+        "description": "チームの完全なデータモデル。\n\nチーム名、説明、作成日時、リードエージェントID、セッションID、\nメンバーリストを含みます。Claude Code で作成されたチームの詳細情報です。"
+      },
+      "TeamSummary": {
+        "properties": {
+          "name": { "type": "string", "title": "Name" },
+          "description": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Description",
+            "default": ""
+          },
+          "memberCount": { "type": "integer", "title": "Membercount" },
+          "taskCount": {
+            "type": "integer",
+            "title": "Taskcount",
+            "default": 0
+          },
+          "status": { "type": "string", "title": "Status" },
+          "lastActivity": {
+            "anyOf": [
+              { "type": "string", "format": "date-time" },
+              { "type": "null" }
+            ],
+            "title": "Lastactivity"
+          },
+          "leadAgentId": { "type": "string", "title": "Leadagentid" },
+          "createdAt": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": ["name", "memberCount", "status", "leadAgentId"],
+        "title": "TeamSummary",
+        "description": "チーム一覧表示用のサマリーモデル。\n\nチーム名、説明、メンバー数、タスク数、ステータス、リードエージェントIDを含みます。\n一覧画面での高速表示に最適化された軽量モデルです。\n\nステータス一覧:\n- active: セッションログ mtime ≤ 1時間\n- stopped: セッションログ mtime > 1時間\n- unknown: セッションログなし\n- inactive: members 空配列"
+      },
+      "TimelineData": {
+        "properties": {
+          "items": {
+            "items": { "$ref": "#/components/schemas/TimelineItem" },
+            "type": "array",
+            "title": "Items"
+          },
+          "groups": {
+            "items": { "$ref": "#/components/schemas/TimelineGroup" },
+            "type": "array",
+            "title": "Groups"
+          },
+          "timeRange": {
+            "additionalProperties": { "type": "string" },
+            "type": "object",
+            "title": "Timerange"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "description": "現在のページのアイテム数",
+            "default": 0
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "フィルタ後の総アイテム数",
+            "default": 0
+          },
+          "hasMore": {
+            "type": "boolean",
+            "title": "Hasmore",
+            "description": "さらにアイテムがあるか",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": ["items", "groups", "timeRange"],
+        "title": "TimelineData",
+        "description": "タイムラインデータのレスポンスモデル。\n\nアイテムリスト、グループリスト、時間範囲を含む完全なタイムラインデータです。\nページネーション情報も含みます。"
+      },
+      "TimelineGroup": {
+        "properties": {
+          "id": { "type": "string", "title": "Id" },
+          "content": { "type": "string", "title": "Content" },
+          "className": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Classname",
+            "default": "timeline-group"
+          }
+        },
+        "type": "object",
+        "required": ["id", "content"],
+        "title": "TimelineGroup",
+        "description": "タイムライングループのデータモデル。\n\n送信者（エージェント）ごとのグループ情報を表します。"
+      },
+      "TimelineItem": {
+        "properties": {
+          "id": { "type": "string", "title": "Id" },
+          "content": { "type": "string", "title": "Content" },
+          "start": { "type": "string", "title": "Start" },
+          "type": {
+            "type": "string",
+            "enum": ["box", "point"],
+            "title": "Type",
+            "default": "box"
+          },
+          "className": {
+            "type": "string",
+            "title": "Classname",
+            "default": "timeline-item"
+          },
+          "group": { "type": "string", "title": "Group" },
+          "receiver": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Receiver"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": ["id", "content", "start", "group", "data"],
+        "title": "TimelineItem",
+        "description": "タイムラインアイテムのデータモデル。\n\nvis-timeline で表示する各メッセージのデータを表します。\nグループ（送信者）ごとに時系列表示されます。"
+      },
+      "TypingIndicators": {
+        "properties": {
+          "typing": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Typing",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "TypingIndicators",
+        "description": "タイピングインジケーターのレスポンスモデル。\n\n現在入力中のエージェント名のリストを含みます。\n\nAttributes:\n    typing: 入力中のエージェント名のリスト"
+      },
+      "UnifiedTimelineEntry": {
+        "properties": {
+          "id": { "type": "string", "title": "Id" },
+          "content": { "type": "string", "title": "Content" },
+          "from_": { "type": "string", "title": "From" },
+          "to": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "To"
+          },
+          "timestamp": { "type": "string", "title": "Timestamp" },
+          "color": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Color"
+          },
+          "read": { "type": "boolean", "title": "Read", "default": true },
+          "summary": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Summary"
+          },
+          "source": { "type": "string", "title": "Source" },
+          "parsed_type": { "type": "string", "title": "Parsed Type" },
+          "parsed_data": {
+            "anyOf": [
+              { "additionalProperties": true, "type": "object" },
+              { "type": "null" }
+            ],
+            "title": "Parsed Data"
+          },
+          "details": {
+            "anyOf": [
+              { "additionalProperties": true, "type": "object" },
+              { "type": "null" }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "content",
+          "from_",
+          "timestamp",
+          "source",
+          "parsed_type"
+        ],
+        "title": "UnifiedTimelineEntry",
+        "description": "統合タイムラインエントリ."
+      },
+      "UnifiedTimelineResponse": {
+        "properties": {
+          "items": {
+            "items": { "$ref": "#/components/schemas/UnifiedTimelineEntry" },
+            "type": "array",
+            "title": "Items"
+          },
+          "last_timestamp": { "type": "string", "title": "Last Timestamp" },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More",
+            "default": false
+          },
+          "last_event_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Last Event Id"
+          }
+        },
+        "type": "object",
+        "required": ["items", "last_timestamp"],
+        "title": "UnifiedTimelineResponse",
+        "description": "統合タイムラインレスポンス."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": { "anyOf": [{ "type": "string" }, { "type": "integer" }] },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": { "type": "string", "title": "Message" },
+          "type": { "type": "string", "title": "Error Type" }
+        },
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
