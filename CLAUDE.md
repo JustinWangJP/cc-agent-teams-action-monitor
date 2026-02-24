@@ -392,7 +392,35 @@ DELETE /api/teams/{team_name}
 - `404 Not Found` - チームが存在しない
 - `400 Bad Request` - ステータスが `stopped` 以外
 
-詳細ドキュメントは `docs/` に配置:
+## ドキュメント構造
+
+### 多言語ドキュメント
+
+`docs/spec/` 内のドキュメントは言語別にサフィックスで管理：
+
+| ファイル | 言語 |
+|---------|------|
+| `*.md` | 日本語（デフォルト） |
+| `*.en.md` | 英語 |
+| `*.zh.md` | 中国語 |
+
+例: `system-design.md`, `system-design.en.md`, `system-design.zh.md`
+
+### スクリーンショット
+
+UI のスクリーンショットは `docs/images/` に配置：
+
+| ファイル | 内容 |
+|---------|------|
+| `dashboard-main-page.png` | メインページ（チーム一覧） |
+| `dashboard-team-detail-page.png` | チーム詳細 |
+| `dashboard-team-timeline-page.png` | タイムラインビュー |
+| `dashboard-message-detail-page.png` | メッセージ詳細 |
+| `dashboard-team-tasks-page.png` | タスク管理（カンバン） |
+
+### 詳細ドキュメント一覧
+
+`docs/spec/` 内の主要ドキュメント:
 - `architecture.md` - アプリケーションアーキテクチャ
 - `backend-tech-stack.md` - バックエンド技術詳細
 - `frontend-tech-stack.md` - フロントエンド技術詳細
