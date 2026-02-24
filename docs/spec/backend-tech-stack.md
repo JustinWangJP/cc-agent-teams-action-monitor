@@ -263,8 +263,8 @@ class FileWatcherService:
 | エンドポイント | メソッド | 説明 |
 |---------------|---------|------|
 | `/api/teams/{team_name}/messages/timeline` | GET | メッセージタイムライン |
-| `/api/history` | GET | 統合履歴取得 |
-| `/api/updates` | GET | 差分更新取得 |
+| `/api/timeline/{team_name}/history` | GET | 統合履歴取得 |
+| `/api/timeline/{team_name}/updates` | GET | 差分更新取得 |
 | `/api/file-changes/{team}` | GET | ファイル変更一覧 |
 
 ### 5.2 チーム削除 API 詳細
@@ -575,5 +575,5 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 ---
 
 *作成日: 2026-02-16*
-*最終更新日: 2026-02-23*
-*バージョン: 2.0.0*
+*最終更新日: 2026-02-24*
+*バージョン: 2.1.0*

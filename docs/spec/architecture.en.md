@@ -1,8 +1,10 @@
-# アプリアーキテクチャ設計書
+# Application Architecture Design
 
-## 1. アーキテクチャ概要
+**Language:** [English](architecture.en.md) | [日本語](architecture.md) | [中文](architecture.zh.md)
 
-### 1.1 システム全体像
+## 1. Architecture Overview
+
+### 1.1 System Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -21,20 +23,20 @@
 │  │  └───────────┘  └───────────┘  └────────────────────────┘   │   │
 │  │  ┌───────────────────────────────────────────────────────┐   │   │
 │  │  │              Zustand Store (dashboardStore)            │   │   │
-│  │  │  - HTTP ポーリングで定期的にデータ更新                  │   │   │
+│  │  │  - Periodic data updates via HTTP polling              │   │   │
 │  │  └───────────────────────────────────────────────────────┘   │   │
 │  └─────────────────────────────────────────────────────────────┘   │
-│         │ HTTP ポーリング（リアルタイム更新）                         │
+│         │ HTTP Polling (Real-time Updates)                         │
 │         ▼                                                           │
 │  ┌─────────────────────────────────────────────────────────────┐   │
 │  │                    Backend (FastAPI)                         │   │
 │  │  ┌───────────┐  ┌────────────────────────────────────────┐   │   │
 │  │  │API Routes │  │ Services                               │   │   │
-│  │  │ - teams   │  │ - FileWatcherService (キャッシュ無効化) │   │   │
-│  │  │ - tasks   │  │ - CacheService (TTL付きメモリキャッシュ)│   │   │
-│  │  │ - messages│  │ - TimelineService (統合タイムライン)   │   │   │
-│  │  │ - agents  │  │ - AgentStatusService (状態推論)        │   │   │
-│  │  │ - timeline│  │ - MessageParser (メッセージ解析)       │   │   │
+│  │  │ - teams   │  │ - FileWatcherService (cache invalidation)│   │
+│  │  │ - tasks   │  │ - CacheService (TTL-based memory cache) │   │
+│  │  │ - messages│  │ - TimelineService (unified timeline)    │   │
+│  │  │ - agents  │  │ - AgentStatusService (status inference) │   │
+│  │  │ - timeline│  │ - MessageParser (message parsing)       │   │   │
 │  │  └───────────┘  └────────────────────────────────────────┘   │   │
 │  │  ┌───────────┐  ┌───────────┐                                │   │
 │  │  │  Models   │  │  Config   │                                │   │
@@ -46,118 +48,118 @@
 │  │  └───────────┘  └───────────┘                                │   │
 │  └─────────────────────────────────────────────────────────────┘   │
 │         │                                                           │
-│         ▼ ファイル監視（キャッシュ無効化・ログ出力）                   │
+│         ▼ File Monitoring (Cache Invalidation & Logging)             │
 │  ┌─────────────────────────────────────────────────────────────┐   │
-│  │ ~/.claude/ Directory                        │   │
-│  │  ├── teams/{team_name}/config.json       # チーム設定         │   │
-│  │  │   └── inboxes/{agent_name}.json       # エージェント別受信箱│   │
-│  │  ├── tasks/{team_name}/{task_id}.json    # タスク定義         │   │
-│  │  └── projects/{project-hash}/            # セッションログ     │   │
-│  │      └── {sessionId}.jsonl               # セッション履歴     │   │
+│  │ ~/.claude/ Directory Structure                               │   │
+│  │  ├── teams/{team_name}/config.json       # Team settings     │   │
+│  │  │   └── inboxes/{agent_name}.json       # Agent inboxes     │   │
+│  │  ├── tasks/{team_name}/{task_id}.json    # Task definitions  │   │
+│  │  └── projects/{project-hash}/            # Session logs      │   │
+│  │      └── {sessionId}.jsonl               # Session history   │   │
 │  └─────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 各機能とデータソース対応表
+### 1.2 Feature and Data Source Mapping
 
-| 機能 | 読み込み対象ファイル | 説明 |
-|------|---------------------|------|
-| **チーム一覧** | `~/.claude/teams/{team_name}/config.json` | チーム設定、メンバー情報 |
-| **チームステータス判定** | `~/.claude/projects/{project-hash}/{sessionId}.jsonl` | セッションログの mtime で判定 |
-| **インボックス** | `~/.claude/teams/{team_name}/inboxes/{agent_name}.json` | エージェント別メッセージ受信箱 |
-| **タスク** | `~/.claude/tasks/{team_name}/{task_id}.json` | タスク定義・ステータス |
-| **統合タイムライン** | 上記すべて + セッションログ | inbox + セッションログ統合 |
-| **エージェント状態** | タスク + インボックス + セッションログ | 状態推論ロジックで判定 |
+| Feature | Target Files | Description |
+|---------|--------------|-------------|
+| **Team List** | `~/.claude/teams/{team_name}/config.json` | Team settings, member info |
+| **Team Status Determination** | `~/.claude/projects/{project-hash}/{sessionId}.jsonl` | Determined by session log mtime |
+| **Inboxes** | `~/.claude/teams/{team_name}/inboxes/{agent_name}.json` | Agent-specific message inboxes |
+| **Tasks** | `~/.claude/tasks/{team_name}/{task_id}.json` | Task definitions and status |
+| **Unified Timeline** | All above + session logs | inbox + session log integration |
+| **Agent Status** | Tasks + Inboxes + Session logs | Determined by inference logic |
 
-### 1.3 レイヤー構成
+### 1.3 Layer Structure
 
-| レイヤー | コンポーネント | 責務 |
+| Layer | Components | Responsibilities |
 |----------|---------------|------|
-| プレゼンテーション | React Components | UI描画、ユーザー操作 |
-| 状態管理 | Zustand Store (v5.0.2+) | グローバル状態管理、ポーリング制御 |
-| データ取得 | Custom Hooks + TanStack Query (v5.90.21+) | API通信、サーバー状態キャッシュ |
-| 通信 | HTTP ポーリング | 定期的なデータ更新（5秒〜60秒） |
-| API | FastAPI Routes | エンドポイント処理 |
-| キャッシュ | CacheService | メモリキャッシュ管理（TTL付き） |
-| ファイル監視 | FileWatcherService | ファイル変更検知、キャッシュ無効化 |
-| データ | Pydantic Models | データ定義・検証 |
-| ストレージ | File System | データ永続化 |
+| Presentation | React Components | UI rendering, user interaction |
+| State Management | Zustand Store (v5.0.2+) | Global state management, polling control |
+| Data Fetching | Custom Hooks + TanStack Query (v5.90.21+) | API communication, server state cache |
+| Communication | HTTP Polling | Periodic data updates (5s-60s) |
+| API | FastAPI Routes | Endpoint handling |
+| Cache | CacheService | Memory cache management (with TTL) |
+| File Monitoring | FileWatcherService | File change detection, cache invalidation |
+| Data | Pydantic Models | Data definition and validation |
+| Storage | File System | Data persistence |
 
 ---
 
-## 2. 設計思想
+## 2. Design Philosophy
 
-### 2.1 なぜHTTPポーリング + キャッシュ無効化か
+### 2.1 Why HTTP Polling + Cache Invalidation
 
-**背景と課題:**
-Claude Code が `~/.claude/` 配下のファイルを直接更新するため、外部からの Webhook や Push 通知が使えない。また、ファイル数が増加すると頻繁なファイル読み込みがパフォーマンスに影響する。
+**Background & Challenges:**
+Claude Code directly updates files under `~/.claude/`, making external Webhooks or Push notifications unavailable. Also, frequent file reads impact performance as file count increases.
 
-**選択したアプローチ:**
-1. **FileWatcherService** で `~/.claude/` を監視し、ファイル変更を検知
-2. 変更検知時に該当する **キャッシュを無効化**（ログ出力も行う）
-3. フロントエンドは **HTTP ポーリング** で定期的に最新データを取得
-4. キャッシュにより、同一データの再読み込みを回避
+**Selected Approach:**
+1. Monitor `~/.claude/` with **FileWatcherService** to detect file changes
+2. **Invalidate corresponding cache** on change detection (also log events)
+3. Frontend periodically fetches latest data via **HTTP polling**
+4. Cache prevents redundant reads of the same data
 
-**トレードオフ:**
-- リアルタイム性は WebSocket Push より劣るが、ポーリング間隔（最小5秒）で十分な更新頻度を確保
-- サーバー負荷は増加するが、キャッシュにより実質的なファイルアクセスを削減
+**Trade-offs:**
+- Real-time capability is inferior to WebSocket Push, but polling interval (minimum 5s) ensures sufficient update frequency
+- Server load increases, but cache effectively reduces actual file access
 
-### 2.2 なぜセッションログのmtimeでステータス判定か
+### 2.2 Why Session Log mtime for Status Determination
 
-**背景と課題:**
-チームの「アクティブ状態」を判定するために、`config.json` の mtime を使用していたが、チーム活動と関係ないタイミングで更新される場合があった。
+**Background & Challenges:**
+The `config.json` mtime was used to determine team "active status," but it could be updated at times unrelated to team activity.
 
-**選択したアプローチ:**
-セッションログ（`{sessionId}.jsonl`）の mtime を使用：
-- **セッションログ** はエージェントの実際の活動（思考、ツール実行、ファイル変更）を記録
-- したがって、セッションログの更新時刻 = チームの最終活動時刻 とみなせる
-- 1時間以内の更新 → `active`、1時間超過 → `stopped`
+**Selected Approach:**
+Use session log (`{sessionId}.jsonl`) mtime:
+- **Session logs** record actual agent activity (thinking, tool execution, file changes)
+- Therefore, session log update time = team's last activity time
+- Updated within 1 hour → `active`, over 1 hour → `stopped`
 
-**判定フロー:**
+**Determination Flow:**
 ```
-1. members が空？ → 'inactive'
-2. セッションログなし？ → 'unknown'
-3. セッションログ mtime > 1時間？ → 'stopped'
-4. それ以外 → 'active'
+1. members empty? → 'inactive'
+2. No session log? → 'unknown'
+3. Session log mtime > 1 hour? → 'stopped'
+4. Otherwise → 'active'
 ```
 
-### 2.3 なぜ統合タイムラインサービスか
+### 2.3 Why Unified Timeline Service
 
-**背景と課題:**
-エージェント間のメッセージ（inbox）とセッションログ（活動履歴）が別々の場所に保存されており、統一されたビューがなかった。
+**Background & Challenges:**
+Messages between agents (inbox) and session logs (activity history) are stored separately, with no unified view.
 
-**選択したアプローチ:**
-`TimelineService` で両者を統合：
-- **inbox**: エージェント間のタスク割り当て、完了通知、アイドル通知
-- **セッションログ**: 思考プロセス、ツール実行、ファイル変更
-- 統合タイムラインで時系列順にソートして返却
+**Selected Approach:**
+Integrate both with `TimelineService`:
+- **inbox**: Task assignments between agents, completion notifications, idle notifications
+- **Session logs**: Thinking processes, tool execution, file changes
+- Returns sorted unified timeline in chronological order
 
-**拡張性:**
-将来的に新しいデータソース（例：外部API呼び出しログ）を追加する場合、`TimelineService` に統合ロジックを追加するだけで対応可能。
+**Extensibility:**
+Future data sources (e.g., external API call logs) can be added by simply extending the integration logic in `TimelineService`.
 
 ---
 
-## 3. フロントエンドアーキテクチャ
+## 3. Frontend Architecture
 
-### 3.1 コンポーネント階層
+### 3.1 Component Hierarchy
 
 ```
-App (メイン)
+App (Main)
 ├── Layout
 │   ├── Header
 │   │   ├── ThemeToggle
 │   │   └── PollingIntervalSelector
 │   └── children
-├── Overview (チーム一覧) - View Tab
+├── Overview (Team List) - View Tab
 │   ├── TeamCard[]
 │   │   ├── ModelBadge
 │   │   └── StatusBadge (active/stopped/unknown/inactive)
 │   └── TeamDetailPanel
-│       └── DeleteTeamButton (stopped時のみ表示)
-├── Timeline (統合タイムライン) - View Tab
+│       └── DeleteTeamButton (shown only when stopped)
+├── Timeline (Unified Timeline) - View Tab
 │   ├── TimelineTaskSplitLayout
-│   │   ├── ChatTimelinePanel (左側)
+│   │   ├── ChatTimelinePanel (left)
 │   │   │   ├── ChatHeader
 │   │   │   │   ├── ChatSearch
 │   │   │   │   └── SenderFilter
@@ -168,55 +170,55 @@ App (メイン)
 │   │   │   │       ├── AgentStatusIndicator
 │   │   │   │       └── MarkdownRenderer
 │   │   │   └── TypingIndicator
-│   │   └── TaskMonitorPanel (右側・折りたたみ可能)
+│   │   └── TaskMonitorPanel (right, collapsible)
 │   │       └── TaskCard[]
 │   └── MessageDetailModal
-└── Tasks (タスク一覧) - View Tab (カンバン形式)
-    ├── TaskFilter (チームフィルタ + 検索)
-    └── TaskCard[] (Pending / In Progress / Completed 列)
+└── Tasks (Task List) - View Tab (Kanban style)
+    ├── TaskFilter (Team filter + search)
+    └── TaskCard[] (Pending / In Progress / Completed columns)
 ```
 
-### 3.2 状態管理パターン
+### 3.2 State Management Pattern
 
-- **グローバル状態**: Zustand Store (dashboardStore)
-  - チーム選択、メッセージ選択、タスク選択、フィルター、UI状態、ポーリング設定
-  - ローカルストレージへの永続化（ダークモード、ポーリング間隔等）
-- **サーバー状態**: カスタムフック + HTTP ポーリング
+- **Global State**: Zustand Store (dashboardStore)
+  - Team selection, message selection, task selection, filters, UI state, polling settings
+  - Persisted to local storage (dark mode, polling interval, etc.)
+- **Server State**: Custom hooks + HTTP polling
   - `useTeams`, `useTasks`, `useInbox`, `useUnifiedTimeline`, `useAgentMessages`
-- **ローカル状態**: useState (コンポーネント内)
+- **Local State**: useState (within components)
 
-### 3.3 データフロー
+### 3.3 Data Flow
 
 ```
 User Action → Component → Store/Hook → HTTP API → Backend
                                             ↓
 Component ← Store/Hook ← State Update ← Response ←────┘
                 ↑
-                └── ポーリングタイマーで定期更新
+                └── Periodic updates via polling timer
 ```
 
-### 3.4 Zustand Store 構成
+### 3.4 Zustand Store Structure
 
 ```typescript
 interface DashboardState {
-  // 選択状態
+  // Selection state
   selectedTeam: string | null;
   selectedMessage: ParsedMessage | null;
   selectedTask: Task | null;
   currentView: ViewType;  // 'overview' | 'timeline' | 'tasks' | 'files'
 
-  // フィルター
+  // Filters
   timeRange: TimeRange;
   messageFilter: MessageFilter;
   searchQuery: string;
 
-  // ポーリング間隔（各データソースごとに個別設定可能）
-  teamsInterval: number;      // チーム一覧（デフォルト30秒）
-  tasksInterval: number;      // タスク一覧（デフォルト30秒）
-  inboxInterval: number;      // インボックス（デフォルト30秒）
-  messagesInterval: number;   // エージェントメッセージ（デフォルト30秒）
+  // Polling intervals (individually configurable per data source)
+  teamsInterval: number;      // Team list (default 30s)
+  tasksInterval: number;      // Task list (default 30s)
+  inboxInterval: number;      // Inboxes (default 30s)
+  messagesInterval: number;   // Agent messages (default 30s)
 
-  // UI状態
+  // UI state
   isDetailModalOpen: boolean;
   isTaskModalOpen: boolean;
   isDarkMode: boolean;
@@ -228,9 +230,9 @@ interface DashboardState {
 
 ---
 
-## 4. バックエンドアーキテクチャ
+## 4. Backend Architecture
 
-### 4.1 レイヤー構成
+### 4.1 Layer Structure
 
 ```
 ┌─────────────────────────────────────────┐
@@ -239,11 +241,11 @@ interface DashboardState {
 │   messages, agents, timeline)           │
 ├─────────────────────────────────────────┤
 │             Service Layer                │
-│  - FileWatcherService (監視・無効化)    │
-│  - CacheService (TTLキャッシュ)         │
-│  - TimelineService (統合タイムライン)   │
-│  - AgentStatusService (状態推論)        │
-│  - MessageParser (メッセージ解析)       │
+│  - FileWatcherService (monitoring & invalidation) │
+│  - CacheService (TTL cache)              │
+│  - TimelineService (unified timeline)    │
+│  - AgentStatusService (status inference) │
+│  - MessageParser (message parsing)       │
 ├─────────────────────────────────────────┤
 │              Model Layer                 │
 │  (Pydantic: Team, Task, Message,        │
@@ -258,113 +260,113 @@ interface DashboardState {
 └─────────────────────────────────────────┘
 ```
 
-### 4.2 ルーティング設計
+### 4.2 Routing Design
 
-| パス | メソッド | ハンドラ | 用途 |
-|------|---------|----------|------|
-| /api/health | GET | health_check | ヘルスチェック |
-| /api/teams | GET | list_teams | チーム一覧（ステータス付き） |
-| /api/teams/{name} | GET | get_team | チーム詳細 |
-| /api/teams/{name} | DELETE | delete_team | チーム削除（stopped時のみ） |
-| /api/teams/{name}/inboxes | GET | get_team_inboxes | インボックス一覧 |
-| /api/teams/{name}/inboxes/{agent} | GET | get_agent_inbox | エージェント別インボックス |
-| /api/teams/{name}/messages/timeline | GET | get_team_messages_timeline | 統合タイムライン |
-| /api/tasks | GET | list_tasks | タスク一覧 |
-| /api/tasks/{team}/{task_id} | GET | get_task | タスク詳細 |
-| /api/agents | GET | list_agents | エージェント一覧 |
-| /api/timeline/{team_name}/history | GET | get_history | 統合履歴取得 |
-| /api/timeline/{team_name}/updates | GET | get_updates | 差分更新取得 |
-| /api/file-changes/{team} | GET | get_file_changes | ファイル変更一覧 |
+| Path | Method | Handler | Purpose |
+|------|---------|----------|---------|
+| /api/health | GET | health_check | Health check |
+| /api/teams | GET | list_teams | Team list (with status) |
+| /api/teams/{name} | GET | get_team | Team details |
+| /api/teams/{name} | DELETE | delete_team | Delete team (stopped only) |
+| /api/teams/{name}/inboxes | GET | get_team_inboxes | Inbox list |
+| /api/teams/{name}/inboxes/{agent} | GET | get_agent_inbox | Agent-specific inbox |
+| /api/teams/{name}/messages/timeline | GET | get_team_messages_timeline | Unified timeline |
+| /api/tasks | GET | list_tasks | Task list |
+| /api/tasks/{team}/{task_id} | GET | get_task | Task details |
+| /api/agents | GET | list_agents | Agent list |
+| /api/timeline/{team_name}/history | GET | get_history | Unified history |
+| /api/timeline/{team_name}/updates | GET | get_updates | Differential updates |
+| /api/file-changes/{team} | GET | get_file_changes | File change list |
 
-### 4.3 サービス構成
+### 4.3 Service Structure
 
 #### CacheService
-- **役割**: メモリキャッシュによるファイルアクセス削減
-- **TTL**: チーム設定 30秒、インボックス 60秒
-- **機能**: 自動期限切れ、手動無効化、統計情報
-- **無効化トリガー**: FileWatcherService からのファイル変更通知
+- **Role**: Reduce file access via in-memory cache
+- **TTL**: Team config 30s, inbox 60s
+- **Features**: Auto expiration, manual invalidation, statistics
+- **Invalidation Trigger**: File change notifications from FileWatcherService
 
 #### FileWatcherService
-- **役割**: `~/.claude/` ディレクトリの変更監視
-- **主目的**: **キャッシュ無効化 + ログ出力**（UI更新は HTTP ポーリング）
-- **デバウンス**: 500ms
-- **検知パターン**:
-  - `teams/*/config.json` → キャッシュ無効化 + ログ出力
-  - `teams/*/inboxes/*.json` → キャッシュ無効化 + ログ出力
-  - `tasks/*/*.json` → ログ出力のみ
+- **Role**: Monitor changes to `~/.claude/` directory
+- **Primary Purpose**: **Cache invalidation + logging** (UI updates via HTTP polling)
+- **Debounce**: 500ms
+- **Detection Patterns**:
+  - `teams/*/config.json` → Cache invalidation + logging
+  - `teams/*/inboxes/*.json` → Cache invalidation + logging
+  - `tasks/*/*.json` → Logging only
 
 #### TimelineService
-- **役割**: inbox + セッションログの統合
-- **入力**:
+- **Role**: Integrate inbox + session logs
+- **Inputs**:
   - `teams/{name}/inboxes/{agent}.json`
   - `projects/{hash}/{sessionId}.jsonl`
-- **出力**: 時系列ソート済みの統合タイムライン
+- **Output**: Chronologically sorted unified timeline
 
 #### AgentStatusService
-- **役割**: エージェント状態の推論
-- **入力**: タスク定義、インボックス、セッションログ
-- **判定ロジック**:
-  - `idle`: 5分以上無活動
-  - `working`: in_progress タスクあり
-  - `waiting`: blocked タスクあり
-  - `error`: 30分以上無活動
-  - `completed`: 全タスク完了
+- **Role**: Infer agent status
+- **Inputs**: Task definitions, inboxes, session logs
+- **Inference Logic**:
+  - `idle`: No activity for 5+ minutes
+  - `working`: Has in_progress tasks
+  - `waiting`: Has blocked tasks
+  - `error`: No activity for 30+ minutes
+  - `completed`: All tasks completed
 
 #### MessageParser
-- **役割**: メッセージの解析・分類
-- **対応タイプ**: message, task_assignment, task_completed, idle_notification 等
+- **Role**: Parse and classify messages
+- **Supported Types**: message, task_assignment, task_completed, idle_notification, etc.
 
-### 4.4 チーム削除 API
+### 4.4 Team Deletion API
 
-**エンドポイント**: `DELETE /api/teams/{team_name}`
+**Endpoint**: `DELETE /api/teams/{team_name}`
 
-**削除可能なステータス**: `stopped`, `inactive`, `unknown`
+**Deletable Statuses**: `stopped`, `inactive`, `unknown`
 
-**削除対象**:
-1. `teams/{team_name}/` ディレクトリ全体
-2. `tasks/{team_name}/` ディレクトリ全体
-3. セッションファイル（`projects/{hash}/{session}.jsonl`）のみ
-   - プロジェクトディレクトリ自体は残す（他チームの可能性）
+**Deletion Targets**:
+1. Entire `teams/{team_name}/` directory
+2. Entire `tasks/{team_name}/` directory
+3. Session file only (`projects/{hash}/{session}.jsonl`)
+   - Project directory itself remains (may belong to other teams)
 
-**エラーレスポンス**:
-- `404 Not Found`: チームが存在しない
-- `400 Bad Request`: ステータスが `active`（削除不可）
+**Error Responses**:
+- `404 Not Found`: Team doesn't exist
+- `400 Bad Request`: Status is `active` (cannot delete)
 
-### 4.5 ミドルウェア構成
+### 4.5 Middleware Structure
 
-| ミドルウェア | 用途 |
-|-------------|------|
-| CORSMiddleware | クロスオリジン許可 |
-| Lifespan | 起動/終了時処理（FileWatcher, CacheService） |
+| Middleware | Purpose |
+|-------------|---------|
+| CORSMiddleware | Cross-origin allowance |
+| Lifespan | Startup/shutdown handling (FileWatcher, CacheService) |
 
 ---
 
-## 5. 通信プロトコル
+## 5. Communication Protocol
 
 ### 5.1 REST API
 
-- **形式**: JSON
-- **メソッド**: GET, DELETE（読み取り + チーム削除のみ）
-- **エラー**: HTTP ステータスコード + detail メッセージ
+- **Format**: JSON
+- **Methods**: GET, DELETE (read-only + team deletion)
+- **Errors**: HTTP status code + detail message
 
-### 5.2 HTTP ポーリング（リアルタイム更新）
+### 5.2 HTTP Polling (Real-time Updates)
 
-フロントエンドは以下のフックで定期的にデータを更新：
+Frontend updates data periodically with the following hooks:
 
-| フック | API | デフォルト間隔 |
-|--------|-----|---------------|
-| useTeams | GET /api/teams | 30秒 |
-| useTasks | GET /api/tasks | 30秒 |
-| useInbox | GET /api/teams/{name}/inboxes | 30秒 |
-| useUnifiedTimeline | GET /api/timeline/{team_name}/history | 30秒 |
+| Hook | API | Default Interval |
+|--------|-----|------------------|
+| useTeams | GET /api/teams | 30s |
+| useTasks | GET /api/tasks | 30s |
+| useInbox | GET /api/teams/{name}/inboxes | 30s |
+| useUnifiedTimeline | GET /api/timeline/{team_name}/history | 30s |
 
-**差分更新**: `/api/timeline/{team_name}/updates?since={timestamp}` で前回以降の変更のみ取得可能
+**Differential Updates**: `/api/timeline/{team_name}/updates?since={timestamp}` fetches only changes since last request
 
 ---
 
-## 6. モジュール間の依存関係
+## 6. Module Dependencies
 
-### 6.1 バックエンド依存関係図
+### 6.1 Backend Dependency Diagram
 
 ```
 main.py
@@ -412,7 +414,7 @@ main.py
         └── models/message.py
 ```
 
-### 6.2 フロントエンド依存関係図
+### 6.2 Frontend Dependency Diagram
 
 ```
 App.tsx
@@ -428,7 +430,7 @@ App.tsx
 │   │   ├── Layout.tsx
 │   │   └── Header.tsx
 │   ├── dashboard/
-│   │   ├── TeamCard.tsx (StatusBadge含む)
+│   │   ├── TeamCard.tsx (includes StatusBadge)
 │   │   ├── TeamDetailPanel.tsx
 │   │   └── ActivityFeed.tsx
 │   ├── overview/
@@ -485,9 +487,9 @@ App.tsx
 
 ---
 
-## 7. デプロイ構成
+## 7. Deployment Configuration
 
-### 7.1 開発環境
+### 7.1 Development Environment
 
 ```
 ┌──────────────────┐     ┌──────────────────┐
@@ -507,7 +509,7 @@ App.tsx
          └──────────────────┘
 ```
 
-### 7.2 本番環境（想定）
+### 7.2 Production Environment (Planned)
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -531,61 +533,61 @@ App.tsx
                     └──────────────────┘
 ```
 
-### 7.3 インフラ要件
+### 7.3 Infrastructure Requirements
 
-| 項目 | 要件 |
-|------|------|
+| Item | Requirement |
+|------|-------------|
 | Python | 3.11+ |
 | Node.js | 18+ |
-| メモリ | 最小512MB |
-| ディスク | ~/.claude/へのアクセス |
+| Memory | Minimum 512MB |
+| Disk | Access to ~/.claude/ |
 
 ---
 
-## 8. セキュリティ設計
+## 8. Security Design
 
-### 8.1 現在の実装
+### 8.1 Current Implementation
 
-| 項目 | 実装状況 |
-|------|----------|
-| CORS | 許可オリジン制限 |
-| 入力検証 | Pydantic バリデーション |
-| エラーハンドリング | HTTP例外処理 |
-| 削除保護 | active チームの削除禁止 |
+| Item | Status |
+|------|--------|
+| CORS | Origin restriction |
+| Input Validation | Pydantic validation |
+| Error Handling | HTTP exception handling |
+| Deletion Protection | Active team deletion blocked |
 
-### 8.2 将来の拡張予定
+### 8.2 Future Extensions
 
-| 項目 | 計画 |
+| Item | Plan |
 |------|------|
-| 認証 | API Key / OAuth |
-| 認可 | ロールベースアクセス制御 |
-| 暗号化 | HTTPS / WSS |
-| ログ | 監査ログ |
+| Authentication | API Key / OAuth |
+| Authorization | Role-based access control |
+| Encryption | HTTPS / WSS |
+| Logging | Audit logs |
 
 ---
 
-## 9. 拡張性
+## 9. Extensibility
 
-### 9.1 拡張ポイント
+### 9.1 Extension Points
 
-| レイヤー | 拡張ポイント |
+| Layer | Extension Points |
 |----------|-------------|
-| Frontend | 新規コンポーネント追加、新規ビュー追加 |
-| Store | 新規状態スライス追加 |
-| API | 新規エンドポイント追加 |
-| Service | 新規データソース統合（TimelineService拡張） |
-| Cache | 新規キャッシュタイプ追加 |
+| Frontend | Add new components, add new views |
+| Store | Add new state slices |
+| API | Add new endpoints |
+| Service | Integrate new data sources (extend TimelineService) |
+| Cache | Add new cache types |
 
-### 9.2 設計原則
+### 9.2 Design Principles
 
-- **単一責任**: 各モジュールは単一の責務を持つ
-- **依存性注入**: 設定は環境変数から注入
-- **インターフェース分離**: 明確なモジュール境界
-- **関心の分離**: UI、状態管理、データ取得を分離
-- **YAGNI**: 必要な機能のみ実装、過剰な抽象化を避ける
+- **Single Responsibility**: Each module has a single responsibility
+- **Dependency Injection**: Configuration injected from environment variables
+- **Interface Segregation**: Clear module boundaries
+- **Separation of Concerns**: Separate UI, state management, and data fetching
+- **YAGNI**: Implement only necessary features, avoid over-abstraction
 
 ---
 
-*作成日: 2026-02-16*
-*最終更新日: 2026-02-24*
-*バージョン: 2.1.0*
+*Created: 2026-02-16*
+*Last Updated: 2026-02-24*
+*Version: 2.1.0*

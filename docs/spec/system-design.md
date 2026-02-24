@@ -316,60 +316,102 @@ graph TB
 
 ### 6.1 REST API一覧
 
+> **凡例**: ✅ = フロントエンドで使用中、❌ = フロントエンド未使用（バックエンドのみ実装済み）、⚠️ = 監視・デバッグ用
+
+#### ヘルス・システム関連
+
+| エンドポイント | メソッド | 説明 | レスポンス | 使用 |
+|----------------|----------|------|-----------|------|
+| `/api/health` | GET | ヘルスチェック | `{"status": "ok"}` | ⚠️ 監視用 |
+| `/api/models` | GET | 利用可能なモデル一覧取得 | `ModelListResponse` | ❌ 未使用 |
+| `/api/cache/stats` | GET | キャッシュ統計情報取得 | `object` | ❌ 未使用 |
+
 #### チーム関連
 
-| エンドポイント | メソッド | 説明 | レスポンス |
-|----------------|----------|------|-----------|
-| `/api/health` | GET | ヘルスチェック | `{"status": "ok"}` |
-| `/api/teams` | GET | 全チーム一覧取得（ステータス付き） | `TeamSummary[]` |
-| `/api/teams/{team_name}` | GET | 特定チーム詳細取得 | `Team` |
-| `/api/teams/{team_name}` | DELETE | チーム削除（stopped/inactive/unknownのみ） | `DeleteResult` |
-| `/api/teams/{team_name}/inboxes` | GET | チームインボックス取得 | `InboxMessage[]` |
-| `/api/teams/{team_name}/inboxes/{agent}` | GET | エージェント別インボックス取得 | `InboxMessage[]` |
+| エンドポイント | メソッド | 説明 | レスポンス | 使用 |
+|----------------|----------|------|-----------|------|
+| `/api/teams/` | GET | 全チーム一覧取得（ステータス付き） | `TeamSummary[]` | ✅ 使用中 |
+| `/api/teams/{team_name}` | GET | 特定チーム詳細取得 | `Team` | ✅ 使用中 |
+| `/api/teams/{team_name}` | DELETE | チーム削除（stopped/inactive/unknownのみ） | `DeleteResult` | ✅ 使用中 |
+| `/api/teams/{team_name}/inboxes` | GET | チームインボックス取得 | `object` | ✅ 使用中 |
+| `/api/teams/{team_name}/inboxes/{agent_name}` | GET | エージェント別インボックス取得 | `object` | ✅ 使用中 |
 
 #### タスク関連
 
-| エンドポイント | メソッド | 説明 | レスポンス |
-|----------------|----------|------|-----------|
-| `/api/tasks` | GET | 全タスク一覧取得 | `TaskSummary[]` |
-| `/api/tasks/team/{team_name}` | GET | チーム別タスク取得 | `TaskSummary[]` |
-| `/api/tasks/{team}/{task_id}` | GET | 特定タスク詳細取得 | `Task` |
+| エンドポイント | メソッド | 説明 | レスポンス | 使用 |
+|----------------|----------|------|-----------|------|
+| `/api/tasks/` | GET | 全タスク一覧取得 | `TaskSummary[]` | ✅ 使用中 |
+| `/api/tasks/team/{team_name}` | GET | チーム別タスク取得（詳細版） | `Task[]` | ✅ 使用中 |
+| `/api/tasks/{task_id}` | GET | 特定タスク詳細取得（team_name はクエリパラメータ） | `Task` | ❌ 未使用 |
 
 #### エージェント関連
 
-| エンドポイント | メソッド | 説明 | レスポンス |
-|----------------|----------|------|-----------|
-| `/api/agents` | GET | 全エージェント一覧取得 | `AgentSummary[]` |
+| エンドポイント | メソッド | 説明 | レスポンス | 使用 |
+|----------------|----------|------|-----------|------|
+| `/api/teams/{team_name}/agents/status` | GET | チーム内エージェントステータス取得 | `AgentStatusList` | ❌ 未使用 |
+| `/api/teams/{team_name}/agents/typing` | GET | 入力中エージェント一覧取得 | `TypingIndicators` | ❌ 未使用 |
 
-#### タイムライン・履歴関連
+#### メッセージ関連
 
-| エンドポイント | メソッド | 説明 | レスポンス |
-|----------------|----------|------|-----------|
-| `/api/teams/{team_name}/messages/timeline` | GET | メッセージタイムライン取得 | `TimelineItem[]` |
-| `/api/history` | GET | 統合履歴取得 | `TimelineItem[]` |
-| `/api/updates` | GET | 差分更新取得（since パラメータ必須） | `TimelineItem[]` |
-| `/api/file-changes/{team}` | GET | ファイル変更一覧 | `FileChange[]` |
+| エンドポイント | メソッド | 説明 | レスポンス | 使用 |
+|----------------|----------|------|-----------|------|
+| `/api/teams/{team_name}/messages/timeline` | GET | タイムライン表示用メッセージ取得 | `TimelineData` | ✅ 使用中 |
+| `/api/teams/{team_name}/messages` | GET | メッセージ一覧取得（生データ） | `object` | ❌ 未使用 |
+| `/api/teams/{team_name}/messages/chat` | GET | チャット形式メッセージ取得 | `ChatMessageList` | ❌ 未使用 |
+
+#### 統合タイムライン関連
+
+| エンドポイント | メソッド | 説明 | レスポンス | 使用 |
+|----------------|----------|------|-----------|------|
+| `/api/timeline/{team_name}/history` | GET | 統合タイムライン履歴取得 | `UnifiedTimelineResponse` | ✅ 使用中 |
+| `/api/timeline/{team_name}/updates` | GET | 差分更新取得（since パラメータ使用） | `UnifiedTimelineResponse` | ✅ 使用中 |
+
+> **注意**: フロントエンド未使用のAPI（❌）は、将来の機能拡張や外部ツール連携のために実装されています。
 
 ### 6.2 クエリパラメータ
 
-#### `/api/teams/{team_name}/messages/timeline`
-
-| パラメータ | 型 | 説明 |
-|-----------|-----|------|
-| `start_time` | string | 開始時刻（ISO形式） |
-| `end_time` | string | 終了時刻（ISO形式） |
-| `since` | string | 差分取得用の基準時刻 |
-| `senders` | string | 送信者フィルター（カンマ区切り） |
-| `types` | string | メッセージタイプフィルター（カンマ区切り） |
-| `search` | string | 全文検索クエリ |
-| `limit` | int | 取得件数上限 |
-
-#### `/api/updates`
+#### `/api/timeline/{team_name}/history`
 
 | パラメータ | 型 | 必須 | 説明 |
 |-----------|-----|------|------|
-| `team_name` | string | はい | チーム名 |
-| `since` | string | はい | 基準時刻（ISO8601） |
+| `limit` | int | いいえ | 最大取得件数（1-10000、デフォルト100） |
+| `types` | string | いいえ | タイプフィルター（カンマ区切り、例: message,thinking,tool_use） |
+| `before_event_id` | string | いいえ | ページネーション用（このイベントIDより古いエントリを取得） |
+
+#### `/api/timeline/{team_name}/updates`
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `since` | string | いいえ | 基準時刻（ISO8601形式、この時刻以降のエントリのみ取得） |
+| `limit` | int | いいえ | 最大取得件数（1-200、デフォルト50） |
+
+#### `/api/teams/{team_name}/messages/timeline`
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `start_time` | string | いいえ | 開始時刻（ISO 8601形式） |
+| `end_time` | string | いいえ | 終了時刻（ISO 8601形式） |
+| `since` | string | いいえ | 差分更新用の基準時刻（ISO 8601形式） |
+| `senders` | string | いいえ | 送信者フィルター（カンマ区切り） |
+| `types` | string | いいえ | タイプフィルター（カンマ区切り） |
+| `search` | string | いいえ | 全文検索クエリ |
+| `unread_only` | boolean | いいえ | 未読のみ取得（デフォルト: false） |
+| `limit` | int | いいえ | 取得件数上限（最大500、デフォルト100） |
+| `offset` | int | いいえ | オフセット（デフォルト0） |
+
+#### `/api/teams/{team_name}/messages/chat`
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `start_time` | string | いいえ | 開始時刻（ISO 8601形式） |
+| `end_time` | string | いいえ | 終了時刻（ISO 8601形式） |
+| `since` | string | いいえ | 差分更新用の基準時刻（ISO 8601形式） |
+| `senders` | string | いいえ | 送信者フィルター（カンマ区切り） |
+| `types` | string | いいえ | タイプフィルター（カンマ区切り） |
+| `search` | string | いいえ | 全文検索クエリ |
+| `unread_only` | boolean | いいえ | 未読のみ取得（デフォルト: false） |
+| `limit` | int | いいえ | 取得件数上限（最大500、デフォルト100） |
+| `offset` | int | いいえ | オフセット（デフォルト0） |
 
 ### 6.3 データフォーマット
 
@@ -431,20 +473,22 @@ interface TaskSummary {
 }
 ```
 
-#### TimelineItem
+#### UnifiedTimelineEntry
 
 ```typescript
-interface TimelineItem {
+interface UnifiedTimelineEntry {
   id: string;
-  type: TimelineMessageType | SessionLogType;
-  from: string;
+  content: string;
+  from_: string;  // Python の from は予約語のため from_ を使用
   to?: string;
-  receiver?: string;
   timestamp: string;
-  text: string;
+  color?: string;
+  read: boolean;
   summary?: string;
-  parsedType?: string;
-  parsedData?: Record<string, unknown>;
+  source: 'inbox' | 'session';
+  parsed_type: string;
+  parsed_data?: Record<string, unknown>;
+  details?: Record<string, unknown>;
 }
 
 type TimelineMessageType =
@@ -462,9 +506,8 @@ type TimelineMessageType =
 type SessionLogType =
   | 'user_message'
   | 'assistant_message'
-  | 'thinking'
-  | 'tool_use'
-  | 'file_change';
+  | 'thinking';
+  // 注意: tool_use と file-history-snapshot はタイムラインで除外されます
 ```
 
 #### DeleteResult
@@ -473,6 +516,98 @@ type SessionLogType =
 interface DeleteResult {
   message: string;
   deletedPaths: string[];
+}
+```
+
+#### ChatMessage
+
+```typescript
+interface ChatMessage {
+  id: string;
+  from: string;
+  to?: string;
+  text: string;
+  summary?: string;
+  timestamp: string;
+  type: string;  // default: 'message'
+  isPrivate: boolean;  // default: false
+  visibleTo: string[];  // default: []
+  read: boolean;  // default: false
+  color?: string;
+}
+
+interface ChatMessageList {
+  messages: ChatMessage[];
+  count: number;  // default: 0
+  hasMore: boolean;  // default: false
+}
+```
+
+#### AgentStatus
+
+```typescript
+interface AgentStatus {
+  name: string;
+  status: 'online' | 'idle' | 'offline';
+  lastActivity?: string;  // ISO 8601形式
+}
+
+interface AgentStatusList {
+  agents: AgentStatus[];  // default: []
+}
+```
+
+#### TypingIndicators
+
+```typescript
+interface TypingIndicators {
+  typing: string[];  // default: []
+}
+```
+
+#### TimelineData (vis-timeline用)
+
+```typescript
+interface TimelineData {
+  items: TimelineItem[];
+  groups: TimelineGroup[];
+  timeRange: { [key: string]: string };
+  count: number;  // default: 0
+  total: number;  // default: 0
+  hasMore: boolean;  // default: false
+}
+
+interface TimelineItem {
+  id: string;
+  content: string;
+  start: string;
+  type: 'box' | 'point';  // default: 'box'
+  className: string;  // default: 'timeline-item'
+  group: string;
+  receiver?: string;
+  data: Record<string, unknown>;
+}
+
+interface TimelineGroup {
+  id: string;
+  content: string;
+  className?: string;  // default: 'timeline-group'
+}
+```
+
+#### ModelConfig
+
+```typescript
+interface ModelConfig {
+  id: string;
+  color: string;
+  icon: string;
+  label: string;
+  provider: 'anthropic' | 'moonshot' | 'zhipu' | 'other';
+}
+
+interface ModelListResponse {
+  models: ModelConfig[];
 }
 ```
 
@@ -608,10 +743,15 @@ def _cwd_to_project_hash(cwd: str) -> str:
 | フレームワーク | React | 18.2.0 |
 | バンドラー | Vite | 5.0.0+ |
 | CSS | Tailwind CSS | 3.4.0+ |
-| 状態管理 | Zustand | 4.5.0+ |
-| データフェッチ | TanStack Query | 最新 |
-| Markdown | react-markdown | 最新 |
-| 日付処理 | date-fns | 最新 |
+| 状態管理 | Zustand | 5.0.2+ |
+| データフェッチ | TanStack Query | 5.90.21+ |
+| 仮想スクロール | @tanstack/react-virtual | 3.10.8+ |
+| Markdown | react-markdown | 10.1.0+ |
+| 日付処理 | date-fns | 4.1.0+ |
+| グラフ可視化 | D3.js | 7.8.5+ |
+| タイムライン | vis-timeline | 7.7.3+ |
+| UIコンポーネント | Radix UI | 1.x |
+| アイコン | lucide-react | 0.344.0+ |
 
 ---
 
@@ -654,5 +794,5 @@ def _cwd_to_project_hash(cwd: str) -> str:
 ---
 
 *作成日: 2026-02-16*
-*最終更新日: 2026-02-23*
-*バージョン: 2.0.0*
+*最終更新日: 2026-02-24*
+*バージョン: 2.1.0*
