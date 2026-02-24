@@ -106,14 +106,16 @@ npm run dev
 
 | 文档 | 内容 |
 |------|------|
-| [architecture.md](docs/spec/architecture.md) | 架构设计、组件构成、数据流 |
-| [system-design.md](docs/spec/system-design.md) | 系统设计、API规格、数据模型 |
-| [frontend-tech-stack.md](docs/spec/frontend-tech-stack.md) | 前端技术栈详情 |
-| [backend-tech-stack.md](docs/spec/backend-tech-stack.md) | 后端技术栈详情 |
-| [feature-specification.md](docs/spec/feature-specification.md) | 功能规格详情 |
-| [user-guide.md](docs/spec/user-guide.md) | 用户指南详情 |
-| [ut-plan.md](docs/spec/ut-plan.md) | 单元测试计划 |
-| [qa-strategy.md](docs/spec/qa-strategy.md) | QA策略 |
+| [architecture.zh.md](docs/spec/architecture.zh.md) | 架构设计、组件构成、数据流 |
+| [system-design.zh.md](docs/spec/system-design.zh.md) | 系统设计、API规格、数据模型 |
+| [frontend-tech-stack.zh.md](docs/spec/frontend-tech-stack.zh.md) | 前端技术栈详情 |
+| [backend-tech-stack.zh.md](docs/spec/backend-tech-stack.zh.md) | 后端技术栈详情 |
+| [feature-specification.zh.md](docs/spec/feature-specification.zh.md) | 功能规格详情 |
+| [user-guide.zh.md](docs/spec/user-guide.zh.md) | 用户指南详情 |
+| [ut-plan.zh.md](docs/spec/ut-plan.zh.md) | 单元测试计划 |
+| [qa-strategy.zh.md](docs/spec/qa-strategy.zh.md) | QA策略 |
+| [uat-test-cases.zh.md](docs/spec/uat-test-cases.zh.md) | UAT测试用例 |
+| [code-review-template.zh.md](docs/spec/code-review-template.zh.md) | 代码审查模板 |
 
 ---
 
@@ -139,7 +141,7 @@ npm run dev
 | 状态管理 | Zustand 5.0.2+ |
 | 数据获取 | TanStack Query 5.90.21+ |
 
-> 详细版本信息请参考 [docs/spec/frontend-tech-stack.md](docs/spec/frontend-tech-stack.md) 和 [docs/spec/backend-tech-stack.md](docs/spec/backend-tech-stack.md)
+> 详细版本信息请参考 [docs/spec/frontend-tech-stack.zh.md](docs/spec/frontend-tech-stack.zh.md) 和 [docs/spec/backend-tech-stack.zh.md](docs/spec/backend-tech-stack.zh.md)
 
 ---
 

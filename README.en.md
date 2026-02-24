@@ -106,14 +106,16 @@ For detailed information, refer to the documents in `docs/spec/`:
 
 | Document | Content |
 |----------|---------|
-| [architecture.md](docs/spec/architecture.md) | Architecture design, component structure, data flow |
-| [system-design.md](docs/spec/system-design.md) | System design, API specifications, data models |
-| [frontend-tech-stack.md](docs/spec/frontend-tech-stack.md) | Frontend technology stack details |
-| [backend-tech-stack.md](docs/spec/backend-tech-stack.md) | Backend technology stack details |
-| [feature-specification.md](docs/spec/feature-specification.md) | Feature specification details |
-| [user-guide.md](docs/spec/user-guide.md) | User guide details |
-| [ut-plan.md](docs/spec/ut-plan.md) | Unit test plan |
-| [qa-strategy.md](docs/spec/qa-strategy.md) | QA strategy |
+| [architecture.en.md](docs/spec/architecture.en.md) | Architecture design, component structure, data flow |
+| [system-design.en.md](docs/spec/system-design.en.md) | System design, API specifications, data models |
+| [frontend-tech-stack.en.md](docs/spec/frontend-tech-stack.en.md) | Frontend technology stack details |
+| [backend-tech-stack.en.md](docs/spec/backend-tech-stack.en.md) | Backend technology stack details |
+| [feature-specification.en.md](docs/spec/feature-specification.en.md) | Feature specification details |
+| [user-guide.en.md](docs/spec/user-guide.en.md) | User guide details |
+| [ut-plan.en.md](docs/spec/ut-plan.en.md) | Unit test plan |
+| [qa-strategy.en.md](docs/spec/qa-strategy.en.md) | QA strategy |
+| [uat-test-cases.en.md](docs/spec/uat-test-cases.en.md) | UAT test cases |
+| [code-review-template.en.md](docs/spec/code-review-template.en.md) | Code review template |
 
 ---
 
@@ -139,7 +141,7 @@ For detailed information, refer to the documents in `docs/spec/`:
 | State Management | Zustand 5.0.2+ |
 | Data Fetching | TanStack Query 5.90.21+ |
 
-> For detailed version information, see [docs/spec/frontend-tech-stack.md](docs/spec/frontend-tech-stack.md) and [docs/spec/backend-tech-stack.md](docs/spec/backend-tech-stack.md)
+> For detailed version information, see [docs/spec/frontend-tech-stack.en.md](docs/spec/frontend-tech-stack.en.md) and [docs/spec/backend-tech-stack.en.md](docs/spec/backend-tech-stack.en.md)
 
 ---
 

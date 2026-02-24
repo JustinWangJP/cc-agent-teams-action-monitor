@@ -114,6 +114,8 @@ npm run dev
 | [user-guide.md](docs/spec/user-guide.md) | ユーザーガイド詳細 |
 | [ut-plan.md](docs/spec/ut-plan.md) | ユニットテスト計画 |
 | [qa-strategy.md](docs/spec/qa-strategy.md) | QA戦略 |
+| [uat-test-cases.md](docs/spec/uat-test-cases.md) | UATテストケース |
+| [code-review-template.md](docs/spec/code-review-template.md) | コードレビューテンプレート |
 
 ---
 
