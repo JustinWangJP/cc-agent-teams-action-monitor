@@ -316,53 +316,57 @@ graph TB
 
 ### 6.1 REST API一覧
 
+> **凡例**: ✅ = フロントエンドで使用中、❌ = フロントエンド未使用（バックエンドのみ実装済み）、⚠️ = 監視・デバッグ用
+
 #### ヘルス・システム関連
 
-| エンドポイント | メソッド | 説明 | レスポンス |
-|----------------|----------|------|-----------|
-| `/api/health` | GET | ヘルスチェック | `{"status": "ok"}` |
-| `/api/models` | GET | 利用可能なモデル一覧取得 | `ModelListResponse` |
-| `/api/cache/stats` | GET | キャッシュ統計情報取得 | `object` |
+| エンドポイント | メソッド | 説明 | レスポンス | 使用 |
+|----------------|----------|------|-----------|------|
+| `/api/health` | GET | ヘルスチェック | `{"status": "ok"}` | ⚠️ 監視用 |
+| `/api/models` | GET | 利用可能なモデル一覧取得 | `ModelListResponse` | ❌ 未使用 |
+| `/api/cache/stats` | GET | キャッシュ統計情報取得 | `object` | ❌ 未使用 |
 
 #### チーム関連
 
-| エンドポイント | メソッド | 説明 | レスポンス |
-|----------------|----------|------|-----------|
-| `/api/teams/` | GET | 全チーム一覧取得（ステータス付き） | `TeamSummary[]` |
-| `/api/teams/{team_name}` | GET | 特定チーム詳細取得 | `Team` |
-| `/api/teams/{team_name}` | DELETE | チーム削除（stopped/inactive/unknownのみ） | `DeleteResult` |
-| `/api/teams/{team_name}/inboxes` | GET | チームインボックス取得 | `object` |
-| `/api/teams/{team_name}/inboxes/{agent_name}` | GET | エージェント別インボックス取得 | `object` |
+| エンドポイント | メソッド | 説明 | レスポンス | 使用 |
+|----------------|----------|------|-----------|------|
+| `/api/teams/` | GET | 全チーム一覧取得（ステータス付き） | `TeamSummary[]` | ✅ 使用中 |
+| `/api/teams/{team_name}` | GET | 特定チーム詳細取得 | `Team` | ✅ 使用中 |
+| `/api/teams/{team_name}` | DELETE | チーム削除（stopped/inactive/unknownのみ） | `DeleteResult` | ✅ 使用中 |
+| `/api/teams/{team_name}/inboxes` | GET | チームインボックス取得 | `object` | ✅ 使用中 |
+| `/api/teams/{team_name}/inboxes/{agent_name}` | GET | エージェント別インボックス取得 | `object` | ✅ 使用中 |
 
 #### タスク関連
 
-| エンドポイント | メソッド | 説明 | レスポンス |
-|----------------|----------|------|-----------|
-| `/api/tasks/` | GET | 全タスク一覧取得 | `TaskSummary[]` |
-| `/api/tasks/team/{team_name}` | GET | チーム別タスク取得（詳細版） | `Task[]` |
-| `/api/tasks/{task_id}` | GET | 特定タスク詳細取得（team_name はクエリパラメータ） | `Task` |
+| エンドポイント | メソッド | 説明 | レスポンス | 使用 |
+|----------------|----------|------|-----------|------|
+| `/api/tasks/` | GET | 全タスク一覧取得 | `TaskSummary[]` | ✅ 使用中 |
+| `/api/tasks/team/{team_name}` | GET | チーム別タスク取得（詳細版） | `Task[]` | ✅ 使用中 |
+| `/api/tasks/{task_id}` | GET | 特定タスク詳細取得（team_name はクエリパラメータ） | `Task` | ❌ 未使用 |
 
 #### エージェント関連
 
-| エンドポイント | メソッド | 説明 | レスポンス |
-|----------------|----------|------|-----------|
-| `/api/teams/{team_name}/agents/status` | GET | チーム内エージェントステータス取得 | `AgentStatusList` |
-| `/api/teams/{team_name}/agents/typing` | GET | 入力中エージェント一覧取得 | `TypingIndicators` |
+| エンドポイント | メソッド | 説明 | レスポンス | 使用 |
+|----------------|----------|------|-----------|------|
+| `/api/teams/{team_name}/agents/status` | GET | チーム内エージェントステータス取得 | `AgentStatusList` | ❌ 未使用 |
+| `/api/teams/{team_name}/agents/typing` | GET | 入力中エージェント一覧取得 | `TypingIndicators` | ❌ 未使用 |
 
 #### メッセージ関連
 
-| エンドポイント | メソッド | 説明 | レスポンス |
-|----------------|----------|------|-----------|
-| `/api/teams/{team_name}/messages/timeline` | GET | タイムライン表示用メッセージ取得 | `TimelineData` |
-| `/api/teams/{team_name}/messages` | GET | メッセージ一覧取得（生データ） | `object` |
-| `/api/teams/{team_name}/messages/chat` | GET | チャット形式メッセージ取得 | `ChatMessageList` |
+| エンドポイント | メソッド | 説明 | レスポンス | 使用 |
+|----------------|----------|------|-----------|------|
+| `/api/teams/{team_name}/messages/timeline` | GET | タイムライン表示用メッセージ取得 | `TimelineData` | ✅ 使用中 |
+| `/api/teams/{team_name}/messages` | GET | メッセージ一覧取得（生データ） | `object` | ❌ 未使用 |
+| `/api/teams/{team_name}/messages/chat` | GET | チャット形式メッセージ取得 | `ChatMessageList` | ❌ 未使用 |
 
 #### 統合タイムライン関連
 
-| エンドポイント | メソッド | 説明 | レスポンス |
-|----------------|----------|------|-----------|
-| `/api/timeline/{team_name}/history` | GET | 統合タイムライン履歴取得 | `UnifiedTimelineResponse` |
-| `/api/timeline/{team_name}/updates` | GET | 差分更新取得（since パラメータ使用） | `UnifiedTimelineResponse` |
+| エンドポイント | メソッド | 説明 | レスポンス | 使用 |
+|----------------|----------|------|-----------|------|
+| `/api/timeline/{team_name}/history` | GET | 統合タイムライン履歴取得 | `UnifiedTimelineResponse` | ✅ 使用中 |
+| `/api/timeline/{team_name}/updates` | GET | 差分更新取得（since パラメータ使用） | `UnifiedTimelineResponse` | ✅ 使用中 |
+
+> **注意**: フロントエンド未使用のAPI（❌）は、将来の機能拡張や外部ツール連携のために実装されています。
 
 ### 6.2 クエリパラメータ
 
