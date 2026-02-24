@@ -75,6 +75,40 @@ npm run dev
 
 ---
 
+## スクリーンショット
+
+### メインページ（概要ビュー）
+
+![Dashboard Main Page](docs/images/dashboard-main-page.png)
+
+チーム一覧を表示し、アクティブなエージェントチームのステータスを確認できます。
+
+### チーム詳細
+
+![Team Detail Page](docs/images/dashboard-team-detail-page.png)
+
+チームを選択すると、メンバー構成やステータスの詳細情報が表示されます。
+
+### タイムラインビュー
+
+![Team Timeline Page](docs/images/dashboard-team-timeline-page.png)
+
+エージェント間のメッセージ履歴とタスク進捗を統合的に確認できます。
+
+### メッセージ詳細
+
+![Message Detail Page](docs/images/dashboard-message-detail-page.png)
+
+メッセージをクリックすると、詳細な内容を確認できます。
+
+### タスク管理（カンバン）
+
+![Team Tasks Page](docs/images/dashboard-team-tasks-page.png)
+
+タスクをステータス別（Pending / In Progress / Completed）に管理できます。
+
+---
+
 ## 設計思想
 
 ### なぜ HTTP ポーリングなのか
@@ -224,6 +258,52 @@ npm run build
 
 ---
 
+## Contributing
+
+コントリビューションを歓迎します！
+
+### 開発に参加する
+
+1. このリポジトリをフォーク
+2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
+3. 変更をコミット (`git commit -m 'Add amazing feature'`)
+4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
+5. Pull Request を作成
+
+### 開発環境のセットアップ
+
+```bash
+# バックエンド
+cd backend
+pip install -e ".[dev]"
+pytest --cov=app  # テスト実行
+
+# フロントエンド
+cd frontend
+npm install
+npm run test:coverage  # テスト実行
+```
+
+### コーディング規約
+
+- **Python**: PEP 8 に準拠、Ruff でフォーマット
+- **TypeScript**: ESLint + Prettier でフォーマット
+- **コミットメッセージ**: Conventional Commits 形式
+
+---
+
+## Roadmap
+
+### v0.1.0 (現在)
+
+- [x] HTTP Polling によるリアルタイム更新
+- [x] チーム監視・ステータス判定
+- [x] タスク管理（カンバン形式）
+- [x] 統合タイムライン（inbox + セッションログ）
+- [x] ダークモード対応
+
+---
+
 ## ライセンス
 
 MIT License
@@ -231,4 +311,3 @@ MIT License
 ---
 
 *最終更新日: 2026-02-24*
-*バージョン: 2.1.0*

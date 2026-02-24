@@ -75,6 +75,40 @@ npm run dev
 
 ---
 
+## Screenshots
+
+### Dashboard Overview
+
+![Dashboard Main Page](docs/images/dashboard-main-page.png)
+
+Main dashboard showing active teams and their status indicators.
+
+### Team Detail View
+
+![Team Detail Page](docs/images/dashboard-team-detail-page.png)
+
+Click on a team to view detailed information including members and session status, and Agent activity.
+
+### Timeline View
+
+![Team Timeline Page](docs/images/dashboard-timeline-page.png)
+
+Unified timeline showing agent messages and session logs in an integrated view.
+
+### Message Detail View
+
+![Message Detail Page](docs/images/dashboard-message-detail-page.png)
+
+Click on a message to view its full content and metadata.
+
+### Task Management (Kanban)
+
+![Team Tasks Page](docs/images/dashboard-team-tasks-page.png)
+
+Kanban-style task management with columns for Pending / In Progress / Completed.
+
+---
+
 ## Design Philosophy
 
 ### Why HTTP Polling?
@@ -224,6 +258,52 @@ npm run build
 
 ---
 
+## Contributing
+
+Contributions are welcome!
+
+### Getting Started
+
+1. Fork this repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Setup
+
+```bash
+# Backend
+cd backend
+pip install -e ".[dev]"
+pytest --cov=app  # Run tests
+
+# Frontend
+cd frontend
+npm install
+npm run test:coverage  # Run tests
+```
+
+### Coding Standards
+
+- **Python**: Follow PEP 8, format with Ruff
+- **TypeScript**: Format with ESLint + Prettier
+- **Commit Messages**: Use Conventional Commits format
+
+---
+
+## Roadmap
+
+### v0.1.0 (Current)
+
+- [x] Real-time updates via HTTP Polling
+- [x] Team monitoring and status detection
+- [x] Task management (Kanban-style)
+- [x] Unified timeline (inbox + session logs)
+- [x] Dark mode support
+
+---
+
 ## License
 
 MIT License
@@ -231,4 +311,3 @@ MIT License
 ---
 
 *Last Updated: 2026-02-24*
-*Version: 2.1.0*

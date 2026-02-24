@@ -75,6 +75,40 @@ npm run dev
 
 ---
 
+## 截图
+
+### 仪表板概览
+
+![Dashboard Main Page](docs/images/dashboard-main-page.png)
+
+主仪表板显示活跃团队及其状态指示器。
+
+### 团队详情视图
+
+![Team Detail Page](docs/images/dashboard-team-detail-page.png)
+
+点击团队查看详细信息，包括成员、会话状态和代理活动。
+
+### 时间线视图
+
+![Team Timeline Page](docs/images/dashboard-timeline-page.png)
+
+统一时间线显示代理消息和会话日志的集成视图。
+
+### 消息详情视图
+
+![Message Detail Page](docs/images/dashboard-message-detail-page.png)
+
+点击消息查看其完整内容和元数据。
+
+### 任务管理（看板）
+
+![Team Tasks Page](docs/images/dashboard-team-tasks-page.png)
+
+看板风格的任务管理，分为待处理/进行中/已完成三列。
+
+---
+
 ## 设计思想
 
 ### 为什么使用 HTTP 轮询？
@@ -224,6 +258,52 @@ npm run build
 
 ---
 
+## 贡献
+
+欢迎贡献！
+
+### 参与开发
+
+1. Fork 本仓库
+2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 创建 Pull Request
+
+### 开发环境设置
+
+```bash
+# 后端
+cd backend
+pip install -e ".[dev]"
+pytest --cov=app  # 运行测试
+
+# 前端
+cd frontend
+npm install
+npm run test:coverage  # 运行测试
+```
+
+### 编码规范
+
+- **Python**: 遵循 PEP 8，使用 Ruff 格式化
+- **TypeScript**: 使用 ESLint + Prettier 格式化
+- **提交消息**: 使用 Conventional Commits 格式
+
+---
+
+## 路线图
+
+### v0.1.0 (当前)
+
+- [x] HTTP 轮询实现实时更新
+- [x] 团队监控和状态检测
+- [x] 任务管理（看板风格）
+- [x] 统一时间线（inbox + 会话日志）
+- [x] 深色模式支持
+
+---
+
 ## 许可证
 
 MIT License
@@ -231,4 +311,3 @@ MIT License
 ---
 
 *最后更新: 2026-02-24*
-*版本: 2.1.0*
