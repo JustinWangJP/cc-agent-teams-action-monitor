@@ -608,10 +608,15 @@ def _cwd_to_project_hash(cwd: str) -> str:
 | フレームワーク | React | 18.2.0 |
 | バンドラー | Vite | 5.0.0+ |
 | CSS | Tailwind CSS | 3.4.0+ |
-| 状態管理 | Zustand | 4.5.0+ |
-| データフェッチ | TanStack Query | 最新 |
-| Markdown | react-markdown | 最新 |
-| 日付処理 | date-fns | 最新 |
+| 状態管理 | Zustand | 5.0.2+ |
+| データフェッチ | TanStack Query | 5.90.21+ |
+| 仮想スクロール | @tanstack/react-virtual | 3.10.8+ |
+| Markdown | react-markdown | 10.1.0+ |
+| 日付処理 | date-fns | 4.1.0+ |
+| グラフ可視化 | D3.js | 7.8.5+ |
+| タイムライン | vis-timeline | 7.7.3+ |
+| UIコンポーネント | Radix UI | 1.x |
+| アイコン | lucide-react | 0.344.0+ |
 
 ---
 

@@ -9,7 +9,7 @@ Real-time monitoring dashboard for Claude Code Agent Teams
 
 ---
 
-## Languages
+## Languages / 语言
 
 - [日本語](README.md) (Default)
 - [English](README.en.md)
@@ -17,17 +17,75 @@ Real-time monitoring dashboard for Claude Code Agent Teams
 
 ---
 
+## Overview
+
+Agent Teams Dashboard is a web application for real-time monitoring and management of Claude Code's Agent Teams feature. It monitors the `~/.claude/` directory and visualizes team configurations, task progress, and inter-agent messaging.
+
+### Key Features
+
+- **Real-time Updates**: Automatic data updates via HTTP Polling (5s-60s intervals)
+- **Team Monitoring**: Display active agent teams with status indicators
+- **Task Management**: Visualize tasks by status (Kanban-style)
+- **Unified Timeline**: Integrated display of agent messages + session logs
+- **Dark Mode**: Theme switching support
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+| Software | Version | Check Command |
+|----------|---------|---------------|
+| Python | 3.11+ | `python --version` |
+| Node.js | 18+ | `node --version` |
+| npm | 9+ | `npm --version` |
+
+### Installation
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd cc-agent-teams-action-monitor
+
+# Backend
+cd backend
+pip install -e ".[dev]"
+
+# Frontend
+cd ../frontend
+npm install
+```
+
+### Starting the Application
+
+**Terminal 1 (Backend):**
+```bash
+cd backend
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+**Terminal 2 (Frontend):**
+```bash
+cd frontend
+npm run dev
+```
+
+**Access:** http://localhost:5173/
+
+---
+
 ## Design Philosophy
 
 ### Why HTTP Polling?
 
-This system uses **HTTP Polling instead of WebSocket**. The reasons are:
+This system uses **HTTP Polling instead of WebSocket**:
 
-1. **Simple Architecture**: No WebSocket connection management required, operates as a stateless API server
+1. **Simple Architecture**: No WebSocket connection management required
 2. **Cache Utilization**: TanStack Query's caching (staleTime: 10s) reduces unnecessary requests
-3. **Scalability**: Polling interval (5s-60s) is user-adjustable, controlling server load
+3. **Scalability**: Polling interval is user-adjustable
 
-### Team Status Determination Logic
+### Team Status Determination
 
 Team status is determined by **session log mtime**:
 
@@ -38,256 +96,118 @@ Team status is determined by **session log mtime**:
 | `unknown` | No session log | ❌ No |
 | `inactive` | Empty members array | ❌ No |
 
-### Data Sources
-
-| Data | File Path |
-|------|-----------|
-| Team Config | `~/.claude/teams/{team_name}/config.json` |
-| Status | `~/.claude/projects/{project-hash}/{sessionId}.jsonl` |
-| Inbox | `~/.claude/teams/{team_name}/inboxes/{agent_name}.json` |
-| Tasks | `~/.claude/tasks/{team_name}/{task_id}.json` |
+> See [docs/spec/system-design.md](docs/spec/system-design.md) §2.2 for details
 
 ---
 
-## Features
+## 📚 Documentation Reference
 
-| Feature | Description |
-|---------|-------------|
-| Team List | Display active agent teams as cards |
-| Team Details | Member info, status, last activity time |
-| Team Status | Auto-determination by session log mtime (active/stopped/unknown/inactive) |
-| Team Deletion | Delete stopped teams only |
-| Task List | Display tasks by status (Pending/In Progress/Completed) |
-| Task Details | Description, owner, dependencies |
-| Unified Timeline | Integrated display of inbox + session logs |
-| Agent Status Inference | Infer status from task state and activity time (working/idle/waiting/completed/error) |
-| Activity Feed | Real-time agent activity history |
-| Auto Update | HTTP polling with configurable interval (5s-60s) |
-| Dark Mode | Theme switching support |
+For detailed information, refer to the documents in `docs/spec/`:
 
----
-
-## Prerequisites
-
-### Required Environment
-
-| Software | Version | Check Command |
-|----------|---------|---------------|
-| Python | 3.11+ | `python --version` |
-| Node.js | 18+ | `node --version` |
-| npm | 9+ | `npm --version` |
-
-### Claude Code Environment
-
-- Claude Code installed
-- Agent Teams feature in use
-- `~/.claude/` directory exists
+| Document | Content |
+|----------|---------|
+| [architecture.md](docs/spec/architecture.md) | Architecture design, component structure, data flow |
+| [system-design.md](docs/spec/system-design.md) | System design, API specifications, data models |
+| [frontend-tech-stack.md](docs/spec/frontend-tech-stack.md) | Frontend technology stack details |
+| [backend-tech-stack.md](docs/spec/backend-tech-stack.md) | Backend technology stack details |
+| [feature-specification.md](docs/spec/feature-specification.md) | Feature specification details |
+| [user-guide.md](docs/spec/user-guide.md) | User guide details |
+| [ut-plan.md](docs/spec/ut-plan.md) | Unit test plan |
+| [qa-strategy.md](docs/spec/qa-strategy.md) | QA strategy |
 
 ---
 
-## Installation
+## Tech Stack
 
-### Step 1: Clone Repository
+### Backend
 
-```bash
-git clone <repository-url>
-cd cc-agent-teams-action-monitor
-```
+| Category | Technology |
+|----------|------------|
+| Language | Python 3.11+ |
+| Framework | FastAPI 0.109+ |
+| Data Validation | Pydantic 2.5+ |
+| File Watching | watchdog 4.0+ |
 
-### Step 2: Backend Setup
+### Frontend
 
-```bash
-cd backend
-pip install -e ".[dev]"
+| Category | Technology |
+|----------|------------|
+| Language | TypeScript 5.3+ |
+| Framework | React 18 |
+| Bundler | Vite 5+ |
+| CSS | Tailwind CSS 3.4+ |
+| State Management | Zustand 5.0.2+ |
+| Data Fetching | TanStack Query 5.90.21+ |
 
-# Verify installation
-python -c "from app.main import app; print('Backend setup completed!')"
-```
-
-### Step 3: Frontend Setup
-
-```bash
-cd ../frontend
-npm install
-
-# Verify installation
-npm run build
-```
+> For detailed version information, see [docs/spec/frontend-tech-stack.md](docs/spec/frontend-tech-stack.md) and [docs/spec/backend-tech-stack.md](docs/spec/backend-tech-stack.md)
 
 ---
 
-## Starting the Application
+## API Overview
 
-### Start Backend
+### Main Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/health` | GET | Health check |
+| `/api/teams` | GET | Team list (with status) |
+| `/api/teams/{name}` | GET | Team details |
+| `/api/teams/{name}` | DELETE | Delete team (stopped only) |
+| `/api/tasks` | GET | Task list |
+| `/api/history` | GET | Unified timeline |
+| `/api/updates` | GET | Incremental updates |
+
+> For complete API specifications, see [docs/spec/system-design.md](docs/spec/system-design.md) §6
+
+---
+
+## Development Commands
+
+### Backend
 
 ```bash
 cd backend
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
 
-### Start Frontend
+# Start development server
+uvicorn app.main:app --reload
 
-In another terminal:
-
-```bash
-cd frontend
-npm run dev
-```
-
-### Access
-
-Open http://localhost:5173/ in your browser.
-
----
-
-## Screen Overview
-
-### Team Status
-
-| Badge | Status | Description |
-|-------|--------|-------------|
-| 🟢 active | Session log mtime ≤ 1 hour | Team is active |
-| ⚫ stopped | Session log mtime > 1 hour | Team stopped (deletable) |
-| ⚪ unknown | No session log | Status unknown |
-| ⚫ inactive | No members | No members present |
-
-### Agent Status
-
-| Display | Status | Description |
-|---------|--------|-------------|
-| 🔵 working | Has in_progress tasks | Working |
-| 💤 idle | No activity for 5+ minutes | Idle |
-| ⏳ waiting | Has blocked tasks | Waiting |
-| ✅ completed | All tasks completed | Completed |
-| ❌ error | No activity for 30+ minutes | Error state |
-
-### Polling Interval Adjustment
-
-Adjust polling interval from the header:
-- 5s / 10s / 20s / 30s (default) / 60s
-- staleTime: 10s (cache validity period)
-
----
-
-## Operations
-
-### Select Team
-
-1. Click on a team card
-2. Selected team is highlighted
-3. Click again to deselect
-
-### Delete Team
-
-1. Click the 🗑️ icon on a stopped team card
-2. Confirm deletion in the dialog
-3. Team config, tasks, and session logs are deleted
-
-**Note**: Active teams cannot be deleted.
-
-### Change Polling Interval
-
-1. Use the polling interval selector in the header
-2. Select from 5s to 60s
-3. Default is 30s
-
-### View Tasks
-
-Tasks are color-coded by status:
-
-| Status | Color | Description |
-|--------|-------|-------------|
-| Pending | Gray | Not started |
-| In Progress | Blue | In progress |
-| Completed | Green | Completed |
-
----
-
-## API Endpoints
-
-### Health Check
-
-```http
-GET /api/health
-```
-
-### Team List
-
-```http
-GET /api/teams
-```
-
-### Team Details
-
-```http
-GET /api/teams/{team_name}
-```
-
-### Team Inbox
-
-```http
-GET /api/teams/{team_name}/inboxes
-```
-
-### Delete Team
-
-```http
-DELETE /api/teams/{team_name}
-```
-
-**Condition**: Only stopped teams can be deleted
-
-### Unified Timeline
-
-```http
-GET /api/history?team_name={team_name}&limit=50&types=message,task_assignment
-```
-
-### Incremental Updates
-
-```http
-GET /api/updates?team_name={team_name}&since=2026-02-23T11:00:00Z
-```
-
-### Task List
-
-```http
-GET /api/tasks
-```
-
----
-
-## Development
-
-### Run Tests
-
-```bash
-# Backend tests
-cd backend
-pytest                    # Run all tests
-pytest -v                 # Verbose output
+# Run tests
+pytest                    # All tests
 pytest --cov=app          # With coverage
-
-# Frontend tests
-cd frontend
-npm run test              # Run tests
+pytest tests/test_api_teams.py -v  # Individual test
 ```
 
-### Development Commands
+### Frontend
 
 ```bash
-# Backend (with hot reload)
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+cd frontend
 
-# Frontend (with HMR)
+# Start development server
 npm run dev
 
 # Type check
 npx tsc --noEmit
 
-# Build
+# Run tests
+npm run test
+npm run test:coverage     # With coverage
+
+# Production build
 npm run build
 ```
+
+---
+
+## Troubleshooting
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Teams not displayed | `~/.claude/teams/` is empty | Create a team in Claude Code |
+| HTTP connection error | Backend stopped | Restart the backend |
+| Page not loading | Frontend not started | Run `npm run dev` |
+| Real-time updates not working | Port blocked | Check firewall settings |
+
+> For details, see [docs/spec/user-guide.md](docs/spec/user-guide.md) §Troubleshooting
 
 ---
 
@@ -302,57 +222,11 @@ npm run build
 
 ---
 
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    Frontend (React)                                  │
-│  ┌───────────┐  ┌───────────┐  ┌────────────────────────────────┐  │
-│  │ Components│  │  Hooks    │  │  Types                         │  │
-│  │ - TeamCard│  │ - useTeams│  │  - Team, Task, Message         │  │
-│  │ - TaskCard│  │ - useTasks│  │                                │  │
-│  └───────────┘  └───────────┘  └────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
-         │ HTTP/REST              │ HTTP Polling
-         ▼                        ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    Backend (FastAPI)                                 │
-│  ┌───────────┐  ┌───────────┐  ┌────────────────────────────────┐  │
-│  │API Routes │  │ Cache     │  │ File Watcher Service           │  │
-│  │ /api/teams│  │ Service   │  │ - Session log monitoring       │  │
-│  │ /api/tasks│  │ - 30s TTL │  │ - Cache invalidation           │  │
-│  └───────────┘  └───────────┘  └────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
-         │
-         ▼ File monitoring (watchdog)
-┌─────────────────────────────────────────────────────────────────────┐
-│                  ~/.claude/ Directory                                │
-│  ├── teams/{team_name}/config.json      # Team config               │
-│  │   └── inboxes/{agent_name}.json      # Agent inbox               │
-│  ├── tasks/{team_name}/{task_id}.json   # Task definitions          │
-│  └── projects/{project-hash}/{sessionId}.jsonl  # Session logs      │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Troubleshooting
-
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| Teams not displayed | `~/.claude/teams/` is empty | Create a team in Claude Code |
-| HTTP connection error | Backend stopped | Restart the backend |
-| Page not loading | Frontend not started | Run `npm run dev` |
-| Real-time updates not working | Port blocked | Check firewall settings |
-
----
-
 ## License
 
 MIT License
 
 ---
 
-*Created: 2026-02-16*
 *Last Updated: 2026-02-24*
 *Version: 2.1.0*

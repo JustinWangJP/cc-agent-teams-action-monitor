@@ -10,21 +10,30 @@
 | UIライブラリ | React | 18.2.0 | コンポーネントベースUI |
 | バンドラー | Vite | 5.0.0+ | 高速ビルド・HMR |
 | CSSフレームワーク | Tailwind CSS | 3.4.0+ | ユーティリティファーストCSS |
-| 状態管理 | Zustand | 4.5.0+ | グローバル状態管理 |
-| データフェッチ | TanStack Query | 最新 | サーバー状態管理・キャッシュ |
-| Markdown | react-markdown | 最新 | Markdownレンダリング |
-| Markdown拡張 | remark-gfm | 最新 | GitHub Flavored Markdown |
-| 日付処理 | date-fns | 最新 | 日付フォーマット・操作 |
-| アイコン | lucide-react | 最新 | アイコンライブラリ |
+| 状態管理 | Zustand | 5.0.2+ | グローバル状態管理 |
+| データフェッチ | TanStack Query | 5.90.21+ | サーバー状態管理・キャッシュ |
+| Markdown | react-markdown | 10.1.0+ | Markdownレンダリング |
+| Markdown拡張 | remark-gfm | 4.0.1+ | GitHub Flavored Markdown |
+| 日付処理 | date-fns | 4.1.0+ | 日付フォーマット・操作 |
+| アイコン | lucide-react | 0.344.0+ | アイコンライブラリ |
+| 仮想スクロール | @tanstack/react-virtual | 3.10.8+ | 大量データの仮想スクロール |
+| グラフ可視化 | D3.js | 7.8.5+ | ネットワーク/依存グラフ |
+| タイムライン | vis-timeline | 7.7.3+ | 時系列データ表示 |
+| UIコンポーネント | Radix UI | 1.x | アクセシブルUIコンポーネント |
 
 ### 1.2 開発用依存関係
 
 | 技術 | バージョン | 用途 |
 |------|-----------|------|
-| Vitest | 最新 | ユニットテスト |
-| @testing-library/react | 最新 | Reactコンポーネントテスト |
-| @testing-library/jest-dom | 最新 | DOMアサーション拡張 |
-| jsdom | 最新 | DOM環境シミュレート |
+| Vitest | 1.1.0+ | ユニットテスト |
+| @testing-library/react | 14.1.2+ | Reactコンポーネントテスト |
+| @testing-library/jest-dom | 6.4.0+ | DOMアサーション拡張 |
+| @testing-library/user-event | 14.5.1+ | ユーザーイベントシミュレート |
+| jsdom | 24.0.0+ | DOM環境シミュレート |
+| @vitest/coverage-v8 | 1.1.0+ | カバレッジレポート |
+| @vitest/ui | 1.1.0+ | テストUI |
+| Puppeteer | 24.37.3+ | E2Eテスト |
+| Playwright | 1.58.2+ | ブラウザ自動化テスト |
 
 ---
 

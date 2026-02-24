@@ -75,8 +75,8 @@
 | レイヤー | コンポーネント | 責務 |
 |----------|---------------|------|
 | プレゼンテーション | React Components | UI描画、ユーザー操作 |
-| 状態管理 | Zustand Store | グローバル状態管理、ポーリング制御 |
-| データ取得 | Custom Hooks | API通信、React Query キャッシュ |
+| 状態管理 | Zustand Store (v5.0.2+) | グローバル状態管理、ポーリング制御 |
+| データ取得 | Custom Hooks + TanStack Query (v5.90.21+) | API通信、サーバー状態キャッシュ |
 | 通信 | HTTP ポーリング | 定期的なデータ更新（5秒〜60秒） |
 | API | FastAPI Routes | エンドポイント処理 |
 | キャッシュ | CacheService | メモリキャッシュ管理（TTL付き） |
