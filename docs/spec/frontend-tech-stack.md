@@ -228,7 +228,7 @@ frontend/src/
 | useTasks() | GET /api/tasks | タスク一覧取得（ポーリング） |
 | useInbox() | GET /api/teams/{name}/inboxes | インボックス取得（ポーリング） |
 | useAgentMessages() | GET /api/teams/{name}/inboxes/{agent} | エージェント別メッセージ取得 |
-| useUnifiedTimeline() | GET /api/history | 統合タイムライン取得（ポーリング） |
+| useUnifiedTimeline() | GET /api/timeline/{team_name}/history | 統合タイムライン取得（ポーリング） |
 
 ### 5.2 ポーリング実装例
 

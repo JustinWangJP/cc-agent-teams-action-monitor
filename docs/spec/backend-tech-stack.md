@@ -263,8 +263,8 @@ class FileWatcherService:
 | エンドポイント | メソッド | 説明 |
 |---------------|---------|------|
 | `/api/teams/{team_name}/messages/timeline` | GET | メッセージタイムライン |
-| `/api/history` | GET | 統合履歴取得 |
-| `/api/updates` | GET | 差分更新取得 |
+| `/api/timeline/{team_name}/history` | GET | 統合履歴取得 |
+| `/api/timeline/{team_name}/updates` | GET | 差分更新取得 |
 | `/api/file-changes/{team}` | GET | ファイル変更一覧 |
 
 ### 5.2 チーム削除 API 詳細

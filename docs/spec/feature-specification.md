@@ -1029,7 +1029,6 @@ interface TimelineData {
 | FastAPI | 0.109+ | Webフレームワーク |
 | Pydantic | 2.5+ | データ検証 |
 | watchdog | 4.0+ | ファイル監視 |
-| websockets | 12.0+ | WebSocket |
 
 ### 9.2 フロントエンド
 
@@ -1042,7 +1041,7 @@ interface TimelineData {
 | **vis-timeline** | 7.x | タイムライン可視化 |
 | **D3.js** | 7.x | ネットワーク/依存グラフ |
 | **Radix UI** | 1.x | アクセシブルコンポーネント |
-| **Zustand** | 4.x | 状態管理 |
+| **Zustand** | 5.x | 状態管理 |
 | **Framer Motion** | 11.x | アニメーション |
 
 ---

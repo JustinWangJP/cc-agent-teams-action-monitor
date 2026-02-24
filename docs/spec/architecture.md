@@ -272,8 +272,8 @@ interface DashboardState {
 | /api/tasks | GET | list_tasks | タスク一覧 |
 | /api/tasks/{team}/{task_id} | GET | get_task | タスク詳細 |
 | /api/agents | GET | list_agents | エージェント一覧 |
-| /api/history | GET | get_history | 統合履歴取得 |
-| /api/updates | GET | get_updates | 差分更新取得 |
+| /api/timeline/{team_name}/history | GET | get_history | 統合履歴取得 |
+| /api/timeline/{team_name}/updates | GET | get_updates | 差分更新取得 |
 | /api/file-changes/{team} | GET | get_file_changes | ファイル変更一覧 |
 
 ### 4.3 サービス構成
@@ -356,9 +356,9 @@ interface DashboardState {
 | useTeams | GET /api/teams | 30秒 |
 | useTasks | GET /api/tasks | 30秒 |
 | useInbox | GET /api/teams/{name}/inboxes | 30秒 |
-| useUnifiedTimeline | GET /api/history | 30秒 |
+| useUnifiedTimeline | GET /api/timeline/{team_name}/history | 30秒 |
 
-**差分更新**: `/api/updates?since={timestamp}` で前回以降の変更のみ取得可能
+**差分更新**: `/api/timeline/{team_name}/updates?since={timestamp}` で前回以降の変更のみ取得可能
 
 ---
 
