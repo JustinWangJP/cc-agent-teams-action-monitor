@@ -1,5 +1,7 @@
 # UT計画・テスト仕様書
 
+**言語:** [English](./ut-plan.en.md) | [日本語](./ut-plan.md) | [中文](./ut-plan.zh.md)
+
 ## 1. テスト概要
 
 ### 1.1 テスト目的
