@@ -41,8 +41,8 @@ class TimelineService:
         先頭に "-" を付与し、先頭の "/" を削除して "/" を "-" に置換します。
 
         例:
-            cwd = "/Users/aegeanwang/Coding/workspaces/python/working/cc-agent-teams-action-monitor"
-            → "-Users-aegeanwang-Coding-workspaces-python-working-cc-agent-teams-action-monitor"
+            cwd = "/Users/xxxx/Coding/workspaces/python/working/cc-agent-teams-action-monitor"
+            → "-Users-xxxxx-Coding-workspaces-python-working-cc-agent-teams-action-monitor"
 
         Args:
             cwd: 作業ディレクトリの絶対パス

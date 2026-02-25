@@ -264,21 +264,21 @@ async function runUATTests() {
     await page.setViewport({ width: 1920, height: 1080 });
     await sleep(500);
     await page.screenshot({
-      path: '/Users/aegeanwang/Coding/workspaces/python/working/cc-agent-teams-action-monitor/frontend/e2e/screenshots/dashboard-desktop.png',
+      path: '/Users/xxxxx/Coding/workspaces/python/working/cc-agent-teams-action-monitor/frontend/e2e/screenshots/dashboard-desktop.png',
       fullPage: true
     });
 
     await page.setViewport({ width: 768, height: 1024 });
     await sleep(500);
     await page.screenshot({
-      path: '/Users/aegeanwang/Coding/workspaces/python/working/cc-agent-teams-action-monitor/frontend/e2e/screenshots/dashboard-tablet.png',
+      path: '/Users/xxxxx/Coding/workspaces/python/working/cc-agent-teams-action-monitor/frontend/e2e/screenshots/dashboard-tablet.png',
       fullPage: true
     });
 
     await page.setViewport({ width: 375, height: 667 });
     await sleep(500);
     await page.screenshot({
-      path: '/Users/aegeanwang/Coding/workspaces/python/working/cc-agent-teams-action-monitor/frontend/e2e/screenshots/dashboard-mobile.png',
+      path: '/Users/xxxxx/Coding/workspaces/python/working/cc-agent-teams-action-monitor/frontend/e2e/screenshots/dashboard-mobile.png',
       fullPage: true
     });
     logTest('スクリーンショット保存', 'PASS', '3サイズのスクリーンショットを保存しました');
