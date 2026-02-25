@@ -51,9 +51,9 @@ disable-model-invocation: true
 - **[Section名]**: [選定理由]
 
 ### メンバー構成
-| ロール | 人数 | 担当タスク | 利用Skills | MCP Servers |
-|--------|------|-----------|------------|-------------|
-| [ロール名] | [N]名 | [タスク概要] | [Skills] | [MCP Servers] |
+| ロール | 人数 | 担当タスク | 利用Skills | MCP Servers | AgentType |
+|--------|------|-----------|------------|-------------|-------------|
+| [ロール名] | [N]名 | [タスク詳細(箇条書き)] | [Skills] | [MCP Servers] | [AgenType] |
 
 ### タスク配分
 ```
@@ -96,6 +96,7 @@ disable-model-invocation: true
 - Sectionへの依頼タスクが不明確
 - 不要なメンバーを追加する（YAGNI違反）
 - 体制承認なしに実装を開始する
+- メンバー構成には利用Skills、MCP Server、AgentTypeの不記載
 
 ---
 
@@ -129,11 +130,16 @@ disable-model-invocation: true
 
 - **役割:** Section全体リード。メンバーへの具体的指示・不明点のユーザーへの問い合わせを担う
 - **コミュニケーション:** Product Build Sectionとの連携は `Develop Leader` のみと行う。Build Sectionメンバーへの直接指示は禁止
+- **AgentType:** `analyzer`
+- **Skills:** `ultrathink`, `sequential-thinking`
+- **MCP Servers:** `perplexity`
 
 #### E2E Member（上限3名）
 
 - **役割:** Product OwnerからアサインされたE2Eテストタスクを高品質・高効率で実行する
 - **コミュニケーション:** `Product Owner` のみへ報告。他メンバーへの直接指示は禁止
+- **AgentType:** `qa`
+- **Skills:** `ui-ux-pro-max`, `chrome-devtools`
 - **MCP Servers:** `zai-mcp-server`, `chrome-devtools`
 
 ---
@@ -142,14 +148,18 @@ disable-model-invocation: true
 
 #### Develop Leader（1名固定）
 
-- **役割:** Section全体リード。メンバーへの具体的指示・Product Ownerからの指摘対応・メンバー課題へのフィードバックを担う。不明点はMCP Serverを介してWeb調査し、まとめた内容をメンバーへ共有する
+- **役割:** Section全体リード。メンバーへの具体的指示・Product Ownerからの指摘対応・メンバー課題へのフィードバックを担う。不明点はMCP Serverを介してWeb調査し、まとめた内容をメンバーへ共有する。Developer間の作業を調整する。メンバーの実装コードに対してレビューを実施する。
 - **コミュニケーション:** Product Design Sectionとの連携は `Product Owner` のみと行う。Design Sectionメンバーへの直接指示は禁止
+- **AgentType:** `multi-agent-coordinator`
+- **Skills:** `ultrathink`, `sequential-thinking`, `tailwind-design-system`, `ui-ux-pro-max`, `vercel-react-best-practices`, `error-handling-patterns`, `fastapi-templates`, `microsoft-agent-framework`
+- **MCP Servers:** `perplexity`, `context7`, `zai-mcp-server`
 
 #### Frontend Developer（上限3名）
 
 - **役割:** UI/UX・React・Tailwindなどフロントエンド実装を担う
 - **制約:** 同一ファイルへの複数名同時編集は禁止
 - **コミュニケーション:** `Develop Leader` のみへ報告。他メンバーへの連絡は必ず `Develop Leader` を経由する
+- **AgentType:** `frontend`
 - **Skills:** `tailwind-design-system`, `ui-ux-pro-max`, `vercel-react-best-practices`, `error-handling-patterns`, `chrome-devtools`
 - **MCP Servers:** `perplexity`, `context7`, `github`, `zai-mcp-server`, `chrome-devtools`
 
@@ -158,6 +168,7 @@ disable-model-invocation: true
 - **役割:** Python・Java・データベース設計などバックエンド実装を担う
 - **制約:** 同一ファイルへの複数名同時編集は禁止
 - **コミュニケーション:** `Develop Leader` のみへ報告。他メンバーへの連絡は必ず `Develop Leader` を経由する
+- **AgentType:** `frontend`
 - **Skills:** `fastapi-templates`, `microsoft-agent-framework`, `error-handling-patterns`
 - **MCP Servers:** `perplexity`, `context7`
 
@@ -263,4 +274,5 @@ disable-model-invocation: true
 | **YAGNI徹底** | 不要なSection・メンバーを追加しない |
 | **Leaderルール** | 選定した各SectionにSection Leaderを必ずアサインする |
 | **コミュニケーション厳守** | Section間通信はリード同士のみ。メンバーの直接横断通信は禁止 |
-| **利用SkillsとMCP Serverの明示提示** |　体制内の各teammatesは利用する予定のSkillsとMCP Serversを明確に提示する。メンバープロフィールに定義した各メンバーが保持しているSkillsとMCP Servers以外に利用することが厳禁。 |
+| **利用Skills, MCP Server, AgentTypeの明示提示** |体制内の各teammatesは利用する予定のSkillsとMCP Servers、AgentTypeを明確に提示する。メンバープロフィールに定義した各メンバーが保持しているSkillsとMCP Servers、AgentType以外に定義することが厳禁。 |
+| **提示フォーマット徹底** | 必ず提示フォーマットに基づき体制提案を出力する |

@@ -13,8 +13,15 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Copy, X, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale/ja';
-import type { ParsedMessage } from '@/types/message';
+import type { ParsedMessage, UnifiedTimelineEntry } from '@/types/message';
 import { clsx } from 'clsx';
+
+/**
+ * 統合メッセージ型。
+ *
+ * ParsedMessage または UnifiedTimelineEntry のいずれか。
+ */
+type TimelineMessage = ParsedMessage | UnifiedTimelineEntry;
 
 /**
  * メッセージタイプに対応するアイコンを取得。
@@ -29,6 +36,10 @@ const getMessageTypeIcon = (type: string): string => {
     plan_approval_response: '✅',
     task_assignment: '📝',
     shutdown_approved: '✅',
+    // session 由来のタイプを追加
+    user_message: '👤',
+    assistant_message: '🤖',
+    thinking: '💭',
   };
   return icons[type] || '❓';
 };
@@ -46,6 +57,10 @@ const getMessageTypeName = (type: string): string => {
     plan_approval_response: 'プラン承認応答',
     task_assignment: 'タスク割り当て',
     shutdown_approved: 'シャットダウン了承',
+    // session 由来のタイプを追加
+    user_message: 'ユーザーメッセージ',
+    assistant_message: 'AIアシスタント応答',
+    thinking: '思考プロセス',
   };
   return names[type] || '不明';
 };
@@ -66,6 +81,13 @@ const safeFormatDate = (timestamp: string | number | Date | undefined): string =
     return '無効な日時';
   }
 };
+
+/**
+ * UnifiedTimelineEntry かどうかを判定する型ガード。
+ */
+function isUnifiedTimelineEntry(message: TimelineMessage): message is UnifiedTimelineEntry {
+  return 'source' in message && message.source === 'session';
+}
 
 /**
  * メタ情報アイテムコンポーネント。
@@ -91,7 +113,7 @@ const MetaItem: React.FC<MetaItemProps> = ({ label, value, icon }) => (
  */
 export interface MessageDetailPanelProps {
   /** メッセージデータ */
-  message: ParsedMessage | null;
+  message: TimelineMessage | null;
   /** パネルが開いているかどうか */
   isOpen: boolean;
   /** 閉じる時のコールバック */
@@ -137,9 +159,14 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
   const handleCopy = useCallback(async () => {
     if (!message) return;
 
+    // UnifiedTimelineEntry の場合は content、ParsedMessage の場合は text を使用
+    const messageText = isUnifiedTimelineEntry(message)
+      ? message.content
+      : message.text;
+
     const textToCopy =
       message.parsedType === 'message'
-        ? message.text
+        ? messageText
         : JSON.stringify(message.parsedData, null, 2);
 
     try {
@@ -152,6 +179,11 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
 
   if (!message) return null;
 
+  // UnifiedTimelineEntry の場合は content、ParsedMessage の場合は text を使用
+  const messageContent = isUnifiedTimelineEntry(message)
+    ? message.content
+    : message.text;
+
   const typeIcon = getMessageTypeIcon(message.parsedType);
   const typeName = getMessageTypeName(message.parsedType);
   const isJsonMessage = message.parsedType !== 'message';
@@ -159,7 +191,7 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
 
   // メッセージ本文
   const messageText =
-    message.parsedType === 'message' ? message.text : message.summary || message.text;
+    message.parsedType === 'message' ? messageContent : message.summary || messageContent;
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>

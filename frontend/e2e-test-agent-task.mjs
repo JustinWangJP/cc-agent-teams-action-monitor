@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const screenshotDir = '/Users/aegeanwang/Coding/workspaces/python/working/cc-agent-teams-action-monitor/docs/plans/e2e-member-b-screenshots';
+const screenshotDir = '/Users/xxxxx/Coding/workspaces/python/working/cc-agent-teams-action-monitor/docs/plans/e2e-member-b-screenshots';
 
 async function runE2ETest() {
   const browser = await chromium.launch({ headless: false });

@@ -10,6 +10,7 @@
 'use client';
 
 import { memo, useCallback, useState, type ReactNode } from 'react';
+import { Info } from 'lucide-react';
 import type { ParsedMessage, UnifiedTimelineEntry, FileChangeInfo } from '@/types/message';
 import { getMessageTypeConfig, getMessageTypeColorClass, renderMessageByType } from '@/types/message';
 import { clsx } from 'clsx';
@@ -32,6 +33,27 @@ function isUnifiedTimelineEntry(message: TimelineMessage): message is UnifiedTim
   // source が 'session' の場合は UnifiedTimelineEntry
   return 'source' in message && message.source === 'session';
 }
+
+/**
+ * 思考型メッセージかどうかを判定するヘルパー関数。
+ *
+ * thinking タイプ、または assistant_message で details.thinking を持つメッセージを思考型とみなす。
+ *
+ * @param message - 判定対象のメッセージ
+ * @returns 思考型メッセージの場合は true
+ */
+const isThinkingMessage = (message: TimelineMessage): boolean => {
+  if (!isUnifiedTimelineEntry(message) || message.source !== 'session') {
+    return false;
+  }
+  if (message.parsedType === 'thinking') {
+    return true;
+  }
+  if (message.parsedType === 'assistant_message' && message.details?.thinking) {
+    return true;
+  }
+  return false;
+};
 
 /**
  * メッセージタイプに対応するアイコンを取得。
@@ -510,6 +532,38 @@ const MarkdownRenderer = memo<MarkdownRendererProps>(({ content, className }) =>
 MarkdownRenderer.displayName = 'MarkdownRenderer';
 
 /**
+ * 詳細表示ボタンコンポーネント。
+ *
+ * 思考型メッセージの詳細パネルを開くためのボタン。
+ */
+interface DetailButtonProps {
+  onClick: () => void;
+}
+
+const DetailButton = memo<DetailButtonProps>(({ onClick }) => (
+  <button
+    type="button"
+    onClick={(e) => {
+      e.stopPropagation();
+      onClick();
+    }}
+    className={clsx(
+      'inline-flex items-center gap-1 px-2 py-1 text-xs',
+      'text-slate-600 dark:text-slate-400',
+      'hover:text-blue-600 dark:hover:text-blue-400',
+      'hover:bg-slate-100 dark:hover:bg-slate-800',
+      'rounded transition-colors'
+    )}
+    aria-label="メッセージ詳細を表示"
+  >
+    <Info className="w-3 h-3" />
+    <span>詳細</span>
+  </button>
+));
+
+DetailButton.displayName = 'DetailButton';
+
+/**
  * Session 由来の詳細表示コンポーネント。
  *
  * UnifiedTimelineEntry の details フィールドを表示します。
@@ -539,9 +593,16 @@ const SessionDetails = memo<SessionDetailsProps>(({ details, parsedType: _parsed
         <details
           className="bg-slate-100 dark:bg-slate-800 rounded p-2 group/details"
           open={isThinkingExpanded}
-          onToggle={(e) => setIsThinkingExpanded((e.target as HTMLDetailsElement).open)}
+          onToggle={(e) => {
+            setIsThinkingExpanded((e.target as HTMLDetailsElement).open);
+            e.preventDefault();
+          }}
+          onClick={(e) => e.stopPropagation()}
         >
-          <summary className="cursor-pointer text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 select-none">
+          <summary
+            className="cursor-pointer text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 select-none"
+            onClick={(e) => e.stopPropagation()}
+          >
             <span className="inline-flex items-center gap-1">
               💭 思考プロセス
               <span className="text-xs opacity-50 group-open/details:rotate-90 transition-transform">▶</span>
@@ -791,6 +852,10 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
       : undefined;
 
     const handleClick = useCallback(() => {
+      // 思考型メッセージの場合はクリックを無視
+      if (isThinkingMessage(message)) {
+        return;
+      }
       onClick?.(message);
     }, [message, onClick]);
 
@@ -803,21 +868,30 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
           'hover:bg-slate-50 dark:hover:bg-slate-800/50',
           isSelected && 'bg-blue-50 dark:bg-blue-900/20',
           isHighlighted && 'bg-yellow-50 dark:bg-yellow-900/20 ring-2 ring-yellow-400 dark:ring-yellow-600',
-          'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-400',
+          // 思考型メッセージはクリック不可、それ以外はクリック可能
+          isThinkingMessage(message) ? 'cursor-default' : 'cursor-pointer',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-400',
           // session は左寄せ、inbox は右寄せ
           isSession ? 'justify-start' : 'justify-end'
         )}
         onClick={handleClick}
-        role="button"
-        tabIndex={0}
+        // 思考型メッセージはボタンとして扱わない
+        tabIndex={isThinkingMessage(message) ? -1 : 0}
         onKeyDown={(e) => {
+          // 思考型メッセージはキーボード操作で詳細パネルを開かない
+          if (isThinkingMessage(message)) {
+            return;
+          }
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             handleClick();
           }
         }}
         aria-label={`${displayName}からのメッセージ: ${messageText.slice(0, 50)}${messageText.length > 50 ? '...' : ''}`}
-        aria-pressed={isSelected ? 'true' : 'false'}
+        {...(!isThinkingMessage(message) && {
+          role: 'button',
+          'aria-pressed': isSelected ? 'true' : 'false',
+        })}
       >
         {/* session は左配置（アバター→コンテンツ）、inbox は右配置（コンテンツ→アバター） */}
         {isSession ? (
@@ -911,6 +985,12 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
                 details={message.details}
                 parsedType={message.parsedType}
               />
+            )}
+            {/* 思考型メッセージの詳細ボタン */}
+            {isThinkingMessage(message) && (
+              <div className="mt-2 flex justify-end">
+                <DetailButton onClick={() => onClick?.(message)} />
+              </div>
             )}
           </div>
 
