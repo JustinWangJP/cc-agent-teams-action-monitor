@@ -25,8 +25,7 @@
       "pending": "未着手",
       "completed": "完了",
       "other": "その他"
-    },
-    "no_tasks": "タスクがありません"
+    }
   },
   "columns": {
     "pending": "保留中",

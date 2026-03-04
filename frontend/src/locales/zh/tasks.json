@@ -25,8 +25,7 @@
       "pending": "待处理",
       "completed": "已完成",
       "other": "其他"
-    },
-    "no_tasks": "没有任务"
+    }
   },
   "columns": {
     "pending": "待处理",
