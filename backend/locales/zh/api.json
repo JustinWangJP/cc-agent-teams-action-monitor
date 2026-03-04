@@ -1,0 +1,22 @@
+{
+  "errors": {
+    "team_not_found": "未找到团队 '{team}'",
+    "team_config_not_found": "未找到团队配置",
+    "team_tasks_not_found": "未找到团队任务",
+    "inbox_not_found": "未找到代理 '{agent}' 的收件箱",
+    "invalid_timestamp": "无效的时间戳格式: {timestamp}",
+    "cache_not_initialized": "缓存服务未初始化",
+    "file_not_found": "未找到文件: {path}",
+    "invalid_team_name": "无效的团队名称: {name}",
+    "invalid_agent_name": "无效的代理名称: {name}",
+    "cannot_delete_active_team": "无法删除状态为 '{status}' 的团队。只能删除状态为 stopped、inactive 或 unknown 的团队。",
+    "delete_error": "删除团队 '{team}' 时发生错误: {error}",
+    "delete_success": "已删除团队 '{team}'"
+  },
+  "delete": {
+    "success_team": "已删除团队目录: {team}",
+    "success_tasks": "已删除任务目录: {dir}",
+    "success_session": "已删除会话文件: {file}",
+    "failed": "删除团队 '{team}' 失败: {error}"
+  }
+}

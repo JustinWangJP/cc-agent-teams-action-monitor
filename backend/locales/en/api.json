@@ -1,0 +1,22 @@
+{
+  "errors": {
+    "team_not_found": "Team '{team}' not found",
+    "team_config_not_found": "Team configuration not found",
+    "team_tasks_not_found": "Team tasks not found",
+    "inbox_not_found": "Inbox for agent '{agent}' not found",
+    "invalid_timestamp": "Invalid timestamp format: {timestamp}",
+    "cache_not_initialized": "Cache service not initialized",
+    "file_not_found": "File not found: {path}",
+    "invalid_team_name": "Invalid team name: {name}",
+    "invalid_agent_name": "Invalid agent name: {name}",
+    "cannot_delete_active_team": "Cannot delete team with status '{status}'. Only teams with stopped, inactive, or unknown status can be deleted.",
+    "delete_error": "Error occurred while deleting team '{team}': {error}",
+    "delete_success": "Deleted team '{team}'"
+  },
+  "delete": {
+    "success_team": "Deleted team directory: {team}",
+    "success_tasks": "Deleted tasks directory: {dir}",
+    "success_session": "Deleted session file: {file}",
+    "failed": "Failed to delete team '{team}': {error}"
+  }
+}
