@@ -3,7 +3,7 @@
 メッセージのタイムライン表示、フィルタリング、検索機能を提供します。
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pathlib import Path
 import json
 from datetime import datetime
@@ -13,6 +13,7 @@ from app.config import settings
 from app.models.timeline import TimelineData, TimelineItem, TimelineGroup, MessageType
 from app.models.model import ModelListResponse, ModelConfig
 from app.models.chat import ChatMessage, ChatMessageList
+from app.services.i18n_service import i18n
 
 router = APIRouter()
 
@@ -78,11 +79,12 @@ MODEL_CONFIGS = [
 # ヘルパー関数
 # ============================================================================
 
-def get_team_dir(team_name: str) -> Path:
+def get_team_dir(team_name: str, lang: str = "en") -> Path:
     """チームディレクトリのパスを取得する。
 
     Args:
         team_name: チーム名
+        lang: 言語コード
 
     Returns:
         チームディレクトリのパス
@@ -93,7 +95,10 @@ def get_team_dir(team_name: str) -> Path:
     """
     team_dir = settings.teams_dir / team_name
     if not team_dir.exists():
-        raise HTTPException(status_code=404, detail="Team not found")
+        raise HTTPException(
+            status_code=404,
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name)
+        )
     return team_dir
 
 
@@ -411,6 +416,7 @@ async def get_cache_stats():
 
 @router.get("/teams/{team_name}/messages/timeline", response_model=TimelineData)
 async def get_message_timeline(
+    request: Request,
     team_name: str,
     start_time: Optional[str] = Query(None, description="開始時刻 (ISO 8601)"),
     end_time: Optional[str] = Query(None, description="終了時刻 (ISO 8601)"),
@@ -428,6 +434,7 @@ async def get_message_timeline(
     時間範囲、送信者、タイプ、検索キーワードでフィルタリング可能です。
 
     Args:
+        request: FastAPI リクエストオブジェクト（言語判定用）
         team_name: チーム名
         start_time: 開始時刻 (ISO 8601形式)
         end_time: 終了時刻 (ISO 8601形式)
@@ -442,7 +449,8 @@ async def get_message_timeline(
     Returns:
         タイムラインデータ（アイテム、グループ、時間範囲）
     """
-    team_dir = get_team_dir(team_name)
+    lang = getattr(request.state, "language", "en")
+    team_dir = get_team_dir(team_name, lang)
     inboxes = await get_team_inboxes(team_dir, team_name)
 
     # 全メッセージを収集
@@ -535,6 +543,7 @@ async def get_message_timeline(
 
 @router.get("/teams/{team_name}/messages")
 async def get_messages(
+    request: Request,
     team_name: str,
     start_time: Optional[str] = Query(None, description="開始時刻 (ISO 8601)"),
     end_time: Optional[str] = Query(None, description="終了時刻 (ISO 8601)"),
@@ -549,6 +558,7 @@ async def get_messages(
     タイムライン形式ではなく、元のメッセージデータをそのまま返します。
 
     Args:
+        request: FastAPI リクエストオブジェクト（言語判定用）
         team_name: チーム名
         start_time: 開始時刻 (ISO 8601形式)
         end_time: 終了時刻 (ISO 8601形式)
@@ -561,7 +571,8 @@ async def get_messages(
     Returns:
         メッセージリスト
     """
-    team_dir = get_team_dir(team_name)
+    lang = getattr(request.state, "language", "en")
+    team_dir = get_team_dir(team_name, lang)
     inboxes = await get_team_inboxes(team_dir, team_name)
 
     # 全メッセージを収集
@@ -620,6 +631,7 @@ async def get_messages(
 
 @router.get("/teams/{team_name}/messages/chat", response_model=ChatMessageList)
 async def get_chat_messages(
+    request: Request,
     team_name: str,
     start_time: Optional[str] = Query(None, description="開始時刻 (ISO 8601)"),
     end_time: Optional[str] = Query(None, description="終了時刻 (ISO 8601)"),
@@ -637,6 +649,7 @@ async def get_chat_messages(
     秘密メッセージ（DM）の判定、閲覧可能エージェントの設定を含みます。
 
     Args:
+        request: FastAPI リクエストオブジェクト（言語判定用）
         team_name: チーム名
         start_time: 開始時刻 (ISO 8601形式)
         end_time: 終了時刻 (ISO 8601形式)
@@ -651,7 +664,8 @@ async def get_chat_messages(
     Returns:
         チャットメッセージリスト
     """
-    team_dir = get_team_dir(team_name)
+    lang = getattr(request.state, "language", "en")
+    team_dir = get_team_dir(team_name, lang)
     inboxes = await get_team_inboxes(team_dir, team_name)
 
     # チーム設定からメンバー情報を取得

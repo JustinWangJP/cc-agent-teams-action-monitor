@@ -12,6 +12,8 @@ from app.config import settings
 from app.api.routes import teams, tasks, messages, agents, timeline
 from app.services.file_watcher import FileWatcherService
 from app.services.cache_service import start_cache_service, stop_cache_service
+from app.services.i18n_service import i18n
+from app.middleware.language import LanguageMiddleware
 
 
 @asynccontextmanager
@@ -24,6 +26,9 @@ async def lifespan(app: FastAPI):
 
     """
     # Startup: Start services
+    # I18n サービスの初期化（シングルトンインスタンス作成）
+    _ = i18n  # インスタンス化を確実に行う
+
     watcher = FileWatcherService()
     await watcher.start()
     app.state.watcher = watcher
@@ -58,6 +63,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Language middleware (Accept-Language ヘッダー解析)
+app.add_middleware(LanguageMiddleware)
 
 # Include routers
 app.include_router(teams.router, prefix="/api/teams", tags=["teams"])

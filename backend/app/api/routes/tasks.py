@@ -4,7 +4,7 @@
 ~/.claude/tasks/ ディレクトリの JSON ファイルからデータを読み込みます。
 
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pathlib import Path
 import json
 import os
@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 
 from app.config import settings
 from app.models.task import Task, TaskSummary
+from app.services.i18n_service import i18n
 
 router = APIRouter()
 
@@ -99,13 +100,14 @@ async def list_tasks():
 
 
 @router.get("/team/{team_name}", response_model=list[Task])
-async def list_team_tasks(team_name: str):
+async def list_team_tasks(request: Request, team_name: str):
     """指定チームのタスク一覧を取得するエンドポイント。
 
     指定されたチーム名のタスクディレクトリから全タスクを読み込み、
     Task 形式（詳細版）で返します。チームが存在しない場合は 404 エラー。
 
     Args:
+        request: FastAPI リクエストオブジェクト（言語判定用）
         team_name: 取得対象のチーム名
 
     Returns:
@@ -115,10 +117,15 @@ async def list_team_tasks(team_name: str):
         HTTPException: チームが存在しない場合（404）
 
     """
+    lang = getattr(request.state, "language", "en")
+
     tasks = []
     team_task_dir = settings.tasks_dir / team_name
     if not team_task_dir.exists():
-        raise HTTPException(status_code=404, detail="Team tasks not found")
+        raise HTTPException(
+            status_code=404,
+            detail=i18n.t("api.errors.team_tasks_not_found", lang=lang)
+        )
 
     for task_file in team_task_dir.glob("*.json"):
         if task_file.name != ".lock":

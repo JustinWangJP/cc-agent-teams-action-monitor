@@ -6,10 +6,11 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.services.timeline_service import TimelineService
+from app.services.i18n_service import i18n
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,12 @@ router = APIRouter(prefix="/api/timeline", tags=["timeline"])
 
 # リクエスト・レスポンスモデル
 class UnifiedTimelineEntry(BaseModel):
-    """統合タイムラインエントリ."""
+    """統合タイムラインエントリのデータモデル。
+
+    inbox メッセージとセッションログを統合した単一のタイムラインエントリです。
+    送信者、受信者、タイムスタンプ、メッセージタイプ、パース済みデータを含みます。
+
+    """
     id: str
     content: str
     from_: str
@@ -36,7 +42,12 @@ class UnifiedTimelineEntry(BaseModel):
 
 
 class UnifiedTimelineResponse(BaseModel):
-    """統合タイムラインレスポンス."""
+    """統合タイムライン API のレスポンスモデル。
+
+    タイムラインエントリのリスト、最終タイムスタンプ、ページネーション情報を含みます。
+    has_more フラグで追加データの有無を、last_event_id で次ページのカーソルを提供します。
+
+    """
     items: list[UnifiedTimelineEntry]
     last_timestamp: str
     has_more: bool = False  # ページネーション：さらに古いエントリが存在するか
@@ -51,6 +62,7 @@ def _get_timeline_service() -> TimelineService:
 
 @router.get("/{team_name}/history", response_model=UnifiedTimelineResponse)
 async def get_timeline_history(
+    request: Request,
     team_name: str,
     limit: int = Query(100, ge=1, le=10000, description="最大取得件数"),
     types: Optional[str] = Query(None, description="カンマ区切りでタイプ指定（例: message,thinking,tool_use）"),
@@ -62,6 +74,7 @@ async def get_timeline_history(
     タイムスタンプの降順（新しい順）でソートされます。
 
     Args:
+        request: FastAPI リクエストオブジェクト（言語判定用）
         team_name: チーム名
         limit: 最大取得件数（1-500、デフォルト100）
         types: フィルタリングするタイプ（カンマ区切り）
@@ -74,11 +87,15 @@ async def get_timeline_history(
         HTTPException: チームが存在しない場合
 
     """
+    lang = getattr(request.state, "language", "en")
     service = _get_timeline_service()
 
     # チーム存在チェック
     if not service.team_exists(team_name):
-        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+        raise HTTPException(
+            status_code=404,
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name)
+        )
 
     # inbox メッセージとセッションログを並行して取得
     inbox_messages = await service.load_inbox_messages(team_name)
@@ -144,6 +161,7 @@ async def get_timeline_history(
 
 @router.get("/{team_name}/updates", response_model=UnifiedTimelineResponse)
 async def get_timeline_updates(
+    request: Request,
     team_name: str,
     since: Optional[str] = Query(None, description="このタイムスタンプ以降のエントリのみ取得（ISO 8601形式）"),
     limit: int = Query(50, ge=1, le=200, description="最大取得件数")
@@ -153,6 +171,7 @@ async def get_timeline_updates(
     since 以降の新規エントリのみ返します。
 
     Args:
+        request: FastAPI リクエストオブジェクト（言語判定用）
         team_name: チーム名
         since: 基準タイムスタンプ（ISO 8601形式、例: 2026-02-21T10:00:00Z）
         limit: 最大取得件数（1-200、デフォルト50）
@@ -164,11 +183,15 @@ async def get_timeline_updates(
         HTTPException: チームが存在しない場合
 
     """
+    lang = getattr(request.state, "language", "en")
     service = _get_timeline_service()
 
     # チーム存在チェック
     if not service.team_exists(team_name):
-        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+        raise HTTPException(
+            status_code=404,
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name)
+        )
 
     # 新規セッションエントリを取得
     session_entries = await service.load_session_entries_since(team_name, since)
