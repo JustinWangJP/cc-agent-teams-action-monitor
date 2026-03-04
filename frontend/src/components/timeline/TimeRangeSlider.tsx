@@ -189,8 +189,8 @@ export const TimeRangeSlider: React.FC<TimeRangeSliderProps> = ({
       const duration = timeRange.end.getTime() - timeRange.start.getTime();
       const shift = duration * 0.1; // 範囲の10%を進める
 
-      let newEnd = new Date(timeRange.end.getTime() + shift);
-      let newStart = new Date(timeRange.start.getTime() + shift);
+      const newEnd = new Date(timeRange.end.getTime() + shift);
+      const newStart = new Date(timeRange.start.getTime() + shift);
 
       // 最大時刻を超える場合は停止
       if (newEnd.getTime() > maxTime.getTime()) {

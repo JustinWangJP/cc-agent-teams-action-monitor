@@ -145,7 +145,7 @@ const getMessageDisplayText = (
             summary: content,
             detail: content,
           };
-        case 'assistant_message':
+        case 'assistant_message': {
           // assistant_message の content が JSON 形式のプロトコルメッセージかをチェック
           const protocolDisplay = parseProtocolMessageFromContent(content);
           if (protocolDisplay) {
@@ -157,6 +157,7 @@ const getMessageDisplayText = (
             summary: msgSummary || content,
             detail: content,
           };
+        }
         default:
           return {
             summary: msgSummary || content,
