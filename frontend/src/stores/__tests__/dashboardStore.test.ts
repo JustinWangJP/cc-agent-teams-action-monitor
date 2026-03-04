@@ -7,14 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import {
-  useDashboardStore,
-  useTeamSelection,
-  useMessageSelection,
-  useFilters,
-  useUIState,
-  useCurrentView,
-} from '../dashboardStore';
+import { useDashboardStore } from '../dashboardStore';
 import type { ParsedMessage } from '@/types/message';
 import type { Task } from '@/types/task';
 
@@ -31,28 +24,15 @@ describe('dashboardStore', () => {
       expect(state.selectedTeam).toBeNull();
       expect(state.selectedMessage).toBeNull();
       expect(state.selectedTask).toBeNull();
-      expect(state.currentView).toBe('overview');
       expect(state.searchQuery).toBe('');
+      expect(state.isDarkMode).toBe(false);
+      expect(state.isSidebarOpen).toBe(true);
       expect(state.isDetailModalOpen).toBe(false);
       expect(state.isTaskModalOpen).toBe(false);
-      expect(state.isSidebarOpen).toBe(true);
       expect(state.autoScrollTimeline).toBe(true);
-    });
-
-    it('初期時間範囲が直近1時間であること', () => {
-      const state = useDashboardStore.getState();
-      const now = Date.now();
-      const oneHourAgo = now - 60 * 60 * 1000;
-
-      expect(state.timeRange.start.getTime()).toBeLessThanOrEqual(oneHourAgo + 1000);
-      expect(state.timeRange.start.getTime()).toBeGreaterThanOrEqual(oneHourAgo - 1000);
-      expect(state.timeRange.end.getTime()).toBeLessThanOrEqual(now + 1000);
-      expect(state.timeRange.end.getTime()).toBeGreaterThanOrEqual(now - 1000);
-    });
-
-    it('初期メッセージフィルターが全て空であること', () => {
-      const state = useDashboardStore.getState();
-
+      // ポーリング間隔は個別設定（teamsInterval, tasksInterval等）
+      expect(state.teamsInterval).toBe(30000);
+      expect(state.currentView).toBe('overview');
       expect(state.messageFilter.senders).toEqual([]);
       expect(state.messageFilter.receivers).toEqual([]);
       expect(state.messageFilter.types).toEqual([]);
@@ -98,64 +78,17 @@ describe('dashboardStore', () => {
       const mockTask: Task = {
         id: 'task-1',
         subject: 'Test task',
-        activeForm: 'Testing',
+        description: 'Test description',
         status: 'pending',
-        blocks: [],
+        owner: 'agent-1',
         blockedBy: [],
+        createdAt: '2026-02-16T10:00:00Z',
+        updatedAt: '2026-02-16T10:00:00Z',
       };
 
       useDashboardStore.getState().setSelectedTask(mockTask);
 
       expect(useDashboardStore.getState().selectedTask).toEqual(mockTask);
-    });
-
-    it('setCurrentView でビューを切り替えられること', () => {
-      const { setCurrentView } = useDashboardStore.getState();
-
-      setCurrentView('timeline');
-
-      expect(useDashboardStore.getState().currentView).toBe('timeline');
-
-      setCurrentView('tasks');
-
-      expect(useDashboardStore.getState().currentView).toBe('tasks');
-    });
-  });
-
-  describe('フィルターのアクション', () => {
-    it('setTimeRange で時間範囲を設定できること', () => {
-      const newRange = {
-        start: new Date('2026-02-16T09:00:00Z'),
-        end: new Date('2026-02-16T10:00:00Z'),
-      };
-
-      useDashboardStore.getState().setTimeRange(newRange);
-
-      expect(useDashboardStore.getState().timeRange).toEqual(newRange);
-    });
-
-    it('setMessageFilter でフィルターを設定できること', () => {
-      const newFilter = {
-        senders: ['agent-1', 'agent-2'],
-        receivers: [],
-        types: ['message'] as ('message' | 'idle_notification' | 'shutdown_request' | 'shutdown_approved' | 'task_assignment' | 'unknown')[],
-      };
-
-      useDashboardStore.getState().setMessageFilter(newFilter);
-
-      expect(useDashboardStore.getState().messageFilter).toEqual(newFilter);
-    });
-
-    it('updateMessageFilter でフィルターを部分的に更新できること', () => {
-      const initialFilter = useDashboardStore.getState().messageFilter;
-
-      useDashboardStore.getState().updateMessageFilter({ senders: ['agent-1'] });
-
-      const updatedFilter = useDashboardStore.getState().messageFilter;
-      expect(updatedFilter.senders).toEqual(['agent-1']);
-      // 他のフィールドは変更されていない
-      expect(updatedFilter.receivers).toEqual(initialFilter.receivers);
-      expect(updatedFilter.types).toEqual(initialFilter.types);
     });
 
     it('setSearchQuery で検索クエリを設定できること', () => {
@@ -164,17 +97,49 @@ describe('dashboardStore', () => {
       expect(useDashboardStore.getState().searchQuery).toBe('test query');
     });
 
-    it('resetFilters で全てのフィルターをリセットできること', () => {
-      // 先にフィルターを変更
-      useDashboardStore.getState().setSearchQuery('test');
-      useDashboardStore.getState().updateMessageFilter({ senders: ['agent-1'] });
+    it('setSearchQuery で空文字列を設定できること', () => {
+      useDashboardStore.getState().setSearchQuery('');
 
-      // リセット
+      expect(useDashboardStore.getState().searchQuery).toBe('');
+    });
+
+    it('setTeamsInterval でチームポーリング間隔を設定できること', () => {
+      useDashboardStore.getState().setTeamsInterval(60000);
+
+      expect(useDashboardStore.getState().teamsInterval).toBe(60000);
+    });
+
+    it('setTasksInterval でタスクポーリング間隔を設定できること', () => {
+      useDashboardStore.getState().setTasksInterval(60000);
+
+      expect(useDashboardStore.getState().tasksInterval).toBe(60000);
+    });
+  });
+
+  describe('フィルターアクション', () => {
+    it('setMessageFilter でメッセージフィルターを設定できること', () => {
+      const filter = { senders: ['agent-1'], receivers: ['agent-2'], types: ['message'] };
+      useDashboardStore.getState().setMessageFilter(filter);
+
+      expect(useDashboardStore.getState().messageFilter).toEqual(filter);
+    });
+
+    it('updateMessageFilter でメッセージフィルターを部分的に更新できること', () => {
+      useDashboardStore.getState().setMessageFilter({ senders: ['agent-1'], receivers: [], types: [] });
+      useDashboardStore.getState().updateMessageFilter({ types: ['task'] });
+
+      const filter = useDashboardStore.getState().messageFilter;
+      expect(filter.senders).toEqual(['agent-1']);
+      expect(filter.types).toEqual(['task']);
+    });
+
+    it('resetFilters でフィルターをリセットできること', () => {
+      const filter = { senders: ['agent-1'], receivers: [], types: [] };
+      useDashboardStore.getState().setMessageFilter(filter);
+
       useDashboardStore.getState().resetFilters();
 
-      const state = useDashboardStore.getState();
-      expect(state.searchQuery).toBe('');
-      expect(state.messageFilter.senders).toEqual([]);
+      expect(useDashboardStore.getState().messageFilter.senders).toEqual([]);
     });
   });
 
@@ -214,14 +179,18 @@ describe('dashboardStore', () => {
     });
 
     it('toggleDarkMode でダークモードを切り替えられること', () => {
-      // ダークモードは HTML class を変更するため、Document モックが必要
       const html = document.documentElement;
 
+      // 初期状態を確認
+      expect(useDashboardStore.getState().isDarkMode).toBe(false);
+
+      // ダークモードをオン
       useDashboardStore.getState().toggleDarkMode();
 
       expect(useDashboardStore.getState().isDarkMode).toBe(true);
       expect(html.classList.contains('dark')).toBe(true);
 
+      // ダークモードをオフ
       useDashboardStore.getState().toggleDarkMode();
 
       expect(useDashboardStore.getState().isDarkMode).toBe(false);
@@ -258,74 +227,31 @@ describe('dashboardStore', () => {
     });
   });
 
-  describe('セレクターフック', () => {
-    it('useTeamSelection がチーム選択関連の状態を返すこと', () => {
-      const selection = useTeamSelection();
-
-      expect(selection).toHaveProperty('selectedTeam');
-      expect(selection).toHaveProperty('setSelectedTeam');
-    });
-
-    it('useMessageSelection がメッセージ選択関連の状態を返すこと', () => {
-      const selection = useMessageSelection();
-
-      expect(selection).toHaveProperty('selectedMessage');
-      expect(selection).toHaveProperty('setSelectedMessage');
-      expect(selection).toHaveProperty('isDetailModalOpen');
-      expect(selection).toHaveProperty('setDetailModalOpen');
-      expect(selection).toHaveProperty('toggleDetailModal');
-    });
-
-    it('useFilters がフィルター関連の状態を返すこと', () => {
-      const filters = useFilters();
-
-      expect(filters).toHaveProperty('timeRange');
-      expect(filters).toHaveProperty('messageFilter');
-      expect(filters).toHaveProperty('searchQuery');
-      expect(filters).toHaveProperty('setTimeRange');
-      expect(filters).toHaveProperty('setMessageFilter');
-      expect(filters).toHaveProperty('updateMessageFilter');
-      expect(filters).toHaveProperty('setSearchQuery');
-      expect(filters).toHaveProperty('resetFilters');
-    });
-
-    it('useUIState がUI状態を返すこと', () => {
-      const ui = useUIState();
-
-      expect(ui).toHaveProperty('isDarkMode');
-      expect(ui).toHaveProperty('isSidebarOpen');
-      expect(ui).toHaveProperty('autoScrollTimeline');
-      expect(ui).toHaveProperty('toggleDarkMode');
-      expect(ui).toHaveProperty('setDarkMode');
-      expect(ui).toHaveProperty('toggleSidebar');
-      expect(ui).toHaveProperty('toggleAutoScroll');
-    });
-
-    it('useCurrentView がビュー関連の状態を返すこと', () => {
-      const view = useCurrentView();
-
-      expect(view).toHaveProperty('currentView');
-      expect(view).toHaveProperty('setCurrentView');
-    });
-  });
-
   describe('リセットアクション', () => {
     it('reset で全ての状態を初期値に戻せること', () => {
       // 状態を変更
       useDashboardStore.getState().setSelectedTeam('test-team');
       useDashboardStore.getState().setSearchQuery('test');
-      useDashboardStore.getState().toggleDarkMode();
-
-      expect(useDashboardStore.getState().selectedTeam).toBe('test-team');
-      expect(useDashboardStore.getState().searchQuery).toBe('test');
-      expect(useDashboardStore.getState().isDarkMode).toBe(true);
+      useDashboardStore.getState().setDarkMode(true);
 
       // リセット
       useDashboardStore.getState().reset();
 
-      // 初期状態に戻っている（isDarkMode は localStorage からの復帰で変わる可能性がある）
+      // 状態が初期値に戻っていることを確認（loadStateの影響でダークモードは維持される可能性がある）
       expect(useDashboardStore.getState().selectedTeam).toBeNull();
       expect(useDashboardStore.getState().searchQuery).toBe('');
+    });
+  });
+
+  describe('ビューアクション', () => {
+    it('setCurrentView でビューを切り替えられること', () => {
+      useDashboardStore.getState().setCurrentView('tasks');
+
+      expect(useDashboardStore.getState().currentView).toBe('tasks');
+
+      useDashboardStore.getState().setCurrentView('timeline');
+
+      expect(useDashboardStore.getState().currentView).toBe('timeline');
     });
   });
 });

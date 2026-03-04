@@ -5,7 +5,7 @@
  *
 */
 import { describe, it, expect } from 'vitest'
-import { render } from '@testing-library/react'
+import { render } from '@/test/setup.tsx'
 import { LoadingSpinner, SkeletonLoader, LoadingOverlay } from '../LoadingSpinner'
 
 describe('LoadingSpinner', () => {
@@ -36,7 +36,8 @@ describe('LoadingSpinner', () => {
 
     it('デフォルトメッセージを表示する', () => {
       const { getByText } = render(<LoadingSpinner />)
-      expect(getByText('Loading...')).toBeInTheDocument()
+      // 翻訳されたテキスト（日本語）を確認
+      expect(getByText('読み込み中...')).toBeInTheDocument()
     })
 
     it('カスタムメッセージを表示する', () => {
@@ -46,7 +47,8 @@ describe('LoadingSpinner', () => {
 
     it('spinnerOnly propでメッセージを非表示にする', () => {
       const { queryByText } = render(<LoadingSpinner spinnerOnly />)
-      expect(queryByText('Loading...')).not.toBeInTheDocument()
+      // 翻訳されたテキスト（日本語）が表示されないことを確認
+      expect(queryByText('読み込み中...')).not.toBeInTheDocument()
     })
 
     it('サイズに応じたクラスを適用する', () => {
