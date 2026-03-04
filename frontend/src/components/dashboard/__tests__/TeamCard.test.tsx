@@ -60,7 +60,7 @@ describe('TeamCard', () => {
       const handleClick = vi.fn()
       const { container } = render(<TeamCard team={mockTeam} onClick={handleClick} />)
       const card = container.querySelector('.bg-white.rounded-lg')
-      
+
       expect(card).toBeInTheDocument()
       fireEvent.click(card!)
       expect(handleClick).toHaveBeenCalledTimes(1)

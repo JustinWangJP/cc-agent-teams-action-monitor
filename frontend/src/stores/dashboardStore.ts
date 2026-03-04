@@ -230,7 +230,7 @@ const STORAGE_KEY = 'dashboard-state';
  *
  * @returns 復元された状態の部分オブジェクト、または null
  *
- * 
+ *
  */
 function loadState(): Partial<DashboardState> | null {
   if (typeof window === 'undefined') return null;
@@ -263,7 +263,7 @@ function loadState(): Partial<DashboardState> | null {
  *
  * @param state - 保存する状態の部分オブジェクト
  *
- * 
+ *
  */
 function saveState(state: Partial<DashboardState>) {
   if (typeof window === 'undefined') return;

@@ -68,7 +68,7 @@ TypingDot.displayName = 'TypingDot';
  * />
  * ```
  *
- * 
+ *
  */
 export const TypingIndicator = memo<TypingIndicatorProps>(
   ({ typingAgents, timeout = 3000 }) => {
@@ -147,7 +147,7 @@ TypingIndicator.displayName = 'TypingIndicator';
  * @param timeout - タイムアウト時間（ミリ秒、デフォルト3000）
  * @returns タイピング中のエージェント配列
  *
- * 
+ *
  */
 export function useTypingIndicator(
   agents: Array<{ name: string; isTyping?: boolean; lastActivity?: string }>,
