@@ -1,0 +1,15 @@
+{
+  "language_selector": "选择语言",
+  "status_badge": "状态: {{status}}",
+  "delete_team": "删除{{name}}",
+  "delete_task": "删除任务{{name}}",
+  "view_switcher": "视图切换器",
+  "polling_interval_select": "选择{{label}}",
+  "theme_toggle": "切换主题",
+  "theme_switch_to": "切换到{{mode}}模式",
+  "theme_current": "当前：{{mode}}模式。点击切换。",
+  "clear_search": "清除搜索",
+  "refresh_timeline": "刷新时间线和任务",
+  "dark_mode": "深色",
+  "light_mode": "浅色"
+}

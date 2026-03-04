@@ -1,0 +1,68 @@
+{
+  "title": "任务",
+  "monitor": {
+    "title": "任务监控",
+    "select_team": "请选择团队",
+    "no_tasks": "没有任务",
+    "expand_panel": "展开任务面板",
+    "collapse_panel": "折叠任务面板",
+    "tooltips": {
+      "total": "分配给团队的所有任务",
+      "pending": "尚未开始的任务",
+      "in_progress": "正在进行中的任务",
+      "other": "被其他任务阻塞",
+      "completed": "已完成的任务"
+    },
+    "stats": {
+      "total": "所有任务",
+      "pending": "待处理",
+      "in_progress": "进行中",
+      "completed": "已完成",
+      "other": "其他"
+    },
+    "sections": {
+      "in_progress": "进行中",
+      "pending": "待处理",
+      "completed": "已完成",
+      "other": "其他"
+    },
+    "no_tasks": "没有任务"
+  },
+  "columns": {
+    "pending": "待处理",
+    "in_progress": "进行中",
+    "completed": "已完成",
+    "deleted": "已删除",
+    "stopped": "已停止"
+  },
+  "status_labels": {
+    "pending": "未开始",
+    "in_progress": "进行中",
+    "completed": "已完成",
+    "deleted": "已删除",
+    "stopped": "已停止"
+  },
+  "task_card": {
+    "status": "状态",
+    "owner": "负责人",
+    "blocked_by": "被阻塞",
+    "no_owner": "未分配"
+  },
+  "delete_dialog": {
+    "title": "确认删除任务",
+    "message": "删除{{name}}？"
+  },
+  "progress": "进度",
+  "current_work": "当前工作",
+  "blocking": "阻塞中",
+  "blocking_details": "阻塞中（等待以下任务完成）",
+  "blocking_others": "阻塞其他（此任务完成后开始）",
+  "related_files": "相关文件",
+  "details": "详情",
+  "dependencies": "依赖关系",
+  "start": "开始",
+  "completed_at": "完成",
+  "timeline_button": "时间线",
+  "timeline_title": "在时间线中显示与此任务相关的活动",
+  "others": "... 还有 {{count}} 项"
+}

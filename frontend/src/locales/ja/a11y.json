@@ -1,0 +1,15 @@
+{
+  "language_selector": "言語を選択",
+  "status_badge": "ステータス: {{status}}",
+  "delete_team": "{{name}}を削除",
+  "delete_task": "タスク{{name}}を削除",
+  "view_switcher": "ビュー切り替え",
+  "polling_interval_select": "{{label}}を選択",
+  "theme_toggle": "テーマを切り替え",
+  "theme_switch_to": "{{mode}}モードに切り替え",
+  "theme_current": "現在: {{mode}}モード。クリックして切り替え。",
+  "clear_search": "検索をクリア",
+  "refresh_timeline": "タイムラインとタスクを更新",
+  "dark_mode": "ダーク",
+  "light_mode": "ライト"
+}

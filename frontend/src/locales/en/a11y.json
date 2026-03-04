@@ -1,0 +1,15 @@
+{
+  "language_selector": "Select language",
+  "status_badge": "Status: {{status}}",
+  "delete_team": "Delete {{name}}",
+  "delete_task": "Delete task {{name}}",
+  "view_switcher": "View switcher",
+  "polling_interval_select": "Select {{label}}",
+  "theme_toggle": "Toggle theme",
+  "theme_switch_to": "Switch to {{mode}} mode",
+  "theme_current": "Current: {{mode}} mode. Click to switch.",
+  "clear_search": "Clear search",
+  "refresh_timeline": "Refresh timeline and tasks",
+  "dark_mode": "dark",
+  "light_mode": "light"
+}

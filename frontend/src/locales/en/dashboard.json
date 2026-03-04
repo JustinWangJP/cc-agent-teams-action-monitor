@@ -1,0 +1,25 @@
+{
+  "team_card": {
+    "delete_button": "Delete team",
+    "status": {
+      "active": "Active",
+      "active_tooltip": "Session log updated within 1 hour (active)",
+      "inactive": "Inactive",
+      "inactive_tooltip": "No members in team",
+      "stopped": "Stopped",
+      "stopped_tooltip": "Session log not updated for over 1 hour (stopped)",
+      "unknown": "Unknown",
+      "unknown_tooltip": "Session log not found (status unknown)",
+      "idle": "Idle",
+      "pending": "Pending",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "deleted": "Deleted"
+    }
+  },
+  "delete_dialog": {
+    "title": "Confirm team deletion",
+    "message": "Delete {{name}}?",
+    "warning": "This action cannot be undone. All related files including team config, tasks, and session logs will be deleted."
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "members": "メンバー",
+  "session_id": "セッションID",
+  "no_members": "メンバーがいません",
+  "member_list": "メンバーリスト",
+  "created_at": "作成日",
+  "lead_agent": "Lead",
+  "model_usage": "使用モデル",
+  "joined_at": "参加",
+  "last_activity": "最終活動",
+  "prompt": "プロンプト",
+  "agent_status": {
+    "idle": "アイドル",
+    "working": "作業中",
+    "waiting": "待機中",
+    "error": "エラー",
+    "completed": "完了"
+  }
+}

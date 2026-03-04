@@ -1,0 +1,25 @@
+{
+  "team_card": {
+    "delete_button": "删除团队",
+    "status": {
+      "active": "活跃",
+      "active_tooltip": "会话日志在1小时内更新（活跃中）",
+      "inactive": "未激活",
+      "inactive_tooltip": "团队中无成员",
+      "stopped": "已停止",
+      "stopped_tooltip": "会话日志超过1小时未更新（已停止）",
+      "unknown": "未知",
+      "unknown_tooltip": "未找到会话日志（状态未知）",
+      "idle": "空闲",
+      "pending": "待处理",
+      "in_progress": "进行中",
+      "completed": "已完成",
+      "deleted": "已删除"
+    }
+  },
+  "delete_dialog": {
+    "title": "确认删除团队",
+    "message": "删除{{name}}？",
+    "warning": "此操作无法撤销。团队配置、任务、会话日志等所有相关文件将被删除。"
+  }
+}

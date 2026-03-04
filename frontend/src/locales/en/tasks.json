@@ -1,0 +1,68 @@
+{
+  "title": "Tasks",
+  "monitor": {
+    "title": "Task Monitor",
+    "select_team": "Please select a team",
+    "no_tasks": "No tasks",
+    "expand_panel": "Expand task panel",
+    "collapse_panel": "Collapse task panel",
+    "tooltips": {
+      "total": "All tasks assigned to the team",
+      "pending": "Tasks not yet started",
+      "in_progress": "Tasks currently in progress",
+      "other": "Blocked by other tasks",
+      "completed": "Completed tasks"
+    },
+    "stats": {
+      "total": "All Tasks",
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "other": "Other"
+    },
+    "sections": {
+      "in_progress": "In Progress",
+      "pending": "Pending",
+      "completed": "Completed",
+      "other": "Other"
+    },
+    "no_tasks": "No tasks"
+  },
+  "columns": {
+    "pending": "Pending",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "deleted": "Deleted",
+    "stopped": "Stopped"
+  },
+  "status_labels": {
+    "pending": "Not Started",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "deleted": "Deleted",
+    "stopped": "Stopped"
+  },
+  "task_card": {
+    "status": "Status",
+    "owner": "Owner",
+    "blocked_by": "Blocked by",
+    "no_owner": "Unassigned"
+  },
+  "delete_dialog": {
+    "title": "Confirm task deletion",
+    "message": "Delete {{name}}?"
+  },
+  "progress": "Progress",
+  "current_work": "Current Work",
+  "blocking": "Blocked",
+  "blocking_details": "Blocked (waiting for tasks below to complete)",
+  "blocking_others": "Blocking (will start after this task completes)",
+  "related_files": "Related Files",
+  "details": "Details",
+  "dependencies": "Dependencies",
+  "start": "Started",
+  "completed_at": "Completed",
+  "timeline_button": "Timeline",
+  "timeline_title": "Show activities related to this task in the timeline",
+  "others": "... and {{count}} more"
+}

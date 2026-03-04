@@ -1,0 +1,68 @@
+{
+  "title": "タスク",
+  "monitor": {
+    "title": "タスク監視",
+    "select_team": "チームを選択してください",
+    "no_tasks": "タスクがありません",
+    "expand_panel": "タスクパネルを展開",
+    "collapse_panel": "タスクパネルを折りたたむ",
+    "tooltips": {
+      "total": "チームに割り当てられた全てのタスク",
+      "pending": "まだ着手していないタスク",
+      "in_progress": "現在作業中のタスク",
+      "other": "他のタスクにブロックされている",
+      "completed": "完了したタスク"
+    },
+    "stats": {
+      "total": "全タスク",
+      "pending": "未着手",
+      "in_progress": "進行中",
+      "completed": "完了",
+      "other": "その他"
+    },
+    "sections": {
+      "in_progress": "進行中",
+      "pending": "未着手",
+      "completed": "完了",
+      "other": "その他"
+    },
+    "no_tasks": "タスクがありません"
+  },
+  "columns": {
+    "pending": "保留中",
+    "in_progress": "進行中",
+    "completed": "完了",
+    "deleted": "削除",
+    "stopped": "停止"
+  },
+  "status_labels": {
+    "pending": "未着手",
+    "in_progress": "進行中",
+    "completed": "完了",
+    "deleted": "削除",
+    "stopped": "停止"
+  },
+  "task_card": {
+    "status": "ステータス",
+    "owner": "担当者",
+    "blocked_by": "ブロック中",
+    "no_owner": "未割り当て"
+  },
+  "delete_dialog": {
+    "title": "タスク削除の確認",
+    "message": "{{name}}を削除しますか？"
+  },
+  "progress": "進捗",
+  "current_work": "進行中の作業",
+  "blocking": "ブロック中",
+  "blocking_details": "ブロック中 (以下のタスクの完了を待機)",
+  "blocking_others": "ブロックしている (このタスク完了後に開始)",
+  "related_files": "関連ファイル",
+  "details": "詳細",
+  "dependencies": "依存関係",
+  "start": "開始",
+  "completed_at": "完了",
+  "timeline_button": "タイムライン",
+  "timeline_title": "タイムラインでこのタスクに関連するアクティビティを表示",
+  "others": "... 他 {{count}} 件"
+}
