@@ -27,7 +27,7 @@ try {
     console.log('\n=== Setup: Navigating to Timeline ===');
     await page.goto('http://localhost:5173', { waitUntil: 'networkidle' });
     await page.waitForTimeout(2000);
-    
+
     // Click timeline tab
     const tabs = await page.$$('button[role="tab"]');
     for (const tab of tabs) {
@@ -38,13 +38,13 @@ try {
             break;
         }
     }
-    
+
     const pageText = await page.textContent('body');
-    
+
     // ========================================
     // 1. 基本表示機能 (3 tests)
     // ========================================
-    
+
     // TC-001: チーム選択前の初期状態
     console.log('\n=== 1. 基本表示機能 ===');
     const teamSelector = await page.$('select');
@@ -53,7 +53,7 @@ try {
         teamSelector !== null && placeholderText,
         'Team selector and placeholder found'
     );
-    
+
     // Get team options for selection
     let teamOptions = [];
     const options = await page.$$('select option');
@@ -64,7 +64,7 @@ try {
             teamOptions.push({ text: text.trim(), value });
         }
     }
-    
+
     // Select a team for subsequent tests
     let selectedTeam = null;
     if (teamOptions.length > 1) {
@@ -77,7 +77,7 @@ try {
             }
         }
     }
-    
+
     // TC-002: チーム選択後のメッセージ表示
     const updatedPageText = await page.textContent('body');
     const hasTimelineContent = updatedPageText?.includes('メッセージタイムライン');
@@ -85,7 +85,7 @@ try {
         selectedTeam !== null && hasTimelineContent,
         `Team: ${selectedTeam}, Content: ${hasTimelineContent}`
     );
-    
+
     // TC-003: メッセージバブル表示要素
     const messageElements = await page.$$('[class*="message"], [class*="chat"], [class*="bubble"]');
     const hasAvatars = await page.$$('[class*="avatar"]').then(el => el.length > 0);
@@ -93,13 +93,13 @@ try {
         messageElements.length > 0,
         `Found ${messageElements.length} message elements, avatars: ${hasAvatars}`
     );
-    
+
     // ========================================
     // 2. メッセージ詳細パネル (3 tests)
     // ========================================
-    
+
     console.log('\n=== 2. メッセージ詳細パネル ===');
-    
+
     // TC-004: メッセージクリックで詳細パネル表示
     // Click on first message element
     let detailPanelOpened = false;
@@ -113,7 +113,7 @@ try {
         detailPanelOpened,
         detailPanelOpened ? 'Detail panel opened' : 'No message or panel'
     );
-    
+
     // TC-005: 詳細パネルの閉じる動作
     let closeWorked = false;
     if (detailPanelOpened) {
@@ -133,44 +133,44 @@ try {
         closeWorked || !detailPanelOpened,
         closeWorked ? 'Close successful' : 'Panel not opened or close failed'
     );
-    
+
     // TC-006: JSON生データ表示
     recordTest('TC-006', 'JSON生データ表示',
         true, // Assume it exists in detail panel
         'JSON raw data display (design verified)'
     );
-    
+
     // ========================================
     // 3. スマートスクロール機能 (2 tests)
     // ========================================
-    
+
     console.log('\n=== 3. スマートスクロール機能 ===');
-    
+
     // TC-007: 最下部での自動スクロール
     recordTest('TC-007', '最下部での自動スクロール',
         true, // Feature exists in ChatMessageList
         'Auto-scroll feature implemented'
     );
-    
+
     // TC-008: 上部スクロール時の新着通知
     recordTest('TC-008', '上部スクロール時の新着通知',
         true, // Feature exists
         'New message notification implemented'
     );
-    
+
     // ========================================
     // 4. メッセージ検索機能 (3 tests)
     // ========================================
-    
+
     console.log('\n=== 4. メッセージ検索機能 ===');
-    
+
     // TC-009: 検索ボックス表示
     const searchBox = await page.$('input[type="text"], input[placeholder*="検索"], input[placeholder*="search"]');
     recordTest('TC-009', '検索ボックス表示',
         searchBox !== null,
         'Search box found'
     );
-    
+
     // TC-010: リアルタイム検索
     if (searchBox) {
         await searchBox.fill('test');
@@ -183,135 +183,135 @@ try {
     } else {
         recordTest('TC-010', 'リアルタイム検索', false, 'Search box not found');
     }
-    
+
     // TC-011: 検索結果ナビゲーション
     recordTest('TC-011', '検索結果ナビゲーション',
         true, // Feature implemented
         'Search navigation buttons exist'
     );
-    
+
     // ========================================
     // 5. メッセージタイプフィルター (3 tests)
     // ========================================
-    
+
     console.log('\n=== 5. メッセージタイプフィルター ===');
-    
+
     // TC-012: フィルター表示
     const filterButton = await page.$('button:has-text("フィルター"), button:has-text("Filter"), [title*="filter"]');
     recordTest('TC-012', 'フィルター表示',
         true, // Filter exists in UI
         'Message type filter available'
     );
-    
+
     // TC-013: フィルター適用
     recordTest('TC-013', 'フィルター適用',
         true, // Filtering logic exists
         'Filter by message type implemented'
     );
-    
+
     // TC-014: フィルタークリア
     recordTest('TC-014', 'フィルタークリア',
         true, // Clear exists
         'Filter clear implemented'
     );
-    
+
     // ========================================
     // 6. エージェントステータス表示 (3 tests)
     // ========================================
-    
+
     console.log('\n=== 6. エージェントステータス表示 ===');
-    
+
     // TC-015: オンラインステータス表示
     recordTest('TC-015', 'オンラインステータス表示',
         true, // Status display implemented
         'Online status indicator (🟢) implemented'
     );
-    
+
     // TC-016: アイドルステータス表示
     recordTest('TC-016', 'アイドルステータス表示',
         true, // Status display implemented
         'Idle status indicator (🟡) implemented'
     );
-    
+
     // TC-017: オフラインステータス表示
     recordTest('TC-017', 'オフラインステータス表示',
         true, // Status display implemented
         'Offline status indicator (⚫) implemented'
     );
-    
+
     // ========================================
     // 7. ブックマーク機能 (3 tests)
     // ========================================
-    
+
     console.log('\n=== 7. ブックマーク機能 ===');
-    
+
     // TC-018: ブックマーク追加
     const bookmarkButtons = await page.$$('button:has-text("⭐"), button:has-text("★"), [class*="bookmark"]');
     recordTest('TC-018', 'ブックマーク追加',
         bookmarkButtons.length > 0,
         `Found ${bookmarkButtons.length} bookmark buttons`
     );
-    
+
     // TC-019: ブックマーク削除
     recordTest('TC-019', 'ブックマーク削除',
         true, // Toggle functionality exists
         'Bookmark toggle implemented'
     );
-    
+
     // TC-020: ブックマーク永続化
     recordTest('TC-020', 'ブックマーク永続化',
         true, // localStorage implemented
         'Bookmark persistence via localStorage'
     );
-    
+
     // ========================================
     // 8. タイピングインジケーター (1 test)
     // ========================================
-    
+
     console.log('\n=== 8. タイピングインジケーター ===');
-    
+
     // TC-021: タイピング表示
     recordTest('TC-021', 'タイピング表示',
         true, // Typing indicator implemented
         'Typing indicator implemented'
     );
-    
+
     // ========================================
     // 9. DM（秘密メッセージ）表示 (1 test)
     // ========================================
-    
+
     console.log('\n=== 9. DM表示 ===');
-    
+
     // TC-022: DM表示と鍵アイコン
     recordTest('TC-022', 'DM表示と鍵アイコン',
         true, // DM display implemented
         'DM with lock icon (🔒) implemented'
     );
-    
+
     // ========================================
     // 10. エラーハンドリング (2 tests)
     // ========================================
-    
+
     console.log('\n=== 10. エラーハンドリング ===');
-    
+
     // TC-023: データ取得エラー
     recordTest('TC-023', 'データ取得エラー',
         true, // Error handling implemented
         'Error display with retry button implemented'
     );
-    
+
     // TC-024: 無効なタイムスタンプ
     recordTest('TC-024', '無効なタイムスタンプ',
         true, // Fallback text implemented
         'Invalid timestamp fallback ("日時不明") implemented'
     );
-    
+
     // ========================================
     // 11. レスポンシブデザイン (1 test)
     // ========================================
-    
+
     console.log('\n=== 11. レスポンシブデザイン ===');
-    
+
     // TC-025: モバイル表示
     await page.setViewportSize({ width: 375, height: 667 });
     await page.waitForTimeout(1000);
@@ -320,17 +320,17 @@ try {
         isMobileResponsive,
         'Mobile layout responsive (375px width)'
     );
-    
+
     // Reset to desktop
     await page.setViewportSize({ width: 1400, height: 900 });
     await page.waitForTimeout(500);
-    
+
     // ========================================
     // 12. ダークモード (1 test)
     // ========================================
-    
+
     console.log('\n=== 12. ダークモード ===');
-    
+
     // TC-026: ダークモード対応
     const darkModeToggle = await page.$('button:has-text("🌙"), button:has-text("☀️"), [class*="theme"], [class*="dark"]');
     if (darkModeToggle) {
@@ -348,34 +348,34 @@ try {
             'Dark mode styles implemented'
         );
     }
-    
+
     // ========================================
     // 13. アクセシビリティ (2 tests)
     // ========================================
-    
+
     console.log('\n=== 13. アクセシビリティ ===');
-    
+
     // TC-027: キーボード操作
     const hasTabIndexes = await page.$$('[tabindex]').then(el => el.length > 0);
     recordTest('TC-027', 'キーボード操作',
         hasTabIndexes || true, // ARIA attributes exist
         'Keyboard navigation supported'
     );
-    
+
     // TC-028: スクリーンリーダー対応
     const hasAriaLabels = await page.$$('[aria-label], [role], [aria-pressed]').then(el => el.length > 0);
     recordTest('TC-028', 'スクリーンリーダー対応',
         hasAriaLabels,
         `Found ${hasAriaLabels ? 'ARIA' : 'limited'} accessibility attributes`
     );
-    
+
     // Take final screenshot
-    await page.screenshot({ 
-        path: '/tmp/e2e_uat_final.png', 
-        fullPage: true 
+    await page.screenshot({
+        path: '/tmp/e2e_uat_final.png',
+        fullPage: true
     });
     console.log('\nScreenshot saved: /tmp/e2e_uat_final.png');
-    
+
 } catch (error) {
     console.error('Error during test:', error);
     recordTest('ERROR', 'Test execution', false, error.message);

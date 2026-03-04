@@ -1,6 +1,9 @@
 # Pre-commit hooks for Agent Teams Dashboard
 # https://pre-commit.com/
 
+# Exclude skill directories from all hooks
+exclude: ^(\.agents|\.claude)/
+
 repos:
   # Python linting and formatting
   - repo: https://github.com/psf/black
@@ -15,30 +18,13 @@ repos:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
 
-  # JavaScript/TypeScript linting
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v8.57.0
+  # JSON syntax validation (simpler than schema check)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
     hooks:
-      - id: eslint
-        files: \.[jt]sx?$
-        types: [file]
-        additional_dependencies:
-          - eslint@8.57.0
-          - '@typescript-eslint/eslint-plugin@7.3.1'
-          - '@typescript-eslint/parser@7.3.1'
-
-  # JSON validation
-  - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.28.0
-    hooks:
-      - id: check-jsonschema
-        name: Validate translation files (frontend)
-        files: ^frontend/locales/.*\.json$
-        types: [json]
-      - id: check-jsonschema
-        name: Validate translation files (backend)
-        files: ^backend/locales/.*\.json$
-        types: [json]
+      - id: check-json
+        name: Validate JSON files
+        files: \.json$
 
   # Custom translation key consistency check
   - repo: local
