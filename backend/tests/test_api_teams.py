@@ -79,7 +79,10 @@ async def test_get_agent_inbox_file_not_found(client: AsyncClient, tmp_path, mon
 
     response = await client.get("/api/teams/test-team/inboxes/nonexistent-agent")
     assert response.status_code == 404
-    assert "Agent inbox not found" in response.json()["detail"]
+    # i18n対応により英語または日本語のエラーメッセージをチェック
+    detail = response.json()["detail"]
+    assert "inbox" in detail.lower() or "受信箱" in detail
+    assert "not found" in detail.lower() or "見つかりません" in detail
 
 
 @pytest.mark.asyncio
@@ -126,7 +129,9 @@ async def test_delete_team_not_found(client: AsyncClient):
     """T-API-009: チーム削除（チームが存在しない）"""
     response = await client.delete("/api/teams/nonexistent-team")
     assert response.status_code == 404
-    assert "見つかりません" in response.json()["detail"]
+    # i18n対応により英語または日本語のエラーメッセージをチェック
+    detail = response.json()["detail"]
+    assert "not found" in detail.lower() or "見つかりません" in detail
 
 
 @pytest.mark.asyncio
@@ -164,8 +169,10 @@ async def test_delete_team_status_active(client: AsyncClient, tmp_path, monkeypa
 
     response = await client.delete("/api/teams/active-team")
     assert response.status_code == 400
-    assert "削除できません" in response.json()["detail"]
-    assert "active" in response.json()["detail"]
+    # i18n対応により英語または日本語のエラーメッセージをチェック
+    detail = response.json()["detail"]
+    assert "active" in detail
+    assert ("cannot delete" in detail.lower() or "削除できません" in detail or "cannot" in detail.lower())
 
 
 @pytest.mark.asyncio
@@ -216,8 +223,9 @@ async def test_delete_team_success(client: AsyncClient, tmp_path, monkeypatch):
     response = await client.delete("/api/teams/stopped-team")
     assert response.status_code == 200
     data = response.json()
-    assert "削除しました" in data["message"]
+    # i18n対応により英語または日本語の成功メッセージをチェック
     assert "stopped-team" in data["message"]
+    assert ("deleted" in data["message"].lower() or "削除" in data["message"])
     assert len(data["deletedPaths"]) >= 3  # teams, tasks, session file
 
     # ディレクトリとファイルが削除されたことを確認
@@ -260,7 +268,8 @@ async def test_delete_team_inactive(client: AsyncClient, tmp_path, monkeypatch):
     response = await client.delete("/api/teams/inactive-team")
     assert response.status_code == 200
     data = response.json()
-    assert "削除しました" in data["message"]
+    # i18n対応により英語または日本語の成功メッセージをチェック
+    assert ("deleted" in data["message"].lower() or "削除" in data["message"])
 
     # ディレクトリが削除されたことを確認
     assert not test_team_dir.exists()
@@ -305,7 +314,8 @@ async def test_delete_team_unknown(client: AsyncClient, tmp_path, monkeypatch):
     response = await client.delete("/api/teams/unknown-team")
     assert response.status_code == 200
     data = response.json()
-    assert "削除しました" in data["message"]
+    # i18n対応により英語または日本語の成功メッセージをチェック
+    assert ("deleted" in data["message"].lower() or "削除" in data["message"])
 
     # ディレクトリが削除されたことを確認
     assert not test_team_dir.exists()

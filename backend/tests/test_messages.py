@@ -60,7 +60,10 @@ class TestMessageTimelineEndpoint:
 
         # チームが存在しない場合、404または空のデータ
         if response.status_code == 404:
-            assert response.json()["detail"] == "Team not found"
+            # i18n対応によりエラーメッセージにチーム名が含まれるようになりました
+            detail = response.json()["detail"]
+            assert "not found" in detail.lower()
+            assert "test-team" in detail
         else:
             assert response.status_code == 200
             data = response.json()

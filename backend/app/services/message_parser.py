@@ -24,7 +24,12 @@ logger = logging.getLogger(__name__)
 
 # メッセージタイプ定義
 class MessageType:
-    """構造化メッセージタイプ定数."""
+    """構造化メッセージタイプの定数定義クラス。
+
+    エージェント間通信で使用されるメッセージタイプの文字列定数を提供します。
+    タスク管理、シャットダウン、プラン承認などのプロトコルメッセージを定義します。
+
+    """
 
     TASK_ASSIGNMENT = "task_assignment"
     TASK_COMPLETED = "task_completed"
@@ -97,7 +102,13 @@ class ParsedMessage:
 
 
 class MessageParser:
-    """構造化メッセージパーサー."""
+    """構造化メッセージをパースするパーサークラス。
+
+    JSON-in-JSON 形式のエージェント間メッセージを解析し、タイプ別に適切な
+    ParsedMessage オブジェクトに変換します。タスク割り当て、シャットダウン要求、
+    プラン承認など、各種プロトコルメッセージの解析をサポートします。
+
+    """
 
     def parse(self, text: str) -> Optional[ParsedMessage]:
         """テキストから構造化メッセージをパースします.
