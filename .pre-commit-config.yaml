@@ -37,6 +37,17 @@ repos:
         pass_filenames: false
         additional_dependencies: []
 
+  # Frontend ESLint
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint (frontend)
+        entry: bash -c 'cd frontend && npm run lint'
+        language: node
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        additional_dependencies: []
+
   # General checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
