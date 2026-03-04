@@ -1,0 +1,19 @@
+{
+  "members": "Members",
+  "session_id": "Session ID",
+  "no_members": "No members",
+  "member_list": "Member list",
+  "created_at": "Created",
+  "lead_agent": "Lead",
+  "model_usage": "Models used",
+  "joined_at": "Joined",
+  "last_activity": "Last activity",
+  "prompt": "Prompt",
+  "agent_status": {
+    "idle": "Idle",
+    "working": "Working",
+    "waiting": "Waiting",
+    "error": "Error",
+    "completed": "Completed"
+  }
+}

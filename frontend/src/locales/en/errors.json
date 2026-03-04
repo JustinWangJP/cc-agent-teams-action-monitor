@@ -1,0 +1,34 @@
+{
+  "types": {
+    "network": "Connection error",
+    "server": "Server error",
+    "data": "Data error",
+    "general": "Error"
+  },
+  "messages": {
+    "network": "Cannot connect to server. Please check your internet connection.",
+    "server": "A server error occurred. Please wait and try again later.",
+    "data": "Failed to load data.",
+    "general": "An error occurred."
+  },
+  "connection": {
+    "title": "Connection error",
+    "message": "Cannot connect to server. Please check your internet connection."
+  },
+  "server": {
+    "title": "Server error",
+    "message": "A server error occurred. Please wait and try again later."
+  },
+  "data": {
+    "title": "Data error",
+    "message": "Failed to load data."
+  },
+  "generic": {
+    "title": "Error",
+    "message": "An error occurred."
+  },
+  "api": {
+    "delete_failed": "Failed to delete team",
+    "status_error": "API error: {{status}}"
+  }
+}

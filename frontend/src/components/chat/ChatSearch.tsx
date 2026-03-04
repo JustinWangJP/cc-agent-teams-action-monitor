@@ -59,7 +59,7 @@ export interface ChatSearchProps {
  * />
  * ```
  *
- * 
+ *
  */
 export const ChatSearch = memo<ChatSearchProps>(
   ({

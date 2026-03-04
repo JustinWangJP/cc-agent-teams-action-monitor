@@ -1,0 +1,66 @@
+{
+  "buttons": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "save": "Save",
+    "retry": "Retry",
+    "reconnect": "Reconnect",
+    "close": "Close",
+    "back": "Back to list",
+    "refresh": "Refresh"
+  },
+  "labels": {
+    "loading": "Loading...",
+    "deleting": "Deleting...",
+    "no_data": "No data available",
+    "language": "Language"
+  },
+  "navigation": {
+    "overview": "Overview",
+    "timeline": "Timeline",
+    "tasks": "Tasks"
+  },
+  "teams": {
+    "active_teams": "Active Teams",
+    "teams_count": "{{count}} teams",
+    "select_team": "Select team",
+    "select_team_placeholder": "-- Select a team --",
+    "search_placeholder": "Search team name...",
+    "search_results": "{{count}} results",
+    "no_search_results": "No search results",
+    "clear_search": "Clear search",
+    "no_teams": "No teams found. Create a team in Claude Code to see it here.",
+    "select_timeline_team": "Please select a team to view the timeline",
+    "members_count": "{{count}} members"
+  },
+  "agents": {
+    "progress": "Progress",
+    "current_task": "Current task",
+    "assigned_count": "Assigned: {{count}}",
+    "completed_count": "Completed: {{count}}",
+    "related_files": "Related files",
+    "more_files": "... and {{count}} more",
+    "no_task": "No task"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "count": "{{filtered}} / {{total}} items",
+    "filter_all": "All teams",
+    "filter_label": "Team filter",
+    "search_label": "Search by subject or assignee",
+    "search_placeholder": "Search subjects or assignees...",
+    "clear_search": "Clear search",
+    "clear_filters": "Clear filters",
+    "description": "Tasks are work units for agent teams. Use team filters or search to find specific tasks.",
+    "no_tasks": "No tasks",
+    "status": {
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "completed": "Completed"
+    }
+  },
+  "loading_data": "Loading data...",
+  "load_error": "Failed to load data",
+  "seconds_one": "second",
+  "seconds_other": "seconds"
+}

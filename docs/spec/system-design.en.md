@@ -794,11 +794,141 @@ Environment variable prefix: `DASHBOARD_`
 | E2E Testing | Implement automated testing |
 | Log Management | Introduce structured logging |
 | Performance Monitoring | Metrics collection feature |
-| i18n | Multi-language support |
+| ✅ i18n | Multi-language support (Implemented) |
 | New Data Sources | Integrate external logs into TimelineService |
 
 ---
 
+## 12. Internationalization (i18n) Architecture
+
+### 12.1 Overview
+
+The application supports three languages: Japanese, English, and Chinese. Both frontend and backend implement i18n capabilities.
+
+### 12.2 Frontend i18n
+
+**Technology Stack:**
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| i18next | 24.2.0+ | Internationalization framework |
+| react-i18next | 15.4.0+ | React i18n binding |
+
+**Translation File Structure:**
+```
+frontend/src/locales/
+├── ja/                     # Japanese
+│   ├── common.json         # Common translations
+│   ├── dashboard.json      # Dashboard
+│   ├── tasks.json          # Task management
+│   ├── timeline.json       # Timeline
+│   ├── errors.json         # Error messages
+│   └── ...                 # Other modules
+├── en/                     # English
+│   └── ...（same structure）
+└── zh/                     # Chinese
+    └── ...（same structure）
+```
+
+**Language Detection Priority:**
+1. **localStorage**: Language setting saved in `i18nextLng` key
+2. **Browser Settings**: `navigator.language`
+3. **Default**: Japanese (`ja`)
+
+**Usage Example:**
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function TeamCard({ team }: { team: TeamSummary }) {
+  const { t } = useTranslation();
+
+  return (
+    <div>
+      <h3>{team.name}</h3>
+      <span>{t(`common.status.${team.status}`)}</span>
+    </div>
+  );
+}
+```
+
+### 12.3 Backend i18n
+
+**Architecture:**
+The backend implements a custom lightweight i18n service for multilingual API error messages and log messages.
+
+**Translation File Structure:**
+```
+backend/locales/
+├── ja/                     # Japanese
+│   ├── api.json            # API error messages
+│   └── logs.json           # Log messages
+├── en/                     # English
+│   ├── api.json
+│   └── logs.json
+└── zh/                     # Chinese
+    ├── api.json
+    └── logs.json
+```
+
+**Language Detection Middleware:**
+
+`LanguageMiddleware` detects language in the following priority:
+
+1. **Accept-Language Header**: HTTP request header
+2. **Default Language**: `DASHBOARD_DEFAULT_LANGUAGE` setting
+
+```python
+# app/middleware/language.py
+class LanguageMiddleware:
+    async def dispatch(self, request: Request, call_next):
+        # Get language from Accept-Language header
+        accept_language = request.headers.get("Accept-Language", "ja")
+        language = self._parse_accept_language(accept_language)
+
+        # Save to request state
+        request.state.language = language
+
+        response = await call_next(request)
+        return response
+```
+
+**I18nService:**
+```python
+# app/services/i18n_service.py
+class I18nService:
+    def __init__(self, locales_dir: Path, default_language: str = "ja"):
+        self._translations: dict[str, dict] = {}
+        self._default_language = default_language
+        self._load_translations(locales_dir)
+
+    def t(self, key: str, language: str, **kwargs) -> str:
+        """Get translated text for a translation key"""
+        translation = self._get_nested_value(
+            self._translations.get(language, {}),
+            key
+        )
+        return translation.format(**kwargs) if translation else key
+```
+
+### 12.4 Supported Languages
+
+| Language Code | Language Name |
+|--------------|---------------|
+| `ja` | 日本語 (Default) |
+| `en` | English |
+| `zh` | 中文 |
+
+### 12.5 Environment Variable
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DASHBOARD_DEFAULT_LANGUAGE` | `ja` | Default language (ja/en/zh) |
+
+### 12.6 Translation Key Consistency Check
+
+The `scripts/verify-translations.js` script runs automatically via pre-commit hook to verify translation key consistency across all languages.
+
+---
+
 *Created: 2026-02-16*
-*Last Updated: 2026-02-24*
-*Version: 2.1.0*
+*Last Updated: 2026-03-04*
+*Version: 2.2.0*

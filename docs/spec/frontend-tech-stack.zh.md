@@ -20,6 +20,8 @@
 | 图表可视化 | D3.js | 7.8.5+ | 网络/依赖图 |
 | 时间轴 | vis-timeline | 7.7.3+ | 时序数据显示 |
 | UI 组件 | Radix UI | 1.x | 无障碍 UI 组件 |
+| 国际化 | i18next | 24.2.0+ | 国际化框架 |
+| 国际化 | react-i18next | 15.4.0+ | React i18n 绑定 |
 
 ### 1.2 开发依赖
 
@@ -608,9 +610,79 @@ npm run test:ui
 
 ---
 
+## 12. 国际化（i18n）
+
+### 12.1 技术栈
+
+| 技术 | 版本 | 用途 |
+|------|-----------|------|
+| i18next | 24.2.0+ | 国际化框架 |
+| react-i18next | 15.4.0+ | React i18n 绑定 |
+
+### 12.2 翻译文件结构
+
+```
+frontend/src/locales/
+├── ja/                     # 日语
+│   ├── common.json         # 通用翻译
+│   ├── dashboard.json      # 仪表板
+│   ├── tasks.json          # 任务管理
+│   ├── timeline.json       # 时间线
+│   ├── errors.json         # 错误消息
+│   ├── header.json         # 页头
+│   ├── a11y.json           # 无障碍
+│   ├── models.json         # 模型相关
+│   └── teamDetail.json     # 团队详情
+├── en/                     # 英语
+│   └── ...（同结构）
+└── zh/                     # 中文
+    └── ...（同结构）
+```
+
+### 12.3 语言检测优先级
+
+1. **localStorage**: `i18nextLng` 键中保存的语言设置
+2. **浏览器设置**: `navigator.language`
+3. **默认**: 日语（`ja`）
+
+### 12.4 使用示例
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function TeamCard({ team }: { team: TeamSummary }) {
+  const { t } = useTranslation();
+
+  return (
+    <div>
+      <h3>{team.name}</h3>
+      <span>{t(`common.status.${team.status}`)}</span>
+      <button>{t('common.delete')}</button>
+    </div>
+  );
+}
+```
+
+### 12.5 语言切换
+
+可通过页头语言选择器切换：
+
+```tsx
+const { i18n } = useTranslation();
+
+// 切换语言
+await i18n.changeLanguage('en');
+```
+
+### 12.6 翻译键一致性检查
+
+pre-commit 钩子自动运行 `scripts/verify-translations.js`，验证所有语言的翻译键是否一致。
+
+---
+
 *创建日期: 2026-02-16*
-*最后更新: 2026-02-24*
-*版本: 2.1.0*
+*最后更新: 2026-03-04*
+*版本: 2.2.0*
 
 ---
 

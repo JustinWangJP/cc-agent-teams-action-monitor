@@ -11,7 +11,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     // グローバルセットアップファイル
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./src/test/setup.tsx'],
 
     // テスト環境（jsdom でブラウザ環境をシミュレート）
     environment: 'jsdom',

@@ -1,0 +1,19 @@
+{
+  "members": "成员",
+  "session_id": "会话ID",
+  "no_members": "无成员",
+  "member_list": "成员列表",
+  "created_at": "创建时间",
+  "lead_agent": "负责人",
+  "model_usage": "使用模型",
+  "joined_at": "加入时间",
+  "last_activity": "最后活动",
+  "prompt": "提示词",
+  "agent_status": {
+    "idle": "空闲",
+    "working": "工作中",
+    "waiting": "等待中",
+    "error": "错误",
+    "completed": "已完成"
+  }
+}

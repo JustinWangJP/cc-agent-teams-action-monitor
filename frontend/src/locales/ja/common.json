@@ -1,0 +1,66 @@
+{
+  "buttons": {
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "save": "保存",
+    "retry": "リトライ",
+    "reconnect": "再接続",
+    "close": "閉じる",
+    "back": "一覧に戻る",
+    "refresh": "更新"
+  },
+  "labels": {
+    "loading": "読み込み中...",
+    "deleting": "削除中...",
+    "no_data": "データがありません",
+    "language": "言語"
+  },
+  "navigation": {
+    "overview": "概要",
+    "timeline": "タイムライン",
+    "tasks": "タスク"
+  },
+  "teams": {
+    "active_teams": "アクティブチーム",
+    "teams_count": "{{count}} チーム",
+    "select_team": "チームを選択",
+    "select_team_placeholder": "-- チームを選択 --",
+    "search_placeholder": "チーム名を検索...",
+    "search_results": "{{count}} 件の結果",
+    "no_search_results": "検索結果がありません",
+    "clear_search": "検索をクリア",
+    "no_teams": "No teams found. Create a team in Claude Code to see it here.",
+    "select_timeline_team": "タイムラインを表示するチームを選択してください",
+    "members_count": "{{count}} members"
+  },
+  "agents": {
+    "progress": "進捗",
+    "current_task": "現在のタスク",
+    "assigned_count": "担当: {{count}}件",
+    "completed_count": "完了: {{count}}件",
+    "related_files": "関連ファイル",
+    "more_files": "... 他 {{count}} 件",
+    "no_task": "タスクなし"
+  },
+  "tasks": {
+    "title": "タスク",
+    "count": "{{filtered}} / {{total}} 件",
+    "filter_all": "全チーム",
+    "filter_label": "チームフィルタ",
+    "search_label": "件名・担当者で検索",
+    "search_placeholder": "件名や担当者を検索...",
+    "clear_search": "検索をクリア",
+    "clear_filters": "フィルタを解除",
+    "description": "タスクはエージェントチームの作業単位です。チームフィルタや検索で特定のタスクを見つけられます。",
+    "no_tasks": "タスクがありません",
+    "status": {
+      "pending": "保留中",
+      "in_progress": "進行中",
+      "completed": "完了"
+    }
+  },
+  "loading_data": "データを読み込んでいます...",
+  "load_error": "データの読み込みに失敗しました",
+  "seconds_one": "秒",
+  "seconds_other": "秒"
+}

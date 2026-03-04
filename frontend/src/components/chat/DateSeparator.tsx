@@ -1,7 +1,7 @@
 /**
  * 日付セパレーターコンポーネント。
  *
- * メッセージタイムラインで日付が変わったことを示すセパレーターを表示します。
+ * メッセージタイムラインで日付が変わったことを示すセパレーターを表示します through
  *
  * @module components/chat/DateSeparator
  */
@@ -11,7 +11,29 @@
 import { memo } from 'react';
 import { clsx } from 'clsx';
 import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
+import type { Locale } from 'date-fns';
+import { ja } from 'date-fns/locale/ja';
+import { enUS } from 'date-fns/locale/en-US';
+import { zhCN } from 'date-fns/locale/zh-CN';
+import { useTranslation } from 'react-i18next';
+
+/**
+ * ロケールマッピング。
+ */
+const LOCALE_MAP: Record<string, Locale> = {
+  ja: ja,
+  en: enUS,
+  zh: zhCN,
+};
+
+/**
+ * 日付フォーマットパターンマッピング。
+ */
+const DATE_FORMAT_MAP: Record<string, string> = {
+  ja: 'yyyy年M月d日 (E)',
+  en: 'MMMM d, yyyy (E)',
+  zh: 'yyyy年M月d日 (E)',
+};
 
 /**
  * 日付セパレーターのプロパティ。
@@ -30,8 +52,15 @@ export interface DateSeparatorProps {
  * ```
  */
 export const DateSeparator = memo<DateSeparatorProps>(({ date }) => {
-  // 日本語形式で日付をフォーマット: "2026年2月19日 (水)"
-  const formattedDate = format(date, 'yyyy年M月d日 (E)', { locale: ja });
+  const { i18n, t } = useTranslation('timeline');
+
+  // 現在のロケールを取得（デフォルトは日本語）
+  const currentLocale = i18n.language || 'ja';
+  const locale = LOCALE_MAP[currentLocale] || ja;
+  const dateFormat = DATE_FORMAT_MAP[currentLocale] || DATE_FORMAT_MAP.ja;
+
+  // ロケールに応じた日付フォーマット
+  const formattedDate = format(date, dateFormat, { locale });
 
   return (
     <div
@@ -40,7 +69,7 @@ export const DateSeparator = memo<DateSeparatorProps>(({ date }) => {
         'sticky top-0 z-10'
       )}
       role="separator"
-      aria-label={`${formattedDate}のメッセージ`}
+      aria-label={t('date.messages_on', { date: formattedDate })}
     >
       <div
         className={clsx(

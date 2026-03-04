@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { Clock, RefreshCw } from 'lucide-react';
 import { clsx } from 'clsx';
 import { INTERVAL_OPTIONS } from './pollingConstants';
+import { useTranslation } from 'react-i18next';
 
 /**
  * PollingIntervalSelector コンポーネントのプロパティ。
@@ -38,23 +39,24 @@ export interface PollingIntervalSelectorProps {
  * ミリ秒を「X秒」「X分」形式の文字列に変換。
  *
  * @param ms - ミリ秒
+ * @param t - 翻訳関数
  * @returns フォーマットされた文字列
  */
-function formatCountdown(ms: number): string {
+function formatCountdown(ms: number, t: (key: string, params?: any) => string): string {
   const seconds = Math.ceil(ms / 1000);
 
   if (seconds < 60) {
-    return `${seconds}秒後`;
+    return t('intervals.seconds_later', { count: seconds });
   }
 
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
 
   if (remainingSeconds === 0) {
-    return `${minutes}分後`;
+    return t('intervals.minutes_later', { count: minutes });
   }
 
-  return `${minutes}分${remainingSeconds}秒後`;
+  return t('intervals.minutes_seconds_later', { minutes, seconds });
 }
 
 /**
@@ -77,12 +79,14 @@ export const PollingIntervalSelector = memo<PollingIntervalSelectorProps>(
   ({
     value,
     onChange,
-    label = '更新間隔',
+    label,
     className,
     disabled = false,
     lastUpdateTimestamp = Date.now(),
     showCountdown = true,
   }) => {
+    const { t } = useTranslation(['header', 'a11y']);
+    const displayLabel = label || t('header:polling_interval');
     // 次回更新までの残り時間（ミリ秒）
     const [timeUntilNextUpdate, setTimeUntilNextUpdate] = useState(0);
 
@@ -159,9 +163,9 @@ export const PollingIntervalSelector = memo<PollingIntervalSelectorProps>(
 
     return (
       <div className={clsx('flex items-center gap-2', className)}>
-        {label && (
+        {displayLabel && (
           <span className="text-sm text-slate-600 dark:text-slate-400 shrink-0">
-            {label}:
+            {displayLabel}:
           </span>
         )}
 
@@ -184,11 +188,11 @@ export const PollingIntervalSelector = memo<PollingIntervalSelectorProps>(
               'transition-all',
               'cursor-pointer'
             )}
-            aria-label={`${label}を選択`}
+            aria-label={t('a11y:polling_interval_select', { label: displayLabel || t('header:polling_interval') })}
           >
             {INTERVAL_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {t(option.labelKey, option.labelParams)}
               </option>
             ))}
           </select>
@@ -232,7 +236,7 @@ export const PollingIntervalSelector = memo<PollingIntervalSelectorProps>(
                 'border border-slate-200 dark:border-slate-700',
                 'transition-all overflow-hidden'
               )}
-              title={`次回更新: ${formatCountdown(timeUntilNextUpdate)}`}
+              title={`${t('header:next_update')}: ${formatCountdown(timeUntilNextUpdate, t)}`}
             >
               <RefreshCw
                 className={clsx(
@@ -244,7 +248,7 @@ export const PollingIntervalSelector = memo<PollingIntervalSelectorProps>(
                 }}
                 aria-hidden="true"
               />
-              <span className="tabular-nums">{formatCountdown(timeUntilNextUpdate)}</span>
+              <span className="tabular-nums">{formatCountdown(timeUntilNextUpdate, t)}</span>
 
               {/* プログレスバー（下部） */}
               <div

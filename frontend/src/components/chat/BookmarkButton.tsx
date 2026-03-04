@@ -23,7 +23,7 @@ const STORAGE_KEY = 'chat-bookmarks';
  *
  * @returns ブックマークされたメッセージIDの集合
  *
- * 
+ *
  */
 function getStoredBookmarks(): Set<string> {
   if (typeof window === 'undefined') return new Set();
@@ -42,7 +42,7 @@ function getStoredBookmarks(): Set<string> {
  *
  * @param bookmarks - 保存するブックマークの集合
  *
- * 
+ *
  */
 function saveBookmarks(bookmarks: Set<string>) {
   if (typeof window === 'undefined') return;
@@ -86,7 +86,7 @@ export interface BookmarkButtonProps {
  * />
  * ```
  *
- * 
+ *
  */
 export const BookmarkButton = memo<BookmarkButtonProps>(
   ({ messageId, onToggle, size = 'md' }) => {
@@ -161,7 +161,7 @@ BookmarkButton.displayName = 'BookmarkButton';
  *
  * @returns ブックマークされたメッセージIDの集合
  *
- * 
+ *
  */
 export function useBookmarks(): Set<string> {
   const [bookmarks, setBookmarks] = useState<Set<string>>(getStoredBookmarks());

@@ -1,4 +1,5 @@
 """AgentStatusService のユニットテスト."""
+
 import pytest
 from datetime import datetime, timezone
 
@@ -20,7 +21,7 @@ class TestAgentStatusService:
                 "to": agent_name,
                 "parsed_type": "idle_notification",
                 "parsed_data": {"type": "idle_notification"},
-                "timestamp": now
+                "timestamp": now,
             }
         ]
         tasks = []
@@ -42,8 +43,12 @@ class TestAgentStatusService:
             {
                 "to": agent_name,
                 "parsed_type": "task_assignment",
-                "parsed_data": {"type": "task_assignment", "taskId": "5", "subject": "API 実装"},
-                "timestamp": now
+                "parsed_data": {
+                    "type": "task_assignment",
+                    "taskId": "5",
+                    "subject": "API 実装",
+                },
+                "timestamp": now,
             }
         ]
         tasks = []
@@ -61,14 +66,13 @@ class TestAgentStatusService:
         service = AgentStatusService()
 
         agent_name = "backend-developer"
-        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         messages = []
         tasks = [
             {
                 "id": "5",
                 "owner": agent_name,
                 "status": "in_progress",
-                "subject": "API 実装"
+                "subject": "API 実装",
             }
         ]
 
@@ -86,14 +90,13 @@ class TestAgentStatusService:
         service = AgentStatusService()
 
         agent_name = "backend-developer"
-        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         messages = []
         tasks = [
             {
                 "id": "5",
                 "owner": agent_name,
                 "status": "completed",
-                "subject": "API 実装"
+                "subject": "API 実装",
             }
         ]
 
@@ -109,7 +112,6 @@ class TestAgentStatusService:
         service = AgentStatusService()
 
         agent_name = "backend-developer"
-        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         messages = []
         tasks = [
             {"id": "1", "owner": agent_name, "status": "completed"},
@@ -131,7 +133,6 @@ class TestAgentStatusService:
         service = AgentStatusService()
 
         agent_name = "backend-developer"
-        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         messages = []
         tasks = [
             {
@@ -139,7 +140,7 @@ class TestAgentStatusService:
                 "owner": agent_name,
                 "status": "in_progress",
                 "blockedBy": ["4"],  # タスク 4 が完了するのを待っている
-                "subject": "API 実装"
+                "subject": "API 実装",
             },
             {"id": "4", "owner": "other-agent", "status": "pending"},
         ]
@@ -192,10 +193,7 @@ class TestAgentStatusService:
             hour=0, minute=0, second=0, microsecond=0
         )
         messages = [
-            {
-                "to": agent_name,
-                "timestamp": old_time.isoformat().replace("+00:00", "Z")
-            }
+            {"to": agent_name, "timestamp": old_time.isoformat().replace("+00:00", "Z")}
         ]
         tasks = []
 
@@ -212,19 +210,17 @@ class TestAgentStatusService:
         session_entries = [
             {
                 "parsed_type": "assistant_message",
-                "details": {
-                    "model": "claude-opus-4-6"
-                }
+                "details": {"model": "claude-opus-4-6"},
             },
             {
                 "parsed_type": "tool_use",
                 "details": {
                     "files": [
                         {"path": "/path/to/file1.py"},
-                        {"path": "/path/to/file2.ts"}
+                        {"path": "/path/to/file2.ts"},
                     ]
-                }
-            }
+                },
+            },
         ]
 
         result = await service._extract_session_info(agent_name, session_entries)

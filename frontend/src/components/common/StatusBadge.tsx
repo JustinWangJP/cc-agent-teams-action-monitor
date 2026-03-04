@@ -11,26 +11,13 @@
  * @returns ステータスバッジ要素
  *
  */
+import { useTranslation } from 'react-i18next';
+
 export interface StatusBadgeProps {
   status: string;
   size?: 'sm' | 'md';
   showTooltip?: boolean;
 }
-
-/**
- * 各ステータスの説明テキスト
- */
-const STATUS_DESCRIPTIONS: Record<string, string> = {
-  active: 'セッションログが1時間以内に更新されています（活動中）',
-  inactive: 'チームにメンバーが存在しません',
-  stopped: 'セッションログが1時間以上更新されていません（停止中）',
-  unknown: 'セッションログが見つかりません（状態不明）',
-  idle: 'アイドル状態',
-  pending: '保留中',
-  in_progress: '進行中',
-  completed: '完了',
-  deleted: '削除済み',
-};
 
 /**
  * 各ステータスの色
@@ -48,15 +35,30 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function StatusBadge({ status, size = 'sm', showTooltip = true }: StatusBadgeProps) {
+  const { t } = useTranslation(['dashboard', 'common']);
   const color = STATUS_COLORS[status] || 'bg-gray-400';
   const sizeClasses = size === 'sm' ? 'w-2 h-2' : 'w-3 h-3';
-  const description = STATUS_DESCRIPTIONS[status] || '不明なステータス';
+
+  // ステータスの説明テキストを翻訳から取得
+  const getDescription = (status: string): string => {
+    const tooltipKey = `team_card.status.${status}_tooltip` as const;
+    const statusKey = `team_card.status.${status}` as const;
+    return t(tooltipKey, { defaultValue: t(statusKey, { defaultValue: status }) });
+  };
+
+  const description = getDescription(status);
+
+  // ステータス表示テキストを翻訳から取得
+  const getStatusText = (status: string): string => {
+    const key = `team_card.status.${status}` as const;
+    return t(key, { defaultValue: status.replace('_', ' ') });
+  };
 
   const badgeContent = (
     <span className="inline-flex items-center gap-1.5">
       <span className={`${sizeClasses} rounded-full ${color}`} />
       <span className="text-xs text-gray-600 dark:text-gray-400 capitalize">
-        {status.replace('_', ' ')}
+        {getStatusText(status)}
       </span>
     </span>
   );

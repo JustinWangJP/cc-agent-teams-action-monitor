@@ -1,0 +1,154 @@
+{
+  "title": "Timeline",
+  "message_timeline": "Message Timeline",
+  "loading": "Loading timeline...",
+  "error": "An error occurred",
+  "no_messages": "No messages to display",
+  "messages_count": "{{count}} messages",
+  "event_types": {
+    "message": "Message",
+    "user_message": "User message",
+    "assistant_message": "AI assistant response",
+    "thinking": "Thinking process",
+    "tool_use": "Tool use",
+    "file_change": "File change",
+    "idle_notification": "Idle notification",
+    "shutdown_request": "Shutdown request",
+    "shutdown_response": "Shutdown response",
+    "shutdown_approved": "Shutdown approved",
+    "plan_approval_request": "Plan approval request",
+    "plan_approval_response": "Plan approval response",
+    "task_assignment": "Task assignment",
+    "task_completed": "Task completed"
+  },
+  "event_icons": {
+    "message": "💬",
+    "user_message": "👤",
+    "assistant_message": "🤖",
+    "thinking": "💭",
+    "tool_use": "🔧",
+    "file_change": "📁",
+    "idle_notification": "💤",
+    "shutdown_request": "🛑",
+    "shutdown_response": "✅",
+    "shutdown_approved": "✅",
+    "plan_approval_request": "📋",
+    "plan_approval_response": "✅",
+    "task_assignment": "📝",
+    "task_completed": "✅"
+  },
+  "file_operations": {
+    "created": "Created",
+    "modified": "Modified",
+    "deleted": "Deleted",
+    "read": "Read"
+  },
+  "no_events": "No events",
+  "detail": {
+    "title": "Message Details",
+    "description": "Display detailed message information",
+    "basic_info": "Basic Info",
+    "sender": "Sender",
+    "recipient": "Recipient",
+    "time": "Time",
+    "type": "Type",
+    "summary": "Summary",
+    "color": "Color",
+    "read_status": "Read Status",
+    "read": "Read",
+    "unread": "Unread",
+    "message_body": "Message Body",
+    "protocol_data": "Protocol Data",
+    "show_raw_data": "Show Raw Data",
+    "copy": "Copy",
+    "close": "Close",
+    "unknown_time": "Unknown time",
+    "invalid_time": "Invalid time",
+    "unknown_type": "Unknown",
+    "detail_button": "Details",
+    "metadata": "Metadata",
+    "session_id": "Session ID",
+    "task_id": "Task ID",
+    "task": "Task",
+    "model": "Model"
+  },
+  "type_filter": {
+    "title": "Message Type",
+    "selected_count": "({{count}} selected)",
+    "clear": "Clear"
+  },
+  "filters": {
+    "sender": "Sender",
+    "type": "Type",
+    "all": "All",
+    "all_senders": "All senders",
+    "all_types": "All types",
+    "reset": "Reset",
+    "filtering": "Filtering by",
+    "senders_count": "{{count}} senders",
+    "types_count": "{{count}} types",
+    "others_count": "{{count}} more"
+  },
+  "typing": {
+    "one_typing": "{{name}} is typing",
+    "two_typing": "{{name1}} and {{name2}} are typing",
+    "many_typing": "{{count}} people are typing"
+  },
+  "header": {
+    "display_limit_500": "500",
+    "display_limit_all": "All",
+    "message_count": "{{count}}",
+    "filter_toggle": "Filter",
+    "filter_toggle_aria": "Toggle filter",
+    "search_placeholder": "Search messages...",
+    "search_aria": "Search messages",
+    "search_clear_aria": "Clear search",
+    "prev_result_aria": "Previous result",
+    "next_result_aria": "Next result",
+    "no_results": "No results"
+  },
+  "panel": {
+    "select_team": "Please select a team",
+    "fetch_error": "Failed to fetch data"
+  },
+  "message_list": {
+    "loading": "Loading messages...",
+    "error_title": "An error occurred",
+    "no_messages": "No messages yet",
+    "aria_label": "Message list",
+    "message_count_sr": "{{count}} messages",
+    "new_messages": "{{count}} new messages",
+    "new_messages_aria": "Show {{count}} new messages",
+    "scroll_to_bottom_aria": "Scroll to bottom"
+  },
+  "sender_filter": {
+    "title": "Sender",
+    "selected_count": "({{count}} selected)",
+    "clear": "Clear",
+    "no_senders": "No sender information"
+  },
+  "date": {
+    "messages_on": "Messages on {{date}}"
+  },
+  "aria": {
+    "message_from": "Message from {{sender}}"
+  },
+  "message_display": {
+    "thinking_in_progress": "Thinking...",
+    "task_assignment_default": "Task assignment",
+    "task_completed_with_id": "Task completed: {{taskId}}",
+    "idle_available": "Waiting for instructions",
+    "idle_with_reason": "Idle: {{reason}}",
+    "idle_reason_unknown": "Unknown reason",
+    "shutdown_request": "Shutdown request",
+    "shutdown_response_approved": "Shutdown response: Approved",
+    "shutdown_response_rejected": "Shutdown response: Rejected",
+    "shutdown_approved": "Shutdown approved",
+    "plan_approval_request": "Plan approval request",
+    "plan_approved": "Plan approval: Approved",
+    "plan_rejected": "Plan approval: Revision requested",
+    "message_default": "Message",
+    "date_unknown": "Unknown time",
+    "date_invalid": "Invalid time"
+  }
+}

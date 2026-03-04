@@ -11,6 +11,7 @@
 
 import { useCallback, useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle } from 'lucide-react';
 import { ChatHeader } from './ChatHeader';
 import { ChatMessageList } from './ChatMessageList';
@@ -98,6 +99,8 @@ export const ChatTimelinePanel = ({
   teamName,
   apiBaseUrl = '/api',
 }: ChatTimelinePanelProps) => {
+  const { t } = useTranslation('timeline');
+
   // ローカル状態（コンポーネント固有のUI状態のみ）
   const [showFilter, setShowFilter] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<ExtendedParsedType[]>([]);
@@ -393,7 +396,7 @@ export const ChatTimelinePanel = ({
       <div className="flex items-center justify-center h-96 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-2" />
-          <p className="text-slate-500 dark:text-slate-400">チームを選択してください</p>
+          <p className="text-slate-500 dark:text-slate-400">{t('panel.select_team')}</p>
         </div>
       </div>
     );
@@ -403,7 +406,6 @@ export const ChatTimelinePanel = ({
     <div className="flex flex-col h-full gap-3">
       {/* ヘッダー */}
       <ChatHeader
-        title="メッセージタイムライン"
         messageCount={sortedMessages.length}
         searchQuery={effectiveSearchQuery}
         onSearchChange={handleSearchChange}
@@ -431,7 +433,7 @@ export const ChatTimelinePanel = ({
         <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-800 dark:text-red-300">データの取得に失敗しました</p>
+            <p className="text-sm font-medium text-red-800 dark:text-red-300">{t('panel.fetch_error')}</p>
             <p className="text-sm text-red-600 dark:text-red-400 mt-1">{error.message}</p>
           </div>
         </div>

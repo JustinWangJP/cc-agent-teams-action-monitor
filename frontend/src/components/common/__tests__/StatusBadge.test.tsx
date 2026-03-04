@@ -7,7 +7,8 @@
  *
 */
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { render } from '@/test/setup.tsx'
 import { StatusBadge } from '../StatusBadge'
 
 describe('StatusBadge', () => {
@@ -20,7 +21,8 @@ describe('StatusBadge', () => {
 
     it('"active"テキストを表示する', () => {
       render(<StatusBadge status="active" />)
-      expect(screen.getByText('active')).toBeInTheDocument()
+      // 翻訳されたテキスト（日本語）を確認
+      expect(screen.getByText('アクティブ')).toBeInTheDocument()
     })
   })
 
@@ -33,7 +35,9 @@ describe('StatusBadge', () => {
 
     it('"pending"テキストを表示する', () => {
       render(<StatusBadge status="pending" />)
-      expect(screen.getByText('pending')).toBeInTheDocument()
+      // 翻訳されたテキスト（日本語）を確認 - ツールチップにも同じテキストが含まれるためgetAllByTextを使用
+      const elements = screen.getAllByText('保留中')
+      expect(elements.length).toBeGreaterThan(0)
     })
   })
 
@@ -46,7 +50,9 @@ describe('StatusBadge', () => {
     it('in_progressステータス: 青色バッジ', () => {
       const { container } = render(<StatusBadge status="in_progress" />)
       expect(container.querySelector('.bg-blue-500')).toBeInTheDocument()
-      expect(screen.getByText('in progress')).toBeInTheDocument()
+      // 翻訳されたテキスト（日本語）を確認 - ツールチップにも同じテキストが含まれるためgetAllByTextを使用
+      const elements = screen.getAllByText('進行中')
+      expect(elements.length).toBeGreaterThan(0)
     })
 
     it('completedステータス: 緑色バッジ', () => {
@@ -59,9 +65,10 @@ describe('StatusBadge', () => {
       expect(container.querySelector('.bg-red-500')).toBeInTheDocument()
     })
 
-    it('不明なステータス: デフォルト灰色バッジ', () => {
+    it('不明なステータス: 黄色バッジ', () => {
       const { container } = render(<StatusBadge status="unknown" />)
-      expect(container.querySelector('.bg-gray-400')).toBeInTheDocument()
+      // unknownステータスは黄色（bg-yellow-500）で表示される
+      expect(container.querySelector('.bg-yellow-500')).toBeInTheDocument()
     })
   })
 
@@ -86,9 +93,11 @@ describe('StatusBadge', () => {
   })
 
   describe('アンダースコア置換', () => {
-    it('in_progress を "in progress" に変換', () => {
+    it('in_progress を翻訳キーで表示', () => {
       render(<StatusBadge status="in_progress" />)
-      expect(screen.getByText('in progress')).toBeInTheDocument()
+      // 翻訳されたテキスト（日本語）を確認 - ツールチップにも同じテキストが含まれるためgetAllByTextを使用
+      const elements = screen.getAllByText('進行中')
+      expect(elements.length).toBeGreaterThan(0)
     })
   })
 })

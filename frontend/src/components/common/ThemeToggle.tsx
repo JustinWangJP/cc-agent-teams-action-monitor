@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ThemeMode } from '@/types/theme';
 
 /**
@@ -47,6 +48,7 @@ export function ThemeToggle({
   iconOnly: _iconOnly = true,
   onThemeChange,
 }: ThemeToggleProps) {
+  const { t } = useTranslation('a11y');
   // 初期レンダリング検出用フラグ
   const isInitialRender = useRef(true);
 
@@ -121,8 +123,8 @@ export function ThemeToggle({
         ${sizeClasses[size]}
         ${className}
       `}
-      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-      title={`Current: ${theme} mode. Click to switch.`}
+      aria-label={t('theme_switch_to', { mode: theme === 'light' ? t('dark_mode') : t('light_mode') })}
+      title={t('theme_current', { mode: theme })}
     >
       {theme === 'light' ? (
         // 月アイコン（ダークモード切り替え）

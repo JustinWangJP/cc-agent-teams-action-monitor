@@ -27,6 +27,8 @@ Agent Teams Dashboard は、Claude Code の Agent Teams 機能をリアルタイ
 - **チーム監視**: アクティブなエージェントチームの一覧表示・ステータス判定
 - **タスク管理**: ステータス別のタスク可視化（カンバン形式）
 - **統合タイムライン**: エージェント間メッセージ + セッションログの統合表示
+- **多言語対応**: 日本語・英語・中国語の3言語サポート（UI/APIエラーメッセージ）
+- **言語自動検出**: Accept-Language ヘッダーまたはブラウザ設定から自動判定
 - **ダークモード**: テーマ切り替え対応
 
 ---
@@ -163,6 +165,7 @@ npm run dev
 | フレームワーク | FastAPI 0.109+ |
 | データ検証 | Pydantic 2.5+ |
 | ファイル監視 | watchdog 4.0+ |
+| 国際化 | 独自i18nサービス |
 
 ### フロントエンド
 
@@ -174,6 +177,7 @@ npm run dev
 | CSS | Tailwind CSS 3.4+ |
 | 状態管理 | Zustand 5.0+ |
 | データフェッチ | TanStack Query 5.90+ |
+| 国際化 | i18next + react-i18next |
 
 > 詳細なバージョン情報は [docs/spec/frontend-tech-stack.md](docs/spec/frontend-tech-stack.md) および [docs/spec/backend-tech-stack.md](docs/spec/backend-tech-stack.md) を参照
 
@@ -255,6 +259,7 @@ npm run build
 | `DASHBOARD_PORT` | `8000` | サーバー待ち受けポート |
 | `DASHBOARD_DEBUG` | `True` | デバッグモード |
 | `DASHBOARD_CLAUDE_DIR` | `~/.claude` | Claude データディレクトリ |
+| `DASHBOARD_DEFAULT_LANGUAGE` | `ja` | デフォルト言語（ja/en/zh） |
 
 ---
 
@@ -300,6 +305,7 @@ npm run test:coverage  # テスト実行
 - [x] チーム監視・ステータス判定
 - [x] タスク管理（カンバン形式）
 - [x] 統合タイムライン（inbox + セッションログ）
+- [x] 多言語対応（i18n: 日本語/英語/中国語）
 - [x] ダークモード対応
 
 ---
@@ -310,4 +316,4 @@ MIT License
 
 ---
 
-*最終更新日: 2026-02-24*
+*最終更新日: 2026-03-04*

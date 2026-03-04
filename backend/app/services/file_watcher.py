@@ -4,12 +4,12 @@ watchdog ライブラリを使用して Claude ディレクトリ内の JSON フ
 ログ出力とキャッシュ無効化を行います。
 
 """
+
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, FileModifiedEvent, FileCreatedEvent
+from watchdog.events import FileSystemEventHandler
 
 from app.config import settings
 from app.services.cache_service import get_cache
@@ -113,7 +113,9 @@ class ClaudeFileHandler(FileSystemEventHandler):
                     teams_idx = parts.index("teams")
                     team_name = parts[teams_idx + 1]
                     agent_name = path_obj.stem
-                    logger.info(f"Inbox updated: team={team_name}, agent={agent_name} ({event_type})")
+                    logger.info(
+                        f"Inbox updated: team={team_name}, agent={agent_name} ({event_type})"
+                    )
                     # キャッシュ無効化
                     try:
                         cache = get_cache()
@@ -131,7 +133,9 @@ class ClaudeFileHandler(FileSystemEventHandler):
                     team_name = parts[tasks_idx + 1]
                     task_id = path_obj.stem
                     if task_id != ".lock":
-                        logger.info(f"Task updated: team={team_name}, task={task_id} ({event_type})")
+                        logger.info(
+                            f"Task updated: team={team_name}, task={task_id} ({event_type})"
+                        )
                 except (ValueError, IndexError):
                     logger.info(f"Task file changed: {path} ({event_type})")
         except Exception as e:

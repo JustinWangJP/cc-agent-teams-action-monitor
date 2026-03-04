@@ -1,0 +1,154 @@
+{
+  "title": "タイムライン",
+  "message_timeline": "メッセージタイムライン",
+  "loading": "タイムラインを読み込み中...",
+  "error": "エラーが発生しました",
+  "no_messages": "表示するメッセージがありません",
+  "messages_count": "{{count}} 件のメッセージ",
+  "event_types": {
+    "message": "メッセージ",
+    "user_message": "ユーザーメッセージ",
+    "assistant_message": "AIアシスタント応答",
+    "thinking": "思考プロセス",
+    "tool_use": "ツール使用",
+    "file_change": "ファイル変更",
+    "idle_notification": "アイドル通知",
+    "shutdown_request": "シャットダウン要求",
+    "shutdown_response": "シャットダウン応答",
+    "shutdown_approved": "シャットダウン了承",
+    "plan_approval_request": "プラン承認要求",
+    "plan_approval_response": "プラン承認応答",
+    "task_assignment": "タスク割り当て",
+    "task_completed": "タスク完了"
+  },
+  "event_icons": {
+    "message": "💬",
+    "user_message": "👤",
+    "assistant_message": "🤖",
+    "thinking": "💭",
+    "tool_use": "🔧",
+    "file_change": "📁",
+    "idle_notification": "💤",
+    "shutdown_request": "🛑",
+    "shutdown_response": "✅",
+    "shutdown_approved": "✅",
+    "plan_approval_request": "📋",
+    "plan_approval_response": "✅",
+    "task_assignment": "📝",
+    "task_completed": "✅"
+  },
+  "file_operations": {
+    "created": "作成",
+    "modified": "変更",
+    "deleted": "削除",
+    "read": "読み取り"
+  },
+  "no_events": "イベントがありません",
+  "detail": {
+    "title": "メッセージ詳細",
+    "description": "メッセージの詳細情報を表示します",
+    "basic_info": "基本情報",
+    "sender": "送信者",
+    "recipient": "受信者",
+    "time": "時刻",
+    "type": "タイプ",
+    "summary": "サマリー",
+    "color": "カラー",
+    "read_status": "既読",
+    "read": "既読",
+    "unread": "未読",
+    "message_body": "メッセージ本文",
+    "protocol_data": "プロトコルデータ",
+    "show_raw_data": "生データを表示",
+    "copy": "コピー",
+    "close": "閉じる",
+    "unknown_time": "日時不明",
+    "invalid_time": "無効な日時",
+    "unknown_type": "不明",
+    "detail_button": "詳細",
+    "metadata": "メタデータ",
+    "session_id": "セッションID",
+    "task_id": "タスクID",
+    "task": "タスク",
+    "model": "モデル"
+  },
+  "type_filter": {
+    "title": "メッセージタイプ",
+    "selected_count": "({{count}}選択中)",
+    "clear": "クリア"
+  },
+  "filters": {
+    "sender": "送信者",
+    "type": "タイプ",
+    "all": "すべて",
+    "all_senders": "すべての送信者",
+    "all_types": "すべてのタイプ",
+    "reset": "リセット",
+    "filtering": "でフィルタ中",
+    "senders_count": "{{count}}送信者",
+    "types_count": "{{count}}タイプ",
+    "others_count": "他 {{count}}件"
+  },
+  "typing": {
+    "one_typing": "{{name}} が入力中",
+    "two_typing": "{{name1}} と {{name2}} が入力中",
+    "many_typing": "{{count}} 人が入力中"
+  },
+  "header": {
+    "display_limit_500": "500件",
+    "display_limit_all": "全量",
+    "message_count": "{{count}}件",
+    "filter_toggle": "フィルター",
+    "filter_toggle_aria": "フィルターを切り替え",
+    "search_placeholder": "メッセージを検索...",
+    "search_aria": "メッセージを検索",
+    "search_clear_aria": "検索をクリア",
+    "prev_result_aria": "前の結果",
+    "next_result_aria": "次の結果",
+    "no_results": "該当なし"
+  },
+  "panel": {
+    "select_team": "チームを選択してください",
+    "fetch_error": "データの取得に失敗しました"
+  },
+  "message_list": {
+    "loading": "メッセージを読み込み中...",
+    "error_title": "エラーが発生しました",
+    "no_messages": "まだメッセージはありません",
+    "aria_label": "メッセージリスト",
+    "message_count_sr": "{{count}}件のメッセージがあります",
+    "new_messages": "新着メッセージ {{count}}件",
+    "new_messages_aria": "{{count}}件の新着メッセージを表示",
+    "scroll_to_bottom_aria": "最下部へスクロール"
+  },
+  "sender_filter": {
+    "title": "送信者",
+    "selected_count": "({{count}}選択中)",
+    "clear": "クリア",
+    "no_senders": "送信者情報がありません"
+  },
+  "date": {
+    "messages_on": "{{date}}のメッセージ"
+  },
+  "aria": {
+    "message_from": "{{sender}}からのメッセージ"
+  },
+  "message_display": {
+    "thinking_in_progress": "思考中...",
+    "task_assignment_default": "タスク割り当て",
+    "task_completed_with_id": "タスク完了: {{taskId}}",
+    "idle_available": "指示待機中",
+    "idle_with_reason": "アイドル: {{reason}}",
+    "idle_reason_unknown": "理由不明",
+    "shutdown_request": "シャットダウン要求",
+    "shutdown_response_approved": "シャットダウン応答: 承認",
+    "shutdown_response_rejected": "シャットダウン応答: 却下",
+    "shutdown_approved": "シャットダウン了承済み",
+    "plan_approval_request": "プラン承認要求",
+    "plan_approved": "プラン承認: 承認",
+    "plan_rejected": "プラン承認: 修正要求",
+    "message_default": "メッセージ",
+    "date_unknown": "日時不明",
+    "date_invalid": "無効な日時"
+  }
+}

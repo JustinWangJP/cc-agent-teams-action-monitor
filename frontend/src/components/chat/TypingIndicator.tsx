@@ -10,6 +10,7 @@
 
 import { memo, useState, useEffect } from 'react';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 
 /**
  * タイピング中のエージェント情報。
@@ -67,10 +68,11 @@ TypingDot.displayName = 'TypingDot';
  * />
  * ```
  *
- * 
+ *
  */
 export const TypingIndicator = memo<TypingIndicatorProps>(
   ({ typingAgents, timeout = 3000 }) => {
+    const { t } = useTranslation('timeline');
     // アクティブなエージェントのみを抽出（タイムアウト済みを除外）
     const [activeAgents, setActiveAgents] = useState<TypingAgent[]>([]);
 
@@ -104,11 +106,11 @@ export const TypingIndicator = memo<TypingIndicatorProps>(
     const agentNames = activeAgents.map((a) => a.name);
     let text = '';
     if (agentNames.length === 1) {
-      text = `${agentNames[0]} が入力中`;
+      text = t('typing.one_typing', { name: agentNames[0] });
     } else if (agentNames.length === 2) {
-      text = `${agentNames[0]} と ${agentNames[1]} が入力中`;
+      text = t('typing.two_typing', { name1: agentNames[0], name2: agentNames[1] });
     } else {
-      text = `${agentNames.length} 人が入力中`;
+      text = t('typing.many_typing', { count: agentNames.length });
     }
 
     return (
@@ -145,7 +147,7 @@ TypingIndicator.displayName = 'TypingIndicator';
  * @param timeout - タイムアウト時間（ミリ秒、デフォルト3000）
  * @returns タイピング中のエージェント配列
  *
- * 
+ *
  */
 export function useTypingIndicator(
   agents: Array<{ name: string; isTyping?: boolean; lastActivity?: string }>,

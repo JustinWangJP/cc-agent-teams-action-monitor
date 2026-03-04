@@ -12,13 +12,15 @@ import { memo, useCallback } from 'react';
 import { Filter, X } from 'lucide-react';
 import type { ExtendedParsedType } from '@/types/message';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 
 /**
  * メッセージタイプのオプション定義。
  */
 export interface MessageTypeOption {
   value: ExtendedParsedType;
-  label: string;
+  /** 翻訳キー */
+  labelKey: string;
   icon: string;
 }
 
@@ -27,18 +29,18 @@ export interface MessageTypeOption {
  */
 export const DEFAULT_TYPE_OPTIONS: MessageTypeOption[] = [
   // inbox 由来
-  { value: 'message', label: 'メッセージ', icon: '💬' },
-  { value: 'idle_notification', label: 'アイドル通知', icon: '💤' },
-  { value: 'shutdown_request', label: 'シャットダウン要求', icon: '🛑' },
-  { value: 'shutdown_response', label: 'シャットダウン応答', icon: '✅' },
-  { value: 'plan_approval_request', label: 'プラン承認要求', icon: '📋' },
-  { value: 'plan_approval_response', label: 'プラン承認応答', icon: '✅' },
-  { value: 'task_assignment', label: 'タスク割り当て', icon: '📝' },
-  { value: 'task_completed', label: 'タスク完了', icon: '✅' },
+  { value: 'message', labelKey: 'event_types.message', icon: '💬' },
+  { value: 'idle_notification', labelKey: 'event_types.idle_notification', icon: '💤' },
+  { value: 'shutdown_request', labelKey: 'event_types.shutdown_request', icon: '🛑' },
+  { value: 'shutdown_response', labelKey: 'event_types.shutdown_response', icon: '✅' },
+  { value: 'plan_approval_request', labelKey: 'event_types.plan_approval_request', icon: '📋' },
+  { value: 'plan_approval_response', labelKey: 'event_types.plan_approval_response', icon: '✅' },
+  { value: 'task_assignment', labelKey: 'event_types.task_assignment', icon: '📝' },
+  { value: 'task_completed', labelKey: 'event_types.task_completed', icon: '✅' },
   // session 由来
-  { value: 'user_message', label: 'ユーザーメッセージ', icon: '👤' },
-  { value: 'assistant_message', label: 'AI応答', icon: '🤖' },
-  { value: 'thinking', label: '思考', icon: '💭' },
+  { value: 'user_message', labelKey: 'event_types.user_message', icon: '👤' },
+  { value: 'assistant_message', labelKey: 'event_types.assistant_message', icon: '🤖' },
+  { value: 'thinking', labelKey: 'event_types.thinking', icon: '💭' },
 ];
 
 /**
@@ -60,9 +62,10 @@ interface TypeChipProps {
   option: MessageTypeOption;
   isSelected: boolean;
   onToggle: () => void;
+  t: (key: string) => string;
 }
 
-const TypeChip = memo<TypeChipProps>(({ option, isSelected, onToggle }) => (
+const TypeChip = memo<TypeChipProps>(({ option, isSelected, onToggle, t }) => (
   <button
     type="button"
     onClick={onToggle}
@@ -75,7 +78,7 @@ const TypeChip = memo<TypeChipProps>(({ option, isSelected, onToggle }) => (
     )}
   >
     <span>{option.icon}</span>
-    <span>{option.label}</span>
+    <span>{t(option.labelKey)}</span>
   </button>
 ));
 
@@ -94,6 +97,8 @@ TypeChip.displayName = 'TypeChip';
  */
 export const MessageTypeFilter = memo<MessageTypeFilterProps>(
   ({ selectedTypes, onChange, options = DEFAULT_TYPE_OPTIONS }) => {
+    const { t } = useTranslation('timeline');
+
     /**
      * タイプのトグルハンドラー。
      */
@@ -123,11 +128,11 @@ export const MessageTypeFilter = memo<MessageTypeFilterProps>(
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-slate-500 dark:text-slate-400" />
             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              メッセージタイプ
+              {t('type_filter.title')}
             </span>
             {hasSelection && (
               <span className="text-xs text-slate-500 dark:text-slate-400">
-                ({selectedTypes.length}選択中)
+                {t('type_filter.selected_count', { count: selectedTypes.length })}
               </span>
             )}
           </div>
@@ -138,7 +143,7 @@ export const MessageTypeFilter = memo<MessageTypeFilterProps>(
               className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors flex items-center gap-1"
             >
               <X className="w-3 h-3" />
-              クリア
+              {t('type_filter.clear')}
             </button>
           )}
         </div>
@@ -149,6 +154,7 @@ export const MessageTypeFilter = memo<MessageTypeFilterProps>(
               option={option}
               isSelected={selectedTypes.includes(option.value)}
               onToggle={() => handleToggle(option.value)}
+              t={t}
             />
           ))}
         </div>

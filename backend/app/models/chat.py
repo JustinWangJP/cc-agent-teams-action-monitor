@@ -3,8 +3,8 @@
 チャットタイムライン表示用のメッセージモデルを定義します。
 
 """
-from datetime import datetime
-from typing import Optional, Any, Literal
+
+from typing import Optional
 from pydantic import BaseModel, Field
 
 

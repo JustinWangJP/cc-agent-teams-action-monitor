@@ -1,13 +1,17 @@
 import { ThemeToggle } from '@/components/common/ThemeToggle';
+import { LanguageSelector } from '@/components/common/LanguageSelector';
+import { useTranslation } from 'react-i18next';
 
 /**
  * アプリケーションのヘッダーコンポーネント。
  *
- * ロゴ、タイトル、テーマ切り替えを表示します。
+ * ロゴ、タイトル、テーマ切り替え、言語選択を表示します。
  *
  * @returns ヘッダー要素
  */
 export function Header() {
+  const { t } = useTranslation('header');
+
   return (
     <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 transition-colors duration-300 ease-in-out">
       <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -17,10 +21,11 @@ export function Header() {
               <span className="text-white font-bold text-sm">AT</span>
             </div>
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Agent Teams Dashboard
+              {t('title')}
             </h1>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSelector />
             <ThemeToggle size="md" iconOnly />
           </div>
         </div>

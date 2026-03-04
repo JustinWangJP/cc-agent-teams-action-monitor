@@ -12,6 +12,7 @@
 | データ検証 | Pydantic | 2.5.0+ | データモデル・バリデーション |
 | 設定管理 | pydantic-settings | 2.1.0+ | 環境変数管理 |
 | ファイル監視 | watchdog | 4.0.0+ | ファイルシステムイベント監視 |
+| 国際化 | 独自i18nサービス | - | APIエラーメッセージ多言語化 |
 | ビルドツール | hatchling | - | パッケージビルド |
 
 ### 1.2 開発用依存関係
@@ -574,6 +575,97 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ---
 
+## 12. 国際化（i18n）
+
+### 12.1 アーキテクチャ
+
+バックエンドは独自の軽量i18nサービスを実装し、APIエラーメッセージとログメッセージの多言語化を提供します。
+
+### 12.2 翻訳ファイル構造
+
+```
+backend/locales/
+├── ja/                     # 日本語
+│   ├── api.json            # APIエラーメッセージ
+│   └── logs.json           # ログメッセージ
+├── en/                     # 英語
+│   ├── api.json
+│   └── logs.json
+└── zh/                     # 中国語
+    ├── api.json
+    └── logs.json
+```
+
+### 12.3 言語検出ミドルウェア
+
+`LanguageMiddleware` が以下の優先順位で言語を検出：
+
+1. **Accept-Language ヘッダー**: HTTP リクエストヘッダー
+2. **デフォルト言語**: 設定ファイルの `DASHBOARD_DEFAULT_LANGUAGE`
+
+```python
+# app/middleware/language.py
+class LanguageMiddleware:
+    async def dispatch(self, request: Request, call_next):
+        # Accept-Language ヘッダーから言語を取得
+        accept_language = request.headers.get("Accept-Language", "ja")
+        language = self._parse_accept_language(accept_language)
+
+        # リクエスト状態に保存
+        request.state.language = language
+
+        response = await call_next(request)
+        return response
+```
+
+### 12.4 I18nService
+
+```python
+# app/services/i18n_service.py
+class I18nService:
+    def __init__(self, locales_dir: Path, default_language: str = "ja"):
+        self._translations: dict[str, dict] = {}
+        self._default_language = default_language
+        self._load_translations(locales_dir)
+
+    def t(self, key: str, language: str, **kwargs) -> str:
+        """翻訳キーに対応するテキストを取得"""
+        translation = self._get_nested_value(
+            self._translations.get(language, {}),
+            key
+        )
+        return translation.format(**kwargs) if translation else key
+```
+
+### 12.5 使用例
+
+```python
+# APIルートでの使用
+@router.get("/teams/{team_name}")
+async def get_team(
+    team_name: str,
+    request: Request,
+    i18n: I18nService = Depends(get_i18n_service)
+):
+    language = getattr(request.state, "language", "ja")
+
+    if not team_exists(team_name):
+        raise HTTPException(
+            status_code=404,
+            detail=i18n.t("api.errors.team_not_found", language, team=team_name)
+        )
+```
+
+### 12.6 対応言語
+
+| 言語コード | 言語名 |
+|-----------|-------|
+| `ja` | 日本語（デフォルト） |
+| `en` | English |
+| `zh` | 中文 |
+
+---
+
 *作成日: 2026-02-16*
-*最終更新日: 2026-02-24*
-*バージョン: 2.1.0*
+*最終更新日: 2026-03-04*
+*バージョン: 2.2.0*

@@ -12,6 +12,7 @@ import { memo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { File, Folder, ArrowRight, Lock } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 import type { TaskWithProgress } from '@/types/task';
 
 /**
@@ -71,6 +72,7 @@ function getProgressColorClass(status: TaskWithProgress['status'], progress: num
  */
 export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
   ({ task, onClick, enableOwnerLink = true, onTimelineFilter, className = '' }) => {
+    const { t } = useTranslation(['tasks', 'common']);
     const progressColorClass = getProgressColorClass(task.status, task.progress);
 
     // ステータスボーダー色
@@ -80,15 +82,6 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
       completed: 'border-l-green-500',
       deleted: 'border-l-red-500',
       stopped: 'border-l-gray-500',
-    };
-
-    // ステータスラベル
-    const statusLabels: Record<TaskWithProgress['status'], string> = {
-      pending: '未着手',
-      in_progress: '進行中',
-      completed: '完了',
-      deleted: '削除',
-      stopped: '停止',
     };
 
     return (
@@ -116,7 +109,7 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
                 task.status === 'deleted' && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
                 task.status === 'stopped' && 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
               )}>
-                {statusLabels[task.status]}
+                {t(`status_labels.${task.status}`)}
               </span>
               {/* タイムライン連携ボタン */}
               {onTimelineFilter && (
@@ -127,9 +120,9 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
                     onTimelineFilter(task.id);
                   }}
                   className="text-xs px-2 py-0.5 rounded bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
-                  title="タイムラインでこのタスクに関連するアクティビティを表示"
+                  title={t('timeline_title')}
                 >
-                  🔗 タイムライン
+                  🔗 {t('timeline_button')}
                 </button>
               )}
             </div>
@@ -143,7 +136,7 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
         {task.description && (
           <details className="group/description mb-3">
             <summary className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 select-none">
-              <span>📝 詳細</span>
+              <span>📝 {t('details')}</span>
               <span className="group-open/description:rotate-90 transition-transform">▶</span>
             </summary>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap pl-2 border-l-2 border-slate-200 dark:border-slate-700">
@@ -155,7 +148,7 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
         {/* プログレスバー */}
         <div className="mb-3">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
-            <span>進捗</span>
+            <span>{t('progress')}</span>
             <span>{task.progress}%</span>
           </div>
           <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -170,7 +163,7 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
         {task.activeForm && task.status === 'in_progress' && (
           <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
             <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mb-1">
-              <span className="font-medium">🔄 進行中の作業</span>
+              <span className="font-medium">🔄 {t('current_work')}</span>
             </div>
             <p className="text-sm text-slate-700 dark:text-slate-300">
               {task.activeForm}
@@ -202,16 +195,16 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-3">
           <div className="flex items-center gap-4">
             {task.startedAt && (
-              <span>開始: {formatDistanceToNow(new Date(task.startedAt), { addSuffix: true })}</span>
+              <span>{t('start')}: {formatDistanceToNow(new Date(task.startedAt), { addSuffix: true })}</span>
             )}
             {task.completedAt && (
-              <span>完了: {formatDistanceToNow(new Date(task.completedAt), { addSuffix: true })}</span>
+              <span>{t('completed_at')}: {formatDistanceToNow(new Date(task.completedAt), { addSuffix: true })}</span>
             )}
           </div>
           {task.blockedCount > 0 && (
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-medium">
               <Lock className="w-3 h-3" />
-              Blocked by {task.blockedCount}
+              {t('task_card.blocked_by')} {task.blockedCount}
             </span>
           )}
         </div>
@@ -220,7 +213,7 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
         {(task.blocks?.length ?? 0) > 0 || (task.blockedBy?.length ?? 0) > 0 ? (
           <details className="group/details mb-3">
             <summary className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 select-none">
-              <span>🔗 依存関係</span>
+              <span>🔗 {t('dependencies')}</span>
               <span className="group-open/details:rotate-90 transition-transform">▶</span>
             </summary>
             <div className="mt-2 space-y-2 text-xs">
@@ -229,7 +222,7 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
                 <div>
                   <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 mb-1">
                     <Lock className="w-3 h-3" />
-                    <span className="font-medium">ブロック中 (以下のタスクの完了を待機)</span>
+                    <span className="font-medium">{t('blocking_details')}</span>
                   </div>
                   <div className="flex flex-wrap gap-1 pl-4">
                     {task.blockedBy.map((taskId) => (
@@ -248,7 +241,7 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
                 <div>
                   <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 mb-1">
                     <ArrowRight className="w-3 h-3" />
-                    <span className="font-medium">ブロックしている (このタスク完了後に開始)</span>
+                    <span className="font-medium">{t('blocking_others')}</span>
                   </div>
                   <div className="flex flex-wrap gap-1 pl-4">
                     {task.blocks.map((taskId) => (
@@ -270,7 +263,7 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
         {task.relatedFiles && task.relatedFiles.length > 0 && (
           <details className="group/details">
             <summary className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 select-none">
-              <span>📁 関連ファイル ({task.relatedFiles.length})</span>
+              <span>📁 {t('related_files')} ({task.relatedFiles.length})</span>
               <span className="group-open/details:rotate-90 transition-transform">▶</span>
             </summary>
             <div className="mt-2 space-y-1 pl-2">
@@ -294,7 +287,7 @@ export const ExpandedTaskCard = memo<ExpandedTaskCardProps>(
               })}
               {task.relatedFiles.length > 10 && (
                 <div className="text-xs text-slate-400 dark:text-slate-500 italic">
-                  ... 他 {task.relatedFiles.length - 10} 件
+                  {t('others', { count: task.relatedFiles.length - 10 })}
                 </div>
               )}
             </div>

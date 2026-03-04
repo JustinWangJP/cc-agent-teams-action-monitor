@@ -16,23 +16,27 @@ import { getMessageTypeIcon } from '@/types/timeline';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale/ja';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 安全に日付をフォーマットする関数。
  * 無効な日付の場合はフォールバック文字列を返す。
  */
-const safeFormatDate = (timestamp: string | number | Date | undefined): string => {
-  if (!timestamp) return '日時不明';
+const safeFormatDate = (
+  timestamp: string | number | Date | undefined,
+  t: (key: string) => string
+): string => {
+  if (!timestamp) return t('detail.unknown_time');
 
   try {
     const date = new Date(timestamp);
     // 無効な日付かチェック
     if (isNaN(date.getTime())) {
-      return '無効な日時';
+      return t('detail.invalid_time');
     }
     return format(date, 'yyyy-MM-dd HH:mm:ss', { locale: ja });
   } catch {
-    return '無効な日時';
+    return t('detail.invalid_time');
   }
 };
 
@@ -87,6 +91,8 @@ export const MessageDetailModal: React.FC<MessageDetailModalProps> = ({
   isOpen: propsIsOpen,
   onClose: propsOnClose,
 }) => {
+  const { t } = useTranslation('timeline');
+
   // 個別セレクターを使用して無限ループを防止
   const storeMessage = useDashboardStore((state) => state.selectedMessage);
   const storeIsOpen = useDashboardStore((state) => state.isDetailModalOpen);
@@ -147,10 +153,10 @@ export const MessageDetailModal: React.FC<MessageDetailModalProps> = ({
             <div className="flex flex-col gap-1">
               <Dialog.Title className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <span>{typeIcon}</span>
-                <span>メッセージ詳細</span>
+                <span>{t('detail.title')}</span>
               </Dialog.Title>
               <Dialog.Description className="text-sm text-slate-500 dark:text-slate-400">
-                メッセージの詳細情報を表示します
+                {t('detail.description')}
               </Dialog.Description>
             </div>
             <Dialog.Close
@@ -165,22 +171,22 @@ export const MessageDetailModal: React.FC<MessageDetailModalProps> = ({
           <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-140px)]">
             {/* メタ情報 */}
             <div className="mb-6">
-              <MetaItem label="送信者" value={message.from} />
-              {message.to && <MetaItem label="受信者" value={message.to} />}
+              <MetaItem label={t('detail.sender')} value={message.from} />
+              {message.to && <MetaItem label={t('detail.recipient')} value={message.to} />}
               <MetaItem
-                label="時刻"
-                value={safeFormatDate(message.timestamp)}
+                label={t('detail.time')}
+                value={safeFormatDate(message.timestamp, t)}
                 icon="🕐"
               />
               <MetaItem
-                label="タイプ"
+                label={t('detail.type')}
                 value={`${typeIcon} ${message.parsedType}`}
                 icon="📋"
               />
-              {message.summary && <MetaItem label="サマリー" value={message.summary} />}
+              {message.summary && <MetaItem label={t('detail.summary')} value={message.summary} />}
               {message.color && (
                 <MetaItem
-                  label="カラー"
+                  label={t('detail.color')}
                   value={
                     <span className="flex items-center gap-2">
                       <span
@@ -193,8 +199,8 @@ export const MessageDetailModal: React.FC<MessageDetailModalProps> = ({
                 />
               )}
               <MetaItem
-                label="既読"
-                value={message.read ? '✅ 既読' : '📬 未読'}
+                label={t('detail.read_status')}
+                value={message.read ? `✅ ${t('detail.read')}` : `📬 ${t('detail.unread')}`}
                 icon={message.read ? '✓' : '📬'}
               />
             </div>
@@ -202,7 +208,7 @@ export const MessageDetailModal: React.FC<MessageDetailModalProps> = ({
             {/* メッセージ本文 */}
             <div className="mb-4">
               <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                {isJsonMessage ? 'プロトコルデータ' : 'メッセージ本文'}
+                {isJsonMessage ? t('detail.protocol_data') : t('detail.message_body')}
               </h4>
               <div className="bg-slate-50 dark:bg-slate-950 rounded-lg p-4 border border-slate-200 dark:border-slate-800 overflow-x-auto">
                 {isJsonMessage && message.parsedData ? (
@@ -221,7 +227,7 @@ export const MessageDetailModal: React.FC<MessageDetailModalProps> = ({
             {Object.keys(message).length > 0 && (
               <details className="mt-4">
                 <summary className="text-xs font-medium text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300">
-                  生データを表示
+                  {t('detail.show_raw_data')}
                 </summary>
                 <div className="mt-2 bg-slate-50 dark:bg-slate-950 rounded-lg p-4 border border-slate-200 dark:border-slate-800 overflow-x-auto">
                   <pre className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap font-mono">
@@ -240,14 +246,14 @@ export const MessageDetailModal: React.FC<MessageDetailModalProps> = ({
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               <Copy className="w-4 h-4" />
-              コピー
+              {t('detail.copy')}
             </button>
             <button
               type="button"
               onClick={handleClose}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-              閉じる
+              {t('detail.close')}
             </button>
           </div>
         </Dialog.Content>

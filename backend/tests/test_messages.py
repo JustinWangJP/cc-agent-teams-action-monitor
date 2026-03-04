@@ -60,7 +60,10 @@ class TestMessageTimelineEndpoint:
 
         # チームが存在しない場合、404または空のデータ
         if response.status_code == 404:
-            assert response.json()["detail"] == "Team not found"
+            # i18n対応によりエラーメッセージにチーム名が含まれるようになりました
+            detail = response.json()["detail"]
+            assert "not found" in detail.lower()
+            assert "test-team" in detail
         else:
             assert response.status_code == 200
             data = response.json()
@@ -101,7 +104,9 @@ class TestMessageTimelineEndpoint:
 
     def test_timeline_filter_by_senders(self):
         """送信者フィルターが動作することを確認する。"""
-        response = client.get("/api/teams/test-team/messages/timeline?senders=agent1,agent2")
+        response = client.get(
+            "/api/teams/test-team/messages/timeline?senders=agent1,agent2"
+        )
 
         if response.status_code == 200:
             data = response.json()
@@ -195,5 +200,7 @@ class TestTimelineHelperFunctions:
 
         assert get_message_class(MessageType.MESSAGE) == "timeline-item-message"
         assert get_message_class(MessageType.IDLE_NOTIFICATION) == "timeline-item-idle"
-        assert get_message_class(MessageType.SHUTDOWN_REQUEST) == "timeline-item-shutdown"
+        assert (
+            get_message_class(MessageType.SHUTDOWN_REQUEST) == "timeline-item-shutdown"
+        )
         assert get_message_class(MessageType.UNKNOWN) == "timeline-item-unknown"

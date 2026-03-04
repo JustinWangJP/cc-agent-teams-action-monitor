@@ -6,7 +6,8 @@
  *
 */
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
+import { render } from '@/test/setup.tsx'
 import { TeamCard } from '../TeamCard'
 import type { TeamSummary } from '@/types/team'
 
@@ -34,7 +35,8 @@ describe('TeamCard', () => {
 
     it('メンバー数を表示する', () => {
       render(<TeamCard team={mockTeam} />)
-      expect(screen.getByText(/3 members/)).toBeInTheDocument()
+      // コンポーネントは数字のみを表示（"members"テキストなし）
+      expect(screen.getByText('3')).toBeInTheDocument()
     })
 
     it('リードエージェントIDを表示する', () => {
@@ -58,7 +60,7 @@ describe('TeamCard', () => {
       const handleClick = vi.fn()
       const { container } = render(<TeamCard team={mockTeam} onClick={handleClick} />)
       const card = container.querySelector('.bg-white.rounded-lg')
-      
+
       expect(card).toBeInTheDocument()
       fireEvent.click(card!)
       expect(handleClick).toHaveBeenCalledTimes(1)
@@ -74,13 +76,15 @@ describe('TeamCard', () => {
   describe('ステータスバッジ表示', () => {
     it('activeステータスのバッジを表示', () => {
       render(<TeamCard team={mockTeam} />)
-      expect(screen.getByText('active')).toBeInTheDocument()
+      // i18n対応により日本語で表示される
+      expect(screen.getByText('アクティブ')).toBeInTheDocument()
     })
 
     it('inactiveステータスのバッジを表示', () => {
       const inactiveTeam: TeamSummary = { ...mockTeam, status: 'inactive' }
       render(<TeamCard team={inactiveTeam} />)
-      expect(screen.getByText('inactive')).toBeInTheDocument()
+      // i18n対応により日本語で表示される
+      expect(screen.getByText('非アクティブ')).toBeInTheDocument()
     })
   })
 })

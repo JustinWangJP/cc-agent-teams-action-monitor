@@ -14,6 +14,7 @@ import type { MessageFilter, MessageType } from '@/types/message';
 import { MESSAGE_TYPES } from '@/types/timeline';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 
 /**
  * タイムラインフィルターのプロパティ。
@@ -48,13 +49,14 @@ interface CustomSelectProps {
   maxDisplay?: number;
 }
 
-const CustomSelect: React.FC<CustomSelectProps> = ({
+const CustomSelect: React.FC<CustomSelectProps & { t: (key: string, options?: Record<string, unknown>) => string }> = ({
   label,
   items,
   selectedValues,
   onChange,
   placeholder = 'すべて',
   maxDisplay = 2,
+  t,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -64,7 +66,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
       ? placeholder
       : selectedItems.length <= maxDisplay
         ? selectedItems.map((i) => i.label).join(', ')
-        : `${selectedItems[0].label} 他 ${selectedItems.length - 1}件`;
+        : `${selectedItems[0].label} ${t('filters.others_count', { count: selectedItems.length - 1 })}`;
 
   const handleToggle = (value: string) => {
     const newValues = selectedValues.includes(value)
@@ -183,6 +185,7 @@ export const TimelineFilters: React.FC<TimelineFiltersProps> = ({
   availableTypes = MESSAGE_TYPES.map((t) => t.value as MessageType),
   onFilterChange,
 }) => {
+  const { t } = useTranslation('timeline');
   // 個別セレクターを使用して無限ループを防止
   const messageFilter = useDashboardStore((state) => state.messageFilter);
   const updateMessageFilter = useDashboardStore((state) => state.updateMessageFilter);
@@ -252,20 +255,22 @@ export const TimelineFilters: React.FC<TimelineFiltersProps> = ({
     <div className="flex flex-wrap items-center gap-3 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
       {/* 送信者フィルター */}
       <CustomSelect
-        label="送信者"
+        label={t('filters.sender')}
         items={senderItems}
         selectedValues={messageFilter.senders}
         onChange={handleSendersChange}
-        placeholder="すべての送信者"
+        placeholder={t('filters.all_senders')}
+        t={t}
       />
 
       {/* タイプフィルター */}
       <CustomSelect
-        label="タイプ"
+        label={t('filters.type')}
         items={typeItems}
         selectedValues={messageFilter.types}
         onChange={handleTypesChange}
-        placeholder="すべてのタイプ"
+        placeholder={t('filters.all_types')}
+        t={t}
       />
 
       {/* リセットボタン */}
@@ -276,7 +281,7 @@ export const TimelineFilters: React.FC<TimelineFiltersProps> = ({
           className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
         >
           <X className="w-4 h-4" />
-          リセット
+          {t('filters.reset')}
         </button>
       )}
 
@@ -284,12 +289,12 @@ export const TimelineFilters: React.FC<TimelineFiltersProps> = ({
       {hasActiveFilters && (
         <span className="text-xs text-slate-500 dark:text-slate-400">
           {[
-            messageFilter.senders.length > 0 && `${messageFilter.senders.length}送信者`,
-            messageFilter.types.length > 0 && `${messageFilter.types.length}タイプ`,
+            messageFilter.senders.length > 0 && t('filters.senders_count', { count: messageFilter.senders.length }),
+            messageFilter.types.length > 0 && t('filters.types_count', { count: messageFilter.types.length }),
           ]
             .filter(Boolean)
             .join(', ')}
-          でフィルタ中
+          {t('filters.filtering')}
         </span>
       )}
     </div>
