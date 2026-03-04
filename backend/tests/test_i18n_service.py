@@ -6,10 +6,6 @@ TC-BE-002: パラメータ置換機能
 TC-BE-003: フォールバック処理（指定言語 → 英語 → キー文字列）
 
 """
-import pytest
-from pathlib import Path
-import tempfile
-import json
 
 from app.services.i18n_service import I18nService, i18n
 
@@ -87,12 +83,7 @@ class TestI18nServiceParameters:
 
     def test_multiple_parameters(self):
         """TC-BE-002-02: 複数パラメータの置換。"""
-        result = i18n.t(
-            "logs.cache.started",
-            lang="en",
-            config_ttl=30,
-            inbox_ttl=60
-        )
+        result = i18n.t("logs.cache.started", lang="en", config_ttl=30, inbox_ttl=60)
         assert "30" in result
         assert "60" in result
 
@@ -106,9 +97,7 @@ class TestI18nServiceParameters:
     def test_parameter_with_special_characters(self):
         """TC-BE-002-04: 特殊文字を含むパラメータの置換。"""
         result = i18n.t(
-            "api.errors.invalid_timestamp",
-            lang="en",
-            timestamp="2025-01-15T10:30:00Z"
+            "api.errors.invalid_timestamp", lang="en", timestamp="2025-01-15T10:30:00Z"
         )
         assert "2025-01-15T10:30:00Z" in result
         assert "Invalid" in result
@@ -183,6 +172,6 @@ class TestI18nServiceEdgeCases:
             "logs.cache.invalidate_inbox",
             lang="en",
             team="test-team",
-            agent="test-agent"
+            agent="test-agent",
         )
         assert "test-team" in result or "test-agent" in result

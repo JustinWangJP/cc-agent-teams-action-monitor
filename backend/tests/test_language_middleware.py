@@ -4,6 +4,7 @@ LanguageMiddleware の単体テスト。
 TC-BE-004: Accept-Language ヘッダー解析と request.state.language 設定
 
 """
+
 import pytest
 from fastapi import Request, Response
 from starlette.responses import PlainTextResponse

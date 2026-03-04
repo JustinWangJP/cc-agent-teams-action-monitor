@@ -1,8 +1,7 @@
 """統合タイムライン API のテスト."""
+
 import json
-import tempfile
-from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -32,10 +31,7 @@ def mock_claude_dir(tmp_path):
     cwd = "/Users/test/project"
     project_hash = "-" + cwd.lstrip("/").replace("/", "-")
 
-    config = {
-        "leadSessionId": lead_session_id,
-        "members": [{"cwd": cwd}]
-    }
+    config = {"leadSessionId": lead_session_id, "members": [{"cwd": cwd}]}
     config_file = team_dir / "config.json"
     config_file.write_text(json.dumps(config))
 
@@ -50,14 +46,14 @@ def mock_claude_dir(tmp_path):
                 "from": "team-lead",
                 "to": "backend-developer",
                 "timestamp": "2026-02-21T10:00:00Z",
-                "read": True
+                "read": True,
             },
             {
                 "content": '{"type": "task_assignment", "taskId": "1", "subject": "Implement API"}',
                 "from": "team-lead",
                 "timestamp": "2026-02-21T10:05:00Z",
-                "read": False
-            }
+                "read": False,
+            },
         ]
     }
     inbox_file = inbox_dir / "backend-developer.json"
@@ -85,7 +81,7 @@ class TestTimelineAPI:
 
     def test_get_timeline_history_success(self, client, mock_claude_dir):
         """タイムライン履歴の取得をテストします."""
-        with patch('app.services.timeline_service.settings') as mock_settings:
+        with patch("app.services.timeline_service.settings") as mock_settings:
             mock_settings.claude_dir = mock_claude_dir
 
             response = client.get("/api/timeline/test-team/history")
@@ -104,7 +100,7 @@ class TestTimelineAPI:
 
     def test_get_timeline_history_with_types_filter(self, client, mock_claude_dir):
         """タイプフィルタのテストをします."""
-        with patch('app.services.timeline_service.settings') as mock_settings:
+        with patch("app.services.timeline_service.settings") as mock_settings:
             mock_settings.claude_dir = mock_claude_dir
 
             # thinking タイプのみを取得
@@ -119,7 +115,7 @@ class TestTimelineAPI:
 
     def test_get_timeline_history_with_limit(self, client, mock_claude_dir):
         """件数制限のテストをします."""
-        with patch('app.services.timeline_service.settings') as mock_settings:
+        with patch("app.services.timeline_service.settings") as mock_settings:
             mock_settings.claude_dir = mock_claude_dir
 
             # 2件に制限
@@ -132,7 +128,7 @@ class TestTimelineAPI:
 
     def test_get_timeline_history_invalid_limit(self, client, mock_claude_dir):
         """無効な limit パラメータのテストをします."""
-        with patch('app.services.timeline_service.settings') as mock_settings:
+        with patch("app.services.timeline_service.settings") as mock_settings:
             mock_settings.claude_dir = mock_claude_dir
 
             # 最大値超過
@@ -144,7 +140,7 @@ class TestTimelineAPI:
 
     def test_get_timeline_updates_with_since(self, client, mock_claude_dir):
         """since パラメータを使用した差分更新のテストをします."""
-        with patch('app.services.timeline_service.settings') as mock_settings:
+        with patch("app.services.timeline_service.settings") as mock_settings:
             mock_settings.claude_dir = mock_claude_dir
 
             # より早い時刻を指定（全エントリが含まれるように）
@@ -170,7 +166,7 @@ class TestTimelineAPI:
 
     def test_timeline_entry_structure(self, client, mock_claude_dir):
         """タイムラインエントリの構造をテストします."""
-        with patch('app.services.timeline_service.settings') as mock_settings:
+        with patch("app.services.timeline_service.settings") as mock_settings:
             mock_settings.claude_dir = mock_claude_dir
 
             response = client.get("/api/timeline/test-team/history")
