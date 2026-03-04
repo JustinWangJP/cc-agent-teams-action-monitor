@@ -576,6 +576,99 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ---
 
+---
+
+## 12. 国际化（i18n）
+
+### 12.1 架构
+
+后端实现了自定义的轻量级 i18n 服务，用于 API 错误消息和日志消息的多语言支持。
+
+### 12.2 翻译文件结构
+
+```
+backend/locales/
+├── ja/                     # 日语
+│   ├── api.json            # API 错误消息
+│   └── logs.json           # 日志消息
+├── en/                     # 英语
+│   ├── api.json
+│   └── logs.json
+└── zh/                     # 中文
+    ├── api.json
+    └── logs.json
+```
+
+### 12.3 语言检测中间件
+
+`LanguageMiddleware` 按以下优先级检测语言：
+
+1. **Accept-Language 请求头**: HTTP 请求头
+2. **默认语言**: 设置文件中的 `DASHBOARD_DEFAULT_LANGUAGE`
+
+```python
+# app/middleware/language.py
+class LanguageMiddleware:
+    async def dispatch(self, request: Request, call_next):
+        # 从 Accept-Language 请求头获取语言
+        accept_language = request.headers.get("Accept-Language", "ja")
+        language = self._parse_accept_language(accept_language)
+
+        # 保存到请求状态
+        request.state.language = language
+
+        response = await call_next(request)
+        return response
+```
+
+### 12.4 I18nService
+
+```python
+# app/services/i18n_service.py
+class I18nService:
+    def __init__(self, locales_dir: Path, default_language: str = "ja"):
+        self._translations: dict[str, dict] = {}
+        self._default_language = default_language
+        self._load_translations(locales_dir)
+
+    def t(self, key: str, language: str, **kwargs) -> str:
+        """获取翻译键对应的文本"""
+        translation = self._get_nested_value(
+            self._translations.get(language, {}),
+            key
+        )
+        return translation.format(**kwargs) if translation else key
+```
+
+### 12.5 使用示例
+
+```python
+# 在 API 路由中使用
+@router.get("/teams/{team_name}")
+async def get_team(
+    team_name: str,
+    request: Request,
+    i18n: I18nService = Depends(get_i18n_service)
+):
+    language = getattr(request.state, "language", "ja")
+
+    if not team_exists(team_name):
+        raise HTTPException(
+            status_code=404,
+            detail=i18n.t("api.errors.team_not_found", language, team=team_name)
+        )
+```
+
+### 12.6 支持的语言
+
+| 语言代码 | 语言名称 |
+|--------------|---------------|
+| `ja` | 日本語（默认） |
+| `en` | English |
+| `zh` | 中文 |
+
+---
+
 *创建日期: 2026-02-16*
-*最后更新日期: 2026-02-24*
-*版本: 2.1.0*
+*最后更新日期: 2026-03-04*
+*版本: 2.2.0*

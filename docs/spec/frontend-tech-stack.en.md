@@ -20,6 +20,8 @@
 | Graph Visualization | D3.js | 7.8.5+ | Network/dependency graphs |
 | Timeline | vis-timeline | 7.7.3+ | Time series data display |
 | UI Components | Radix UI | 1.x | Accessible UI components |
+| Internationalization | i18next | 24.2.0+ | Internationalization framework |
+| Internationalization | react-i18next | 15.4.0+ | React i18n binding |
 
 ### 1.2 Development Dependencies
 
@@ -608,9 +610,79 @@ npm run test:ui
 
 ---
 
+## 12. Internationalization (i18n)
+
+### 12.1 Technology Stack
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| i18next | 24.2.0+ | Internationalization framework |
+| react-i18next | 15.4.0+ | React i18n binding |
+
+### 12.2 Translation File Structure
+
+```
+frontend/src/locales/
+├── ja/                     # Japanese
+│   ├── common.json         # Common translations
+│   ├── dashboard.json      # Dashboard
+│   ├── tasks.json          # Task management
+│   ├── timeline.json       # Timeline
+│   ├── errors.json         # Error messages
+│   ├── header.json         # Header
+│   ├── a11y.json           # Accessibility
+│   ├── models.json         # Model-related
+│   └── teamDetail.json     # Team detail
+├── en/                     # English
+│   └── ...（same structure）
+└── zh/                     # Chinese
+    └── ...（same structure）
+```
+
+### 12.3 Language Detection Priority
+
+1. **localStorage**: Language setting saved in `i18nextLng` key
+2. **Browser Settings**: `navigator.language`
+3. **Default**: Japanese (`ja`)
+
+### 12.4 Usage Example
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function TeamCard({ team }: { team: TeamSummary }) {
+  const { t } = useTranslation();
+
+  return (
+    <div>
+      <h3>{team.name}</h3>
+      <span>{t(`common.status.${team.status}`)}</span>
+      <button>{t('common.delete')}</button>
+    </div>
+  );
+}
+```
+
+### 12.5 Language Switching
+
+Language can be switched from the header's language selector:
+
+```tsx
+const { i18n } = useTranslation();
+
+// Change language
+await i18n.changeLanguage('en');
+```
+
+### 12.6 Translation Key Consistency Check
+
+The `scripts/verify-translations.js` script runs automatically via pre-commit hook to verify translation key consistency across all languages.
+
+---
+
 *Created: 2026-02-16*
-*Last Updated: 2026-02-24*
-*Version: 2.1.0*
+*Last Updated: 2026-03-04*
+*Version: 2.2.0*
 
 ---
 

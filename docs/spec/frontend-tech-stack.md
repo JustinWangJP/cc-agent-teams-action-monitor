@@ -20,6 +20,8 @@
 | グラフ可視化 | D3.js | 7.8.5+ | ネットワーク/依存グラフ |
 | タイムライン | vis-timeline | 7.7.3+ | 時系列データ表示 |
 | UIコンポーネント | Radix UI | 1.x | アクセシブルUIコンポーネント |
+| 国際化 | i18next | 24.2.0+ | 多言語対応フレームワーク |
+| 国際化 | react-i18next | 15.4.0+ | React用i18nバインディング |
 
 ### 1.2 開発用依存関係
 
@@ -608,6 +610,76 @@ npm run test:ui
 
 ---
 
+## 12. 国際化（i18n）
+
+### 12.1 技術スタック
+
+| 技術 | バージョン | 用途 |
+|------|-----------|------|
+| i18next | 24.2.0+ | 国際化フレームワーク |
+| react-i18next | 15.4.0+ | React用i18nバインディング |
+
+### 12.2 翻訳ファイル構造
+
+```
+frontend/src/locales/
+├── ja/                     # 日本語
+│   ├── common.json         # 共通翻訳
+│   ├── dashboard.json      # ダッシュボード
+│   ├── tasks.json          # タスク管理
+│   ├── timeline.json       # タイムライン
+│   ├── errors.json         # エラーメッセージ
+│   ├── header.json         # ヘッダー
+│   ├── a11y.json           # アクセシビリティ
+│   ├── models.json         # モデル関連
+│   └── teamDetail.json     # チーム詳細
+├── en/                     # 英語
+│   └── ...（同構造）
+└── zh/                     # 中国語
+    └── ...（同構造）
+```
+
+### 12.3 言語検出優先順位
+
+1. **localStorage**: `i18nextLng` キーに保存された言語設定
+2. **ブラウザ設定**: `navigator.language`
+3. **デフォルト**: 日本語（`ja`）
+
+### 12.4 使用例
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function TeamCard({ team }: { team: TeamSummary }) {
+  const { t } = useTranslation();
+
+  return (
+    <div>
+      <h3>{team.name}</h3>
+      <span>{t(`common.status.${team.status}`)}</span>
+      <button>{t('common.delete')}</button>
+    </div>
+  );
+}
+```
+
+### 12.5 言語切り替え
+
+ヘッダーの言語セレクターから切り替え可能：
+
+```tsx
+const { i18n } = useTranslation();
+
+// 言語変更
+await i18n.changeLanguage('en');
+```
+
+### 12.6 翻訳キー整合性チェック
+
+pre-commit フックで `scripts/verify-translations.js` が自動実行され、全言語の翻訳キー整合性を検証します。
+
+---
+
 *作成日: 2026-02-16*
-*最終更新日: 2026-02-24*
-*バージョン: 2.1.0*
+*最終更新日: 2026-03-04*
+*バージョン: 2.2.0*
