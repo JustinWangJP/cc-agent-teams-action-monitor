@@ -13,7 +13,8 @@
  *
 */
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { render } from '@/test/setup.tsx'
 import { ModelBadge, ModelBadgeGroup } from '../ModelBadge'
 
 describe('ModelBadge', () => {

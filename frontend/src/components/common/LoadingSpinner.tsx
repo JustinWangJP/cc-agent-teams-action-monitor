@@ -7,6 +7,8 @@
  * @module components/common/LoadingSpinner
  */
 
+import { useTranslation } from 'react-i18next';
+
 /**
  * LoadingSpinner コンポーネントのプロパティ。
  */
@@ -42,11 +44,13 @@ export interface LoadingSpinnerProps {
  * ```
  */
 export function LoadingSpinner({
-  message = 'Loading...',
+  message,
   size = 'md',
   className = '',
   spinnerOnly = false,
 }: LoadingSpinnerProps) {
+  const { t } = useTranslation('common');
+  const displayMessage = message || t('labels.loading');
   // サイズに応じたクラス
   const sizeClasses = {
     sm: 'h-6 w-6 border-2',
@@ -72,7 +76,7 @@ export function LoadingSpinner({
       </div>
       {!spinnerOnly && (
         <p className={`mt-4 text-gray-600 dark:text-gray-400 font-medium ${textSize[size]}`}>
-          {message}
+          {displayMessage}
         </p>
       )}
     </div>
@@ -120,12 +124,15 @@ export function SkeletonLoader({ count = 3, className = '' }: { count?: number; 
  * <LoadingOverlay message="処理中..." show={isLoading} />
  * ```
  */
-export function LoadingOverlay({ message = 'Loading...', show = true }: { message?: string; show: boolean }) {
+export function LoadingOverlay({ message, show = true }: { message?: string; show: boolean }) {
+  const { t } = useTranslation('common');
+  const displayMessage = message || t('labels.loading');
+
   if (!show) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-      <LoadingSpinner message={message} size="lg" />
+      <LoadingSpinner message={displayMessage} size="lg" />
     </div>
   );
 }

@@ -394,8 +394,9 @@ export const useDashboardStore = create<DashboardState>()(
         // HTML class も更新
         if (typeof document !== 'undefined') {
           const html = document.documentElement;
-          const newDarkMode = !get().isDarkMode;
-          if (newDarkMode) {
+          // set()後なので、get()は新しい値を返す（すでにトグル済み）
+          const isDark = get().isDarkMode;
+          if (isDark) {
             html.classList.add('dark');
           } else {
             html.classList.remove('dark');

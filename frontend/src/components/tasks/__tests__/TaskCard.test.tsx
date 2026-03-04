@@ -5,7 +5,8 @@
  *
 */
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { render } from '@/test/setup.tsx'
 import { TaskCard } from '../TaskCard'
 import type { TaskSummary } from '@/types/task'
 
@@ -37,17 +38,21 @@ describe('TaskCard', () => {
 
     it('担当者を表示する', () => {
       render(<TaskCard task={mockTask} />)
-      expect(screen.getByText(/Owner: test-agent/)).toBeInTheDocument()
+      // 担当者はバッジとして表示される
+      expect(screen.getByText('test-agent')).toBeInTheDocument()
     })
 
     it('ブロックされているタスク数を表示する', () => {
       render(<TaskCard task={mockTask} />)
-      expect(screen.getByText(/Blocked by 2/)).toBeInTheDocument()
+      // 翻訳されたテキスト（日本語）を確認
+      expect(screen.getByText(/ブロック中: 2/)).toBeInTheDocument()
     })
 
     it('ステータスバッジを表示する', () => {
       render(<TaskCard task={mockTask} />)
-      expect(screen.getByText('pending')).toBeInTheDocument()
+      // 翻訳されたテキスト（日本語）を確認 - getAllByTextを使用して複数要素に対応
+      const statusElements = screen.getAllByText('保留中')
+      expect(statusElements.length).toBeGreaterThan(0)
     })
   })
 

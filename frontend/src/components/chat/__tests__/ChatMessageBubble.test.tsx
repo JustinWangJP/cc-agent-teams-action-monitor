@@ -4,7 +4,8 @@
  * 統合タイムライン対応したメッセージバブルコンポーネントを検証します。
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { render } from '@/test/setup.tsx';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import ChatMessageBubble, { type ChatMessageBubbleProps } from '../ChatMessageBubble';

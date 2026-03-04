@@ -12,10 +12,10 @@ import { StatusBadge } from '@/components/common/StatusBadge';
 import { ModelBadge } from '@/components/overview/ModelBadge';
 import { PollingIntervalSelector } from '@/components/common/PollingIntervalSelector';
 import { ArrowLeft, Calendar, User, Clock, FileText, Tag, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale/ja';
 import { useState, useMemo } from 'react';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/utils/dateFormat';
 
 /**
  * Unixタイムスタンプ（秒またはミリ秒）をDateオブジェクトに変換。
@@ -218,6 +218,7 @@ export function TeamDetailPanel({
   pollingInterval = 30000,
   onPollingIntervalChange,
 }: TeamDetailPanelProps) {
+  const { t, i18n } = useTranslation(['teamDetail', 'common', 'header']);
   // プロンプト表示状態（メンバーごと）
   const [expandedPrompts, setExpandedPrompts] = useState<Set<string>>(new Set());
 
@@ -255,7 +256,7 @@ export function TeamDetailPanel({
           className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>一覧に戻る</span>
+          <span>{t('buttons.back', { ns: 'common' })}</span>
         </button>
         <div className="flex items-center gap-3">
           {/* ポーリング間隔セレクター */}
@@ -263,7 +264,6 @@ export function TeamDetailPanel({
             <PollingIntervalSelector
               value={pollingInterval}
               onChange={onPollingIntervalChange}
-              label="更新間隔"
               lastUpdateTimestamp={dataUpdatedAt}
             />
           )}
@@ -284,7 +284,7 @@ export function TeamDetailPanel({
               )}
             >
               <RefreshCw className={clsx('w-4 h-4', isLoading && 'animate-spin')} />
-              更新
+              {t('buttons.refresh', { ns: 'common' })}
             </button>
           )}
           <StatusBadge status={team.members.some(m => m.status === 'active') ? 'active' : 'idle'} />
@@ -308,7 +308,7 @@ export function TeamDetailPanel({
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4" />
             <span>
-              作成日: {format(parseTimestamp(team.createdAt), 'yyyy-MM-dd HH:mm', { locale: ja })}
+              {t('created_at')}: {formatDate(parseTimestamp(team.createdAt), i18n.language)}
             </span>
           </div>
 
@@ -316,14 +316,14 @@ export function TeamDetailPanel({
           <div className="flex items-center gap-2">
             <User className="w-4 h-4" />
             <span>
-              Lead: <span className="font-medium text-slate-900 dark:text-slate-100">{team.leadAgentId}</span>
+              {t('lead_agent')}: <span className="font-medium text-slate-900 dark:text-slate-100">{team.leadAgentId}</span>
             </span>
           </div>
 
           {/* メンバー数 */}
           <div className="flex items-center gap-2">
-            <span>メンバー: </span>
-            <span className="font-medium text-slate-900 dark:text-slate-100">{team.members.length}名</span>
+            <span>{t('members')}: </span>
+            <span className="font-medium text-slate-900 dark:text-slate-100">{team.members.length}</span>
           </div>
         </div>
       </div>
@@ -332,7 +332,7 @@ export function TeamDetailPanel({
       {Object.keys(modelUsage).length > 0 && (
         <div className="mb-8">
           <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
-            使用モデル
+            {t('model_usage')}
           </h3>
           <div className="flex flex-wrap gap-2">
             {Object.entries(modelUsage).map(([model, data]) => (
@@ -350,7 +350,7 @@ export function TeamDetailPanel({
       {/* メンバーリスト */}
       <div>
         <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">
-          メンバーリスト
+          {t('member_list')}
         </h3>
         <div className="space-y-3">
           {team.members.map((member) => (
@@ -390,14 +390,14 @@ export function TeamDetailPanel({
                 {member.joinedAt && (
                   <div className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    <span>参加: {format(parseTimestamp(member.joinedAt), 'yyyy-MM-dd HH:mm', { locale: ja })}</span>
+                    <span>{t('joined_at')}: {formatDate(parseTimestamp(member.joinedAt), i18n.language)}</span>
                   </div>
                 )}
 
                 {/* 最終活動 */}
                 {member.lastActivity && (
                   <div className="flex items-center gap-1">
-                    <span>最終活動: {format(new Date(member.lastActivity), 'HH:mm:ss')}</span>
+                    <span>{t('last_activity')}: {formatDate(new Date(member.lastActivity), i18n.language)}</span>
                   </div>
                 )}
 
@@ -419,7 +419,7 @@ export function TeamDetailPanel({
                     className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors w-full text-left"
                   >
                     <FileText className="w-3 h-3 flex-shrink-0" />
-                    <span>プロンプト</span>
+                    <span>{t('prompt')}</span>
                     {expandedPrompts.has(member.agentId) ? (
                       <ChevronUp className="w-3 h-3 ml-auto" />
                     ) : (

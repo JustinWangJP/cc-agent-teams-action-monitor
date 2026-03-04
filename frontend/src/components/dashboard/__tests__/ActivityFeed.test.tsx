@@ -5,7 +5,8 @@
  *
 */
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { render } from '@/test/setup.tsx'
 import { ActivityFeed } from '../ActivityFeed'
 
 const mockActivities = [
@@ -37,7 +38,8 @@ describe('ActivityFeed', () => {
 
     it('空の配列の場合、メッセージを表示する', () => {
       render(<ActivityFeed activities={[]} />)
-      expect(screen.getByText(/no activity/i)).toBeInTheDocument()
+      // コンポーネントは "No recent activity" を表示
+      expect(screen.getByText(/no recent activity/i)).toBeInTheDocument()
     })
 
     it('各アクティビティのタイムスタンプを表示する', () => {

@@ -13,6 +13,7 @@
 
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useTranslation } from 'react-i18next';
 import { ArrowDown, ChevronDown } from 'lucide-react';
 import { ChatMessageBubble, type TimelineMessage } from './ChatMessageBubble';
 import { DateSeparator, isSameDate } from './DateSeparator';
@@ -46,9 +47,10 @@ export interface ChatMessageListProps {
 interface NewMessageNotificationProps {
   count: number;
   onClick: () => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }
 
-const NewMessageNotification = memo<NewMessageNotificationProps>(({ count, onClick }) => (
+const NewMessageNotification = memo<NewMessageNotificationProps>(({ count, onClick, t }) => (
   <button
     type="button"
     onClick={onClick}
@@ -60,9 +62,9 @@ const NewMessageNotification = memo<NewMessageNotificationProps>(({ count, onCli
       'animate-bounce cursor-pointer',
       'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
     )}
-    aria-label={`${count}件の新着メッセージを表示`}
+    aria-label={t('message_list.new_messages_aria', { count })}
   >
-    <span>新着メッセージ {count}件</span>
+    <span>{t('message_list.new_messages', { count })}</span>
     <ChevronDown className="w-4 h-4" />
   </button>
 ));
@@ -75,9 +77,10 @@ NewMessageNotification.displayName = 'NewMessageNotification';
 interface ScrollToBottomButtonProps {
   onClick: () => void;
   isVisible: boolean;
+  ariaLabel: string;
 }
 
-const ScrollToBottomButton = memo<ScrollToBottomButtonProps>(({ onClick, isVisible }) => (
+const ScrollToBottomButton = memo<ScrollToBottomButtonProps>(({ onClick, isVisible, ariaLabel }) => (
   <button
     type="button"
     onClick={onClick}
@@ -91,7 +94,7 @@ const ScrollToBottomButton = memo<ScrollToBottomButtonProps>(({ onClick, isVisib
       'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
       isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
     )}
-    aria-label="最下部へスクロール"
+    aria-label={ariaLabel}
   >
     <ArrowDown className="w-5 h-5" />
   </button>
@@ -105,15 +108,16 @@ ScrollToBottomButton.displayName = 'ScrollToBottomButton';
 interface EmptyStateProps {
   isLoading: boolean;
   error: string | null;
+  t: (key: string) => string;
 }
 
-const EmptyState = memo<EmptyStateProps>(({ isLoading, error }) => {
+const EmptyState = memo<EmptyStateProps>(({ isLoading, error, t }) => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">メッセージを読み込み中...</p>
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">{t('message_list.loading')}</p>
         </div>
       </div>
     );
@@ -123,7 +127,7 @@ const EmptyState = memo<EmptyStateProps>(({ isLoading, error }) => {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center text-red-600 dark:text-red-400">
-          <p className="font-medium">エラーが発生しました</p>
+          <p className="font-medium">{t('message_list.error_title')}</p>
           <p className="text-sm mt-1">{error}</p>
         </div>
       </div>
@@ -134,7 +138,7 @@ const EmptyState = memo<EmptyStateProps>(({ isLoading, error }) => {
     <div className="flex items-center justify-center h-full">
       <div className="text-center text-slate-500 dark:text-slate-400">
         <p className="text-lg">💬</p>
-        <p className="mt-2">まだメッセージはありません</p>
+        <p className="mt-2">{t('message_list.no_messages')}</p>
       </div>
     </div>
   );
@@ -216,6 +220,7 @@ export const ChatMessageList = memo<ChatMessageListProps>(
     isLoading = false,
     error = null,
   }) => {
+    const { t } = useTranslation('timeline');
     const viewportRef = useRef<HTMLDivElement>(null);
     const [isNearBottom, setIsNearBottom] = useState(true);
     const [showNewMessageBadge, setShowNewMessageBadge] = useState(false);
@@ -369,16 +374,16 @@ export const ChatMessageList = memo<ChatMessageListProps>(
           role="log"
           aria-live="polite"
           aria-atomic="false"
-          aria-label="メッセージリスト"
+          aria-label={t('message_list.aria_label')}
           tabIndex={0}
         >
           {isEmpty ? (
-            <EmptyState isLoading={isLoading} error={error} />
+            <EmptyState isLoading={isLoading} error={error} t={t} />
           ) : (
             <>
               {/* スクリーンリーダー向けのメッセージ数通知 */}
               <div className="sr-only" aria-live="polite" aria-atomic="true">
-                {messages.length}件のメッセージがあります
+                {t('message_list.message_count_sr', { count: messages.length })}
               </div>
 
               {/* バーチャルスクロールコンテナ */}
@@ -427,13 +432,14 @@ export const ChatMessageList = memo<ChatMessageListProps>(
 
         {/* 新着メッセージ通知 */}
         {showNewMessageBadge && unreadCount > 0 && (
-          <NewMessageNotification count={unreadCount} onClick={handleNewMessageClick} />
+          <NewMessageNotification count={unreadCount} onClick={handleNewMessageClick} t={t} />
         )}
 
         {/* 最下部へボタン（最下部から離れている場合のみ表示） */}
         <ScrollToBottomButton
           onClick={handleScrollToBottom}
           isVisible={!isNearBottom && messages.length > 0}
+          ariaLabel={t('message_list.scroll_to_bottom_aria')}
         />
       </div>
     );

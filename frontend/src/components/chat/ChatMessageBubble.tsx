@@ -10,6 +10,7 @@
 'use client';
 
 import { memo, useCallback, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
 import type { ParsedMessage, UnifiedTimelineEntry, FileChangeInfo } from '@/types/message';
 import { getMessageTypeConfig, getMessageTypeColorClass, renderMessageByType } from '@/types/message';
@@ -114,9 +115,13 @@ const parseProtocolMessageFromContent = (content: string): { summary: string; de
  * ParsedMessage と UnifiedTimelineEntry の両方に対応します。
  *
  * @param message タイムラインメッセージ
+ * @param t 翻訳関数
  * @returns summary（一覧表示用）と detail（詳細表示用、オプション）
  */
-const getMessageDisplayText = (message: TimelineMessage): { summary: string; detail?: string } => {
+const getMessageDisplayText = (
+  message: TimelineMessage,
+  t: (key: string, options?: Record<string, unknown>) => string
+): { summary: string; detail?: string } => {
   // 共通プロパティを取得
   const parsedType = isUnifiedTimelineEntry(message) ? message.parsedType : message.parsedType;
   const parsedData = isUnifiedTimelineEntry(message) ? message.parsedData : message.parsedData;
@@ -132,7 +137,7 @@ const getMessageDisplayText = (message: TimelineMessage): { summary: string; det
       switch (parsedType) {
         case 'thinking':
           return {
-            summary: '思考中...',
+            summary: t('message_display.thinking_in_progress'),
             detail: details?.thinking || content,
           };
         case 'user_message':
@@ -167,47 +172,47 @@ const getMessageDisplayText = (message: TimelineMessage): { summary: string; det
       switch (parsedType) {
         case 'task_assignment':
           return {
-            summary: (data.subject as string) || msgSummary || 'タスク割り当て',
+            summary: (data.subject as string) || msgSummary || t('message_display.task_assignment_default'),
             detail: (data.description as string) || undefined,
           };
 
         case 'task_completed':
           return {
-            summary: `タスク完了: ${data.taskId || ''}`,
+            summary: t('message_display.task_completed_with_id', { taskId: data.taskId || '' }),
             detail: data.content as string | undefined,
           };
 
         case 'idle_notification': {
           const reason = data.idleReason as string;
           if (reason === 'available') {
-            return { summary: '指示待機中' };
+            return { summary: t('message_display.idle_available') };
           }
-          return { summary: `アイドル: ${reason || '理由不明'}` };
+          return { summary: t('message_display.idle_with_reason', { reason: reason || t('message_display.idle_reason_unknown') }) };
         }
 
         case 'shutdown_request':
           return {
-            summary: 'シャットダウン要求',
+            summary: t('message_display.shutdown_request'),
             detail: (data.reason as string) || undefined,
           };
 
         case 'shutdown_response': {
           const approve = data.approve as boolean;
           return {
-            summary: approve ? 'シャットダウン応答: 承認' : 'シャットダウン応答: 却下',
+            summary: approve ? t('message_display.shutdown_response_approved') : t('message_display.shutdown_response_rejected'),
           };
         }
 
         case 'plan_approval_request':
           return {
-            summary: 'プラン承認要求',
+            summary: t('message_display.plan_approval_request'),
             detail: (data.reason as string) || undefined,
           };
 
         case 'plan_approval_response': {
           const planApprove = data.approve as boolean;
           return {
-            summary: planApprove ? 'プラン承認: 承認' : 'プラン承認: 修正要求',
+            summary: planApprove ? t('message_display.plan_approved') : t('message_display.plan_rejected'),
           };
         }
 
@@ -229,44 +234,44 @@ const getMessageDisplayText = (message: TimelineMessage): { summary: string; det
     switch (parsedType) {
       case 'task_assignment':
         return {
-          summary: (data.subject as string) || msgSummary || 'タスク割り当て',
+          summary: (data.subject as string) || msgSummary || t('message_display.task_assignment_default'),
           detail: (data.description as string) || undefined,
         };
 
       case 'idle_notification': {
         const reason = data.idleReason as string;
         if (reason === 'available') {
-          return { summary: '指示待機中' };
+          return { summary: t('message_display.idle_available') };
         }
-        return { summary: `アイドル: ${reason || '理由不明'}` };
+        return { summary: t('message_display.idle_with_reason', { reason: reason || t('message_display.idle_reason_unknown') }) };
       }
 
       case 'shutdown_request':
         return {
-          summary: 'シャットダウン要求',
+          summary: t('message_display.shutdown_request'),
           detail: (data.reason as string) || undefined,
         };
 
       case 'shutdown_response': {
         const approve = data.approve as boolean;
         return {
-          summary: approve ? 'シャットダウン応答: 承認' : 'シャットダウン応答: 却下',
+          summary: approve ? t('message_display.shutdown_response_approved') : t('message_display.shutdown_response_rejected'),
         };
       }
 
       case 'shutdown_approved':
-        return { summary: 'シャットダウン了承済み' };
+        return { summary: t('message_display.shutdown_approved') };
 
       case 'plan_approval_request':
         return {
-          summary: 'プラン承認要求',
+          summary: t('message_display.plan_approval_request'),
           detail: (data.reason as string) || undefined,
         };
 
       case 'plan_approval_response': {
         const planApprove = data.approve as boolean;
         return {
-          summary: planApprove ? 'プラン承認: 承認' : 'プラン承認: 修正要求',
+          summary: planApprove ? t('message_display.plan_approved') : t('message_display.plan_rejected'),
         };
       }
 
@@ -276,7 +281,7 @@ const getMessageDisplayText = (message: TimelineMessage): { summary: string; det
   }
 
   return {
-    summary: msgSummary || content || 'メッセージ',
+    summary: msgSummary || content || t('message_display.message_default'),
     detail: msgSummary ? content : undefined,
   };
 };
@@ -387,22 +392,26 @@ const highlightText = (text: string, query: string): ReactNode => {
  * 安全に日付をフォーマットする関数。
  *
  * @param timestamp - タイムスタンプ
- * @param showAbsolute - 絶対時刻を表示するかどうか
+ * @param locale - ロケール文字列
+ * @param t - 翻訳関数
  * @returns フォーマットされた日時文字列
  */
 const safeFormatDate = (
-  timestamp: string | number | Date | undefined
+  timestamp: string | number | Date | undefined,
+  locale: string,
+  t: (key: string) => string
 ): string => {
-  if (!timestamp) return '日時不明';
+  if (!timestamp) return t('message_display.date_unknown');
 
   try {
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) {
-      return '無効な日時';
+      return t('message_display.date_invalid');
     }
 
-    // 常に具体的な時刻を表示
-    return date.toLocaleString('ja-JP', {
+    // ロケールに応じたフォーマット
+    const localeString = locale === 'ja' ? 'ja-JP' : locale === 'zh' ? 'zh-CN' : 'en-US';
+    return date.toLocaleString(localeString, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -411,7 +420,7 @@ const safeFormatDate = (
       second: '2-digit',
     });
   } catch {
-    return '無効な日時';
+    return t('message_display.date_invalid');
   }
 };
 
@@ -419,18 +428,25 @@ const safeFormatDate = (
  * 具体的な時刻を表示する関数。
  *
  * @param timestamp - タイムスタンプ
+ * @param locale - ロケール文字列
+ * @param t - 翻訳関数
  * @returns フォーマットされた日時文字列
  */
-const formatFullDate = (timestamp: string | number | Date | undefined): string => {
-  if (!timestamp) return '日時不明';
+const formatFullDate = (
+  timestamp: string | number | Date | undefined,
+  locale: string,
+  t: (key: string) => string
+): string => {
+  if (!timestamp) return t('message_display.date_unknown');
 
   try {
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) {
-      return '無効な日時';
+      return t('message_display.date_invalid');
     }
 
-    return date.toLocaleString('ja-JP', {
+    const localeString = locale === 'ja' ? 'ja-JP' : locale === 'zh' ? 'zh-CN' : 'en-US';
+    return date.toLocaleString(localeString, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -439,7 +455,7 @@ const formatFullDate = (timestamp: string | number | Date | undefined): string =
       second: '2-digit',
     });
   } catch {
-    return '無効な日時';
+    return t('message_display.date_invalid');
   }
 };
 
@@ -540,26 +556,29 @@ interface DetailButtonProps {
   onClick: () => void;
 }
 
-const DetailButton = memo<DetailButtonProps>(({ onClick }) => (
-  <button
-    type="button"
-    onClick={(e) => {
-      e.stopPropagation();
-      onClick();
-    }}
-    className={clsx(
-      'inline-flex items-center gap-1 px-2 py-1 text-xs',
-      'text-slate-600 dark:text-slate-400',
-      'hover:text-blue-600 dark:hover:text-blue-400',
-      'hover:bg-slate-100 dark:hover:bg-slate-800',
-      'rounded transition-colors'
-    )}
-    aria-label="メッセージ詳細を表示"
-  >
-    <Info className="w-3 h-3" />
-    <span>詳細</span>
-  </button>
-));
+const DetailButton = memo<DetailButtonProps>(({ onClick }) => {
+  const { t } = useTranslation('timeline');
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className={clsx(
+        'inline-flex items-center gap-1 px-2 py-1 text-xs',
+        'text-slate-600 dark:text-slate-400',
+        'hover:text-blue-600 dark:hover:text-blue-400',
+        'hover:bg-slate-100 dark:hover:bg-slate-800',
+        'rounded transition-colors'
+      )}
+      aria-label={t('detail.description')}
+    >
+      <Info className="w-3 h-3" />
+      <span>{t('detail.detail_button')}</span>
+    </button>
+  );
+});
 
 DetailButton.displayName = 'DetailButton';
 
@@ -575,6 +594,7 @@ interface SessionDetailsProps {
 }
 
 const SessionDetails = memo<SessionDetailsProps>(({ details, parsedType: _parsedType }) => {
+  const { t } = useTranslation('timeline');
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(false);
 
   if (!details) return null;
@@ -604,8 +624,7 @@ const SessionDetails = memo<SessionDetailsProps>(({ details, parsedType: _parsed
             onClick={(e) => e.stopPropagation()}
           >
             <span className="inline-flex items-center gap-1">
-              💭 思考プロセス
-              <span className="text-xs opacity-50 group-open/details:rotate-90 transition-transform">▶</span>
+              💭 {t('event_types.thinking')}
             </span>
           </summary>
           <pre className="mt-2 whitespace-pre-wrap text-xs text-slate-700 dark:text-slate-300">
@@ -638,25 +657,26 @@ interface FileChangeBadgeProps {
 }
 
 const FileChangeBadge = memo<FileChangeBadgeProps>(({ file }) => {
-  const operationConfig: Record<FileChangeInfo['operation'], { icon: string; label: string; class: string }> = {
+  const { t } = useTranslation('timeline');
+  const operationConfig: Record<FileChangeInfo['operation'], { icon: string; labelKey: string; class: string }> = {
     read: {
       icon: '📖',
-      label: '読み取り',
+      labelKey: 'file_operations.read',
       class: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     },
     created: {
       icon: '✨',
-      label: '作成',
+      labelKey: 'file_operations.created',
       class: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
     },
     modified: {
       icon: '✏️',
-      label: '変更',
+      labelKey: 'file_operations.modified',
       class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
     },
     deleted: {
       icon: '🗑️',
-      label: '削除',
+      labelKey: 'file_operations.deleted',
       class: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
     },
   };
@@ -669,7 +689,7 @@ const FileChangeBadge = memo<FileChangeBadgeProps>(({ file }) => {
         'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs',
         config.class
       )}
-      title={`${config.label}: ${file.path}`}
+      title={`${t(config.labelKey)}: ${file.path}`}
     >
       <span>{config.icon}</span>
       <span className="max-w-[200px] truncate">{file.path}</span>
@@ -701,6 +721,7 @@ interface MetadataDisplayProps {
 }
 
 const MetadataDisplay = memo<MetadataDisplayProps>(({ metadata, collapsible = true }) => {
+  const { t } = useTranslation('timeline');
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (!metadata) return null;
@@ -723,7 +744,7 @@ const MetadataDisplay = memo<MetadataDisplayProps>(({ metadata, collapsible = tr
       onToggle={(e) => collapsible && setIsExpanded((e.target as HTMLDetailsElement).open)}
     >
       <summary className="cursor-pointer text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 select-none flex items-center gap-1">
-        <span>📋 メタデータ</span>
+        <span>📋 {t('detail.metadata')}</span>
         {collapsible && (
           <span className="text-xs opacity-50 group-open/metadata:rotate-90 transition-transform">▶</span>
         )}
@@ -731,7 +752,7 @@ const MetadataDisplay = memo<MetadataDisplayProps>(({ metadata, collapsible = tr
       <dl className="mt-2 space-y-1">
         {metadata.sessionId && (
           <div className="flex gap-2">
-            <dt className="text-slate-500 dark:text-slate-400 min-w-[80px]">セッションID:</dt>
+            <dt className="text-slate-500 dark:text-slate-400 min-w-[80px]">{t('detail.session_id')}:</dt>
             <dd className="text-slate-700 dark:text-slate-300 font-mono truncate">
               {metadata.sessionId.slice(0, 8)}...
             </dd>
@@ -739,19 +760,19 @@ const MetadataDisplay = memo<MetadataDisplayProps>(({ metadata, collapsible = tr
         )}
         {metadata.taskId && (
           <div className="flex gap-2">
-            <dt className="text-slate-500 dark:text-slate-400 min-w-[80px]">タスクID:</dt>
+            <dt className="text-slate-500 dark:text-slate-400 min-w-[80px]">{t('detail.task_id')}:</dt>
             <dd className="text-slate-700 dark:text-slate-300 font-mono">#{metadata.taskId}</dd>
           </div>
         )}
         {metadata.taskSubject && (
           <div className="flex gap-2">
-            <dt className="text-slate-500 dark:text-slate-400 min-w-[80px]">タスク:</dt>
+            <dt className="text-slate-500 dark:text-slate-400 min-w-[80px]">{t('detail.task')}:</dt>
             <dd className="text-slate-700 dark:text-slate-300">{metadata.taskSubject}</dd>
           </div>
         )}
         {metadata.model && (
           <div className="flex gap-2">
-            <dt className="text-slate-500 dark:text-slate-400 min-w-[80px]">モデル:</dt>
+            <dt className="text-slate-500 dark:text-slate-400 min-w-[80px]">{t('detail.model')}:</dt>
             <dd className="text-slate-700 dark:text-slate-300">{metadata.model}</dd>
           </div>
         )}
@@ -811,6 +832,9 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
     showAbsoluteTime = false,
     showMetadata = false,
   }) => {
+    const { i18n, t } = useTranslation('timeline');
+    const currentLocale = i18n.language || 'ja';
+
     // データソース判定: sessionは左側、inboxは右側
     const isSession = isUnifiedTimelineEntry(message) && message.source === 'session';
 
@@ -832,10 +856,10 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
     const initials = userAIColor?.icon || getInitials(safeFrom);
     // User/AIメッセージの場合は displayName、それ以外は from
     const displayName = userAIColor?.displayName || safeFrom;
-    const formattedTime = safeFormatDate(message.timestamp);
+    const formattedTime = safeFormatDate(message.timestamp, currentLocale, t);
 
     // メッセージ表示用テキストを生成（タイプ別ロジック）
-    const { summary: messageSummary, detail: messageDetail } = getMessageDisplayText(message);
+    const { summary: messageSummary, detail: messageDetail } = getMessageDisplayText(message, t);
     const messageText = messageSummary;
 
     // メッセージID（ブックマーク用）
@@ -887,7 +911,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
             handleClick();
           }
         }}
-        aria-label={`${displayName}からのメッセージ: ${messageText.slice(0, 50)}${messageText.length > 50 ? '...' : ''}`}
+        aria-label={`${t('aria.message_from', { sender: displayName })}: ${messageText.slice(0, 50)}${messageText.length > 50 ? '...' : ''}`}
         {...(!isThinkingMessage(message) && {
           role: 'button',
           'aria-pressed': isSelected ? 'true' : 'false',
@@ -945,7 +969,7 @@ export const ChatMessageBubble = memo<ChatMessageBubbleProps>(
             </span>
             <time
               className="text-xs text-slate-500 dark:text-slate-400 cursor-help"
-              title={showAbsoluteTime ? formatFullDate(message.timestamp) : undefined}
+              title={showAbsoluteTime ? formatFullDate(message.timestamp, currentLocale, t) : undefined}
               dateTime={typeof message.timestamp === 'string' ? message.timestamp : new Date(message.timestamp).toISOString()}
             >
               {formattedTime}

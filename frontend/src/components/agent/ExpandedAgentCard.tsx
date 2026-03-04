@@ -14,6 +14,7 @@ import { File, Folder } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { AgentStatus, AgentStatusType } from '@/types/agent';
 import { getAgentStatusConfig, getProgressColorClass } from '@/types/agent';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 拡張エージェントカードのプロパティ。
@@ -42,6 +43,7 @@ export interface ExpandedAgentCardProps {
  */
 export const ExpandedAgentCard = memo<ExpandedAgentCardProps>(
   ({ agent, onClick, className = '' }) => {
+    const { t } = useTranslation('common');
     const statusConfig = getAgentStatusConfig(agent.status);
     const progressColorClass = getProgressColorClass(agent.progress, agent.status);
 
@@ -55,7 +57,7 @@ export const ExpandedAgentCard = memo<ExpandedAgentCardProps>(
       ? agent.currentTaskSubject
       : agent.currentTaskId
         ? `Task #${agent.currentTaskId}`
-        : 'タスクなし';
+        : t('agents.no_task');
 
     return (
       <div
@@ -108,7 +110,7 @@ export const ExpandedAgentCard = memo<ExpandedAgentCardProps>(
           {/* プログレスバー */}
           <div className="mb-3">
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
-              <span>進捗</span>
+              <span>{t('agents.progress')}</span>
               <span>{progress}%</span>
             </div>
             <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -122,7 +124,7 @@ export const ExpandedAgentCard = memo<ExpandedAgentCardProps>(
           {/* 現在のタスク */}
           <div className="mb-3 p-2 bg-slate-50 dark:bg-slate-900/30 rounded">
             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-              <span>📋 現在のタスク</span>
+              <span>📋 {t('agents.current_task')}</span>
             </div>
             <p className="text-sm text-slate-700 dark:text-slate-300 truncate" title={taskInfo}>
               {taskInfo}
@@ -140,11 +142,11 @@ export const ExpandedAgentCard = memo<ExpandedAgentCardProps>(
           <div className="mb-3 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-1">
               <span>📋</span>
-              <span>担当: {agent.assignedTasks.length}件</span>
+              <span>{t('agents.assigned_count', { count: agent.assignedTasks.length })}</span>
             </div>
             <div className="flex items-center gap-1">
               <span>✅</span>
-              <span>完了: {agent.completedTasks.length}件</span>
+              <span>{t('agents.completed_count', { count: agent.completedTasks.length })}</span>
             </div>
             <div className="flex items-center gap-1">
               <span>🕒</span>
@@ -157,7 +159,7 @@ export const ExpandedAgentCard = memo<ExpandedAgentCardProps>(
             <div>
               <details className="group/details">
                 <summary className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 select-none">
-                  <span>📁 関連ファイル ({agent.touchedFiles.length})</span>
+                  <span>📁 {t('agents.related_files')} ({agent.touchedFiles.length})</span>
                   <span className="group-open/details:rotate-90 transition-transform">▶</span>
                 </summary>
                 <div className="mt-2 space-y-1 pl-2">
@@ -181,7 +183,7 @@ export const ExpandedAgentCard = memo<ExpandedAgentCardProps>(
                   })}
                   {agent.touchedFiles.length > 10 && (
                     <div className="text-xs text-slate-400 dark:text-slate-500 italic">
-                      ... 他 {agent.touchedFiles.length - 10} 件
+                      {t('agents.more_files', { count: agent.touchedFiles.length - 10 })}
                     </div>
                   )}
                 </div>

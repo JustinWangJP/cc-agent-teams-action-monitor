@@ -10,6 +10,7 @@
 
 import { memo } from 'react';
 import { Search, Filter, ChevronUp, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { MessageTypeFilter, type MessageTypeFilterProps } from './MessageTypeFilter';
 import { SenderFilter, type SenderFilterProps } from './SenderFilter';
 import { clsx } from 'clsx';
@@ -67,7 +68,7 @@ export interface ChatHeaderProps {
  */
 export const ChatHeader = memo<ChatHeaderProps>(
   ({
-    title = '💬 メッセージタイムライン',
+    title,
     messageCount = 0,
     searchQuery = '',
     onSearchChange,
@@ -82,6 +83,11 @@ export const ChatHeader = memo<ChatHeaderProps>(
     displayLimit = '500',
     onDisplayLimitChange,
   }) => {
+    const { t } = useTranslation('timeline');
+
+    // デフォルトタイトルは翻訳を使用
+    const displayTitle = title ?? `💬 ${t('message_timeline')}`;
+
     return (
       <div className="flex flex-col gap-3">
         {/* メインタイトルバー */}
@@ -100,7 +106,7 @@ export const ChatHeader = memo<ChatHeaderProps>(
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
                   )}
                 >
-                  500件
+                  {t('header.display_limit_500')}
                 </button>
                 <button
                   type="button"
@@ -112,16 +118,16 @@ export const ChatHeader = memo<ChatHeaderProps>(
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
                   )}
                 >
-                  全量
+                  {t('header.display_limit_all')}
                 </button>
               </div>
             )}
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              {title}
+              {displayTitle}
             </h2>
             {messageCount > 0 && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                {messageCount}件
+                {t('header.message_count', { count: messageCount })}
               </span>
             )}
           </div>
@@ -141,11 +147,11 @@ export const ChatHeader = memo<ChatHeaderProps>(
                   'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
                   showFilter && 'bg-slate-100 dark:bg-slate-700'
                 )}
-                aria-label="フィルターを切り替え"
+                aria-label={t('header.filter_toggle_aria')}
                 aria-pressed={showFilter}
               >
                 <Filter className="w-4 h-4" />
-                フィルター
+                {t('header.filter_toggle')}
                 {/* フィルター選択数の合計を表示 */}
                 {(messageTypeFilter?.selectedTypes.length || 0) + (senderFilter?.selectedSenders.length || 0) > 0 && (
                   <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
@@ -166,7 +172,7 @@ export const ChatHeader = memo<ChatHeaderProps>(
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="メッセージを検索..."
+                placeholder={t('header.search_placeholder')}
                 className={clsx(
                   'w-full pl-10 pr-10 py-2',
                   'text-sm text-slate-900 dark:text-slate-100',
@@ -177,14 +183,14 @@ export const ChatHeader = memo<ChatHeaderProps>(
                   'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
                   'transition-colors'
                 )}
-                aria-label="メッセージを検索"
+                aria-label={t('header.search_aria')}
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => onSearchChange('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-xs"
-                  aria-label="検索をクリア"
+                  aria-label={t('header.search_clear_aria')}
                 >
                   ✕
                 </button>
@@ -206,7 +212,7 @@ export const ChatHeader = memo<ChatHeaderProps>(
                       'p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors',
                       (!onPrevResult || searchResultCount === 0) && 'opacity-50 cursor-not-allowed'
                     )}
-                    aria-label="前の結果"
+                    aria-label={t('header.prev_result_aria')}
                   >
                     <ChevronUp className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                   </button>
@@ -218,7 +224,7 @@ export const ChatHeader = memo<ChatHeaderProps>(
                       'p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors',
                       (!onNextResult || searchResultCount === 0) && 'opacity-50 cursor-not-allowed'
                     )}
-                    aria-label="次の結果"
+                    aria-label={t('header.next_result_aria')}
                   >
                     <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                   </button>
@@ -229,7 +235,7 @@ export const ChatHeader = memo<ChatHeaderProps>(
             {/* 検索結果なし */}
             {searchQuery && searchResultCount === 0 && (
               <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">
-                該当なし
+                {t('header.no_results')}
               </span>
             )}
           </div>

@@ -11,6 +11,7 @@
 import { memo, useCallback } from 'react';
 import { X, User } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 送信者オプション定義。
@@ -85,6 +86,8 @@ SenderChip.displayName = 'SenderChip';
  */
 export const SenderFilter = memo<SenderFilterProps>(
   ({ selectedSenders, onChange, options }) => {
+    const { t } = useTranslation('timeline');
+
     /**
      * 送信者のトグルハンドラー。
      */
@@ -117,11 +120,11 @@ export const SenderFilter = memo<SenderFilterProps>(
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-slate-500 dark:text-slate-400" />
             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              送信者
+              {t('sender_filter.title')}
             </span>
             {hasSelection && (
               <span className="text-xs text-slate-500 dark:text-slate-400">
-                ({selectedSenders.length}選択中)
+                {t('sender_filter.selected_count', { count: selectedSenders.length })}
               </span>
             )}
           </div>
@@ -132,7 +135,7 @@ export const SenderFilter = memo<SenderFilterProps>(
               className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors flex items-center gap-1"
             >
               <X className="w-3 h-3" />
-              クリア
+              {t('sender_filter.clear')}
             </button>
           )}
         </div>
@@ -148,7 +151,7 @@ export const SenderFilter = memo<SenderFilterProps>(
             ))
           ) : (
             <span className="text-sm text-slate-400 dark:text-slate-500">
-              送信者情報がありません
+              {t('sender_filter.no_senders')}
             </span>
           )}
         </div>
