@@ -11,6 +11,7 @@ Example:
     >>> i18n.t("api.errors.team_not_found", lang="en", team="example")
     "Team 'example' not found"
 """
+
 from __future__ import annotations
 
 import json
@@ -86,13 +87,11 @@ class I18nService:
                     # 翻訳ファイルの読み込みエラーはログに記録し、続行
                     logger.warning(
                         f"Failed to load translation file {json_file}: {e}",
-                        extra={"file": str(json_file), "error": str(e)}
+                        extra={"file": str(json_file), "error": str(e)},
                     )
                     self._translations[lang][namespace] = {}
 
-    def _get_translation(
-        self, namespace: str, key: str, lang: str
-    ) -> str | None:
+    def _get_translation(self, namespace: str, key: str, lang: str) -> str | None:
         """指定された言語で翻訳を取得します。
 
         Args:
@@ -119,9 +118,7 @@ class I18nService:
 
         return current if isinstance(current, str) else None
 
-    def t(
-        self, key: str, lang: str = DEFAULT_LANGUAGE, **params: Any
-    ) -> str:
+    def t(self, key: str, lang: str = DEFAULT_LANGUAGE, **params: Any) -> str:
         """翻訳を取得します。
 
         指定されたキーで翻訳を取得し、必要に応じてパラメータを埋め込みます。
@@ -176,7 +173,7 @@ class I18nService:
                 # パラメータの置換に失敗した場合は警告ログを出力し、元の文字列を返す
                 logger.warning(
                     f"Failed to replace parameters in translation: key={key}, error={e}",
-                    extra={"key": key, "params": params, "error": str(e)}
+                    extra={"key": key, "params": params, "error": str(e)},
                 )
 
         return translation

@@ -4,6 +4,7 @@
 ~/.claude/teams/ ディレクトリの config.json からデータを読み込みます。
 
 """
+
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 from pathlib import Path
@@ -53,6 +54,7 @@ def get_team_inboxes(team_dir: Path) -> dict[str, list]:
 
     """
     import logging
+
     logger = logging.getLogger(__name__)
 
     inboxes_dir = team_dir / "inboxes"
@@ -66,7 +68,7 @@ def get_team_inboxes(team_dir: Path) -> dict[str, list]:
                 # TC-023: エラーハンドリング - 読み込みエラーをログに出力
                 logger.warning(
                     f"Failed to read inbox file {inbox_file}: {e}",
-                    extra={"file": str(inbox_file), "error": str(e)}
+                    extra={"file": str(inbox_file), "error": str(e)},
                 )
                 continue
     return inboxes
@@ -209,15 +211,17 @@ async def list_teams():
                 if config:
                     team_name = config.get("name", team_dir.name)
                     status = get_team_status(config)
-                    teams.append(TeamSummary(
-                        name=team_name,
-                        description=config.get("description", ""),
-                        memberCount=len(config.get("members", [])),
-                        taskCount=get_team_task_count(team_name),
-                        status=status,
-                        leadAgentId=config.get("leadAgentId", ""),
-                        createdAt=config.get("createdAt"),
-                    ))
+                    teams.append(
+                        TeamSummary(
+                            name=team_name,
+                            description=config.get("description", ""),
+                            memberCount=len(config.get("members", [])),
+                            taskCount=get_team_task_count(team_name),
+                            status=status,
+                            leadAgentId=config.get("leadAgentId", ""),
+                            createdAt=config.get("createdAt"),
+                        )
+                    )
     return teams
 
 
@@ -245,14 +249,14 @@ async def get_team(request: Request, team_name: str):
     if not team_dir.exists():
         raise HTTPException(
             status_code=404,
-            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name)
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name),
         )
 
     config = get_team_config(team_dir)
     if not config:
         raise HTTPException(
             status_code=404,
-            detail=i18n.t("api.errors.team_config_not_found", lang=lang)
+            detail=i18n.t("api.errors.team_config_not_found", lang=lang),
         )
 
     members = [Member(**m) for m in config.get("members", [])]
@@ -290,7 +294,7 @@ async def get_team_inboxes_api(request: Request, team_name: str):
     if not team_dir.exists():
         raise HTTPException(
             status_code=404,
-            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name)
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name),
         )
 
     return get_team_inboxes(team_dir)
@@ -318,14 +322,14 @@ async def get_agent_inbox(request: Request, team_name: str, agent_name: str):
     if not team_dir.exists():
         raise HTTPException(
             status_code=404,
-            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name)
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name),
         )
 
     inbox_path = team_dir / "inboxes" / f"{agent_name}.json"
     if not inbox_path.exists():
         raise HTTPException(
             status_code=404,
-            detail=i18n.t("api.errors.inbox_not_found", lang=lang, agent=agent_name)
+            detail=i18n.t("api.errors.inbox_not_found", lang=lang, agent=agent_name),
         )
 
     with open(inbox_path, "r", encoding="utf-8") as f:
@@ -369,7 +373,7 @@ async def delete_team(request: Request, team_name: str):
     if not team_dir.exists():
         raise HTTPException(
             status_code=404,
-            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name)
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name),
         )
 
     # チーム設定取得
@@ -377,7 +381,7 @@ async def delete_team(request: Request, team_name: str):
     if not config:
         raise HTTPException(
             status_code=404,
-            detail=i18n.t("api.errors.team_config_not_found", lang=lang)
+            detail=i18n.t("api.errors.team_config_not_found", lang=lang),
         )
 
     # ステータス確認（active 以外は削除可能）
@@ -386,7 +390,9 @@ async def delete_team(request: Request, team_name: str):
     if status not in deletable_statuses:
         raise HTTPException(
             status_code=400,
-            detail=i18n.t("api.errors.cannot_delete_active_team", lang=lang, status=status)
+            detail=i18n.t(
+                "api.errors.cannot_delete_active_team", lang=lang, status=status
+            ),
         )
 
     deleted_paths = []
@@ -413,12 +419,14 @@ async def delete_team(request: Request, team_name: str):
 
         return {
             "message": i18n.t("api.errors.delete_success", lang=lang, team=team_name),
-            "deletedPaths": deleted_paths
+            "deletedPaths": deleted_paths,
         }
 
     except Exception as e:
         logger.error(f"Failed to delete team {team_name}: {e}")
         raise HTTPException(
             status_code=500,
-            detail=i18n.t("api.errors.delete_error", lang=lang, team=team_name, error=str(e))
+            detail=i18n.t(
+                "api.errors.delete_error", lang=lang, team=team_name, error=str(e)
+            ),
         )

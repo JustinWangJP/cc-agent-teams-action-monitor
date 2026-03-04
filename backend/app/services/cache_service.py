@@ -4,6 +4,7 @@
 TTL（Time To Live）による自動有効期限切れと、手動無効化をサポートします。
 
 """
+
 import asyncio
 import json
 import logging
@@ -178,7 +179,6 @@ class CacheService:
 
 
         """
-        now = datetime.now()
         removed_count = 0
 
         teams_to_remove = []
@@ -340,10 +340,7 @@ class CacheService:
             team_name: チーム名
             agent_name: エージェント名
         """
-        if (
-            team_name in self._teams
-            and agent_name in self._teams[team_name].inboxes
-        ):
+        if team_name in self._teams and agent_name in self._teams[team_name].inboxes:
             del self._teams[team_name].inboxes[agent_name]
             logger.debug(
                 f"Invalidated inbox cache for team '{team_name}', agent '{agent_name}'"
@@ -368,9 +365,7 @@ class CacheService:
             キャッシュ統計辞書
         """
         team_count = len(self._teams)
-        config_count = sum(
-            1 for tc in self._teams.values() if tc.config is not None
-        )
+        config_count = sum(1 for tc in self._teams.values() if tc.config is not None)
         inbox_count = sum(len(tc.inboxes) for tc in self._teams.values())
 
         return {
@@ -398,7 +393,9 @@ def get_cache() -> CacheService:
         RuntimeError: キャッシュサービスが初期化されていない場合
     """
     if _cache_service is None:
-        raise RuntimeError("CacheService not initialized. Call start_cache_service first.")
+        raise RuntimeError(
+            "CacheService not initialized. Call start_cache_service first."
+        )
     return _cache_service
 
 

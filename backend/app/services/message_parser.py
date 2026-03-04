@@ -15,6 +15,7 @@
 - error: エラー通知
 
 """
+
 import json
 import logging
 from typing import Any, Optional
@@ -133,7 +134,7 @@ class MessageParser:
             return None
 
         try:
-            json_str = text[json_start:json_end + 1]
+            json_str = text[json_start : json_end + 1]
             data = json.loads(json_str)
 
             msg_type = data.get("type")

@@ -2,12 +2,13 @@
 
 inbox メッセージとセッションログを統合したタイムラインを提供します。
 """
+
 import logging
 from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from app.services.timeline_service import TimelineService
 from app.services.i18n_service import i18n
@@ -25,6 +26,7 @@ class UnifiedTimelineEntry(BaseModel):
     送信者、受信者、タイムスタンプ、メッセージタイプ、パース済みデータを含みます。
 
     """
+
     id: str
     content: str
     from_: str
@@ -48,6 +50,7 @@ class UnifiedTimelineResponse(BaseModel):
     has_more フラグで追加データの有無を、last_event_id で次ページのカーソルを提供します。
 
     """
+
     items: list[UnifiedTimelineEntry]
     last_timestamp: str
     has_more: bool = False  # ページネーション：さらに古いエントリが存在するか
@@ -65,8 +68,12 @@ async def get_timeline_history(
     request: Request,
     team_name: str,
     limit: int = Query(100, ge=1, le=10000, description="最大取得件数"),
-    types: Optional[str] = Query(None, description="カンマ区切りでタイプ指定（例: message,thinking,tool_use）"),
-    before_event_id: Optional[str] = Query(None, description="このイベントIDより古いエントリを取得（ページネーション用）")
+    types: Optional[str] = Query(
+        None, description="カンマ区切りでタイプ指定（例: message,thinking,tool_use）"
+    ),
+    before_event_id: Optional[str] = Query(
+        None, description="このイベントIDより古いエントリを取得（ページネーション用）"
+    ),
 ):
     """統合タイムライン履歴を取得します。
 
@@ -94,7 +101,7 @@ async def get_timeline_history(
     if not service.team_exists(team_name):
         raise HTTPException(
             status_code=404,
-            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name)
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name),
         )
 
     # inbox メッセージとセッションログを並行して取得
@@ -107,18 +114,16 @@ async def get_timeline_history(
     # タイプフィルタ
     if types:
         type_filter = set(types.split(","))
-        all_entries = [
-            e for e in all_entries
-            if e.get("parsed_type") in type_filter
-        ]
+        all_entries = [e for e in all_entries if e.get("parsed_type") in type_filter]
 
     # timestamp が None のエントリを除外してからソート
     # content が空文字列のエントリも除外
     # タイムスタンプが同じ場合は ID でソートして順序を安定させる
-    all_entries = [e for e in all_entries if e.get("timestamp") is not None and e.get("content")]
+    all_entries = [
+        e for e in all_entries if e.get("timestamp") is not None and e.get("content")
+    ]
     all_entries.sort(
-        key=lambda x: (x.get("timestamp", ""), x.get("id", "")),
-        reverse=True
+        key=lambda x: (x.get("timestamp", ""), x.get("id", "")), reverse=True
     )
 
     # before_event_id によるページネーション
@@ -132,7 +137,7 @@ async def get_timeline_history(
 
         if before_index is not None:
             # 指定イベントより後ろ（古い）のエントリのみを使用
-            all_entries = all_entries[before_index + 1:]
+            all_entries = all_entries[before_index + 1 :]
         else:
             # 指定されたイベントIDが見つからない場合、空のリストを返す
             logger.warning(f"before_event_id not found: {before_event_id}")
@@ -144,7 +149,11 @@ async def get_timeline_history(
     has_more = total_before_limit > limit
 
     # 最終タイムスタンプを取得
-    last_timestamp = all_entries[0]["timestamp"] if all_entries else datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    last_timestamp = (
+        all_entries[0]["timestamp"]
+        if all_entries
+        else datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    )
     # 次ページ用カーソルを設定（has_more=True の場合のみ）
     last_event_id = all_entries[-1]["id"] if all_entries and has_more else None
 
@@ -155,7 +164,7 @@ async def get_timeline_history(
         items=timeline_items,
         last_timestamp=last_timestamp,
         has_more=has_more,
-        last_event_id=last_event_id
+        last_event_id=last_event_id,
     )
 
 
@@ -163,8 +172,10 @@ async def get_timeline_history(
 async def get_timeline_updates(
     request: Request,
     team_name: str,
-    since: Optional[str] = Query(None, description="このタイムスタンプ以降のエントリのみ取得（ISO 8601形式）"),
-    limit: int = Query(50, ge=1, le=200, description="最大取得件数")
+    since: Optional[str] = Query(
+        None, description="このタイムスタンプ以降のエントリのみ取得（ISO 8601形式）"
+    ),
+    limit: int = Query(50, ge=1, le=200, description="最大取得件数"),
 ):
     """差分更新用エンドポイントです。
 
@@ -190,7 +201,7 @@ async def get_timeline_updates(
     if not service.team_exists(team_name):
         raise HTTPException(
             status_code=404,
-            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name)
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name),
         )
 
     # 新規セッションエントリを取得
@@ -202,21 +213,17 @@ async def get_timeline_updates(
 
     # since フィルタ（inbox メッセージのみ、セッションは既にフィルタ済み）
     if since:
-        inbox_messages = [
-            m for m in inbox_messages
-            if m.get("timestamp", "") > since
-        ]
+        inbox_messages = [m for m in inbox_messages if m.get("timestamp", "") > since]
 
     # 統合
     all_entries = inbox_messages + session_entries
 
     # timestamp が None のエントリを除外してからソート
     # content が空文字列のエントリも除外
-    all_entries = [e for e in all_entries if e.get("timestamp") is not None and e.get("content")]
-    all_entries.sort(
-        key=lambda x: x.get("timestamp", ""),
-        reverse=True
-    )
+    all_entries = [
+        e for e in all_entries if e.get("timestamp") is not None and e.get("content")
+    ]
+    all_entries.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
     # 件数制限（has_more 判定の前に元のサイズを保存）
     total_before_limit = len(all_entries)
@@ -224,7 +231,11 @@ async def get_timeline_updates(
     has_more = total_before_limit > limit
 
     # 最終タイムスタンプを取得
-    last_timestamp = all_entries[0]["timestamp"] if all_entries else datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    last_timestamp = (
+        all_entries[0]["timestamp"]
+        if all_entries
+        else datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    )
     # 次ページ用カーソルを設定（has_more=True の場合のみ）
     last_event_id = all_entries[-1]["id"] if all_entries and has_more else None
 
@@ -235,7 +246,5 @@ async def get_timeline_updates(
         items=timeline_items,
         last_timestamp=last_timestamp,
         has_more=has_more,
-        last_event_id=last_event_id
+        last_event_id=last_event_id,
     )
-
-

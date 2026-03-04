@@ -4,6 +4,7 @@
 ~/.claude/tasks/ ディレクトリの JSON ファイルからデータを読み込みます。
 
 """
+
 from fastapi import APIRouter, HTTPException, Request
 from pathlib import Path
 import json
@@ -88,14 +89,16 @@ async def list_tasks():
                         if task_data:
                             original_status = task_data.get("status", "pending")
                             status = get_task_status(task_file, original_status)
-                            tasks.append(TaskSummary(
-                                id=task_data.get("id", task_file.stem),
-                                subject=task_data.get("subject", ""),
-                                status=status,
-                                owner=task_data.get("owner"),
-                                blockedCount=len(task_data.get("blockedBy", [])),
-                                teamName=team_task_dir.name,
-                            ))
+                            tasks.append(
+                                TaskSummary(
+                                    id=task_data.get("id", task_file.stem),
+                                    subject=task_data.get("subject", ""),
+                                    status=status,
+                                    owner=task_data.get("owner"),
+                                    blockedCount=len(task_data.get("blockedBy", [])),
+                                    teamName=team_task_dir.name,
+                                )
+                            )
     return tasks
 
 
@@ -123,8 +126,7 @@ async def list_team_tasks(request: Request, team_name: str):
     team_task_dir = settings.tasks_dir / team_name
     if not team_task_dir.exists():
         raise HTTPException(
-            status_code=404,
-            detail=i18n.t("api.errors.team_tasks_not_found", lang=lang)
+            status_code=404, detail=i18n.t("api.errors.team_tasks_not_found", lang=lang)
         )
 
     for task_file in team_task_dir.glob("*.json"):

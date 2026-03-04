@@ -8,6 +8,7 @@ Example:
     >>> # リクエストハンドラー内で:
     >>> lang = request.state.language  # 'ja', 'en', または 'zh'
 """
+
 from __future__ import annotations
 
 from typing import Callable
@@ -59,9 +60,7 @@ class LanguageMiddleware(BaseHTTPMiddleware):
 
         """
         # Accept-Language ヘッダーから言語を抽出
-        accept_language = request.headers.get(
-            "Accept-Language", i18n.DEFAULT_LANGUAGE
-        )
+        accept_language = request.headers.get("Accept-Language", i18n.DEFAULT_LANGUAGE)
 
         # Accept-Language ヘッダーのパース
         # 形式: "ja,en-US;q=0.9,en;q=0.8" または "ja"

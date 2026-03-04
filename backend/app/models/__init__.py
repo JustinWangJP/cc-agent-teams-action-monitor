@@ -2,6 +2,7 @@
 
 全モデルを統一的にインポートするためのモジュールです。
 """
+
 from app.models.team import Member, Team, TeamSummary
 from app.models.message import InboxMessage, ProtocolMessage, ActivityEvent
 from app.models.task import Task, TaskSummary, TaskUpdate

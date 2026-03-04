@@ -4,7 +4,8 @@
 ~/.claude/teams/{team_name}/inboxes/ ディレクトリからデータを読み込みます。
 
 """
-from datetime import datetime, timedelta
+
+from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 from pathlib import Path
@@ -60,8 +61,9 @@ def get_team_inboxes(team_dir: Path) -> dict[str, list]:
 
     """
     import logging
+
     logger = logging.getLogger(__name__)
-    
+
     inboxes_dir = team_dir / "inboxes"
     inboxes = {}
     if inboxes_dir.exists():
@@ -73,7 +75,7 @@ def get_team_inboxes(team_dir: Path) -> dict[str, list]:
                 # TC-023: エラーハンドリング - 読み込みエラーをログに出力
                 logger.warning(
                     f"Failed to read inbox file {inbox_file}: {e}",
-                    extra={"file": str(inbox_file), "error": str(e)}
+                    extra={"file": str(inbox_file), "error": str(e)},
                 )
                 continue
     return inboxes
@@ -131,7 +133,7 @@ async def get_agents_status(request: Request, team_name: str):
     if not team_dir.exists():
         raise HTTPException(
             status_code=404,
-            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name)
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name),
         )
 
     # インボックスメッセージを取得
@@ -166,11 +168,13 @@ async def get_agents_status(request: Request, team_name: str):
     agents = []
     for agent_name, last_activity in sorted(agent_last_activity.items()):
         status = determine_agent_status(last_activity)
-        agents.append(AgentStatus(
-            name=agent_name,
-            status=status,
-            lastActivity=last_activity,
-        ))
+        agents.append(
+            AgentStatus(
+                name=agent_name,
+                status=status,
+                lastActivity=last_activity,
+            )
+        )
 
     return AgentStatusList(agents=agents)
 
@@ -199,7 +203,7 @@ async def get_typing_indicators(request: Request, team_name: str):
     if not team_dir.exists():
         raise HTTPException(
             status_code=404,
-            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name)
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name),
         )
 
     # 現時点では実際のタイピング状態を検出する手段がないため

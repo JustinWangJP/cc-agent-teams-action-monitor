@@ -4,9 +4,10 @@ Member、Team、TeamSummary の3つのモデルを定義し、
 Claude Code Agent Teams のチーム構成管理をサポートします。
 
 """
+
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class Member(BaseModel):

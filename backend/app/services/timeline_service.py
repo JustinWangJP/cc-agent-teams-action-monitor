@@ -4,6 +4,7 @@
 タイムライン形式で提供します。
 
 """
+
 import json
 import logging
 from pathlib import Path
@@ -98,7 +99,9 @@ class TimelineService:
         project_hash = self._cwd_to_project_hash(cwd)
 
         # セッションファイルのパスを構築
-        session_file = self.claude_dir / "projects" / project_hash / f"{lead_session_id}.jsonl"
+        session_file = (
+            self.claude_dir / "projects" / project_hash / f"{lead_session_id}.jsonl"
+        )
 
         if session_file.exists():
             logger.info(f"Found session file: {session_file}")
@@ -129,7 +132,11 @@ class TimelineService:
                 with open(inbox_file, "r", encoding="utf-8") as f:
                     inbox_data = json.load(f)
                     # inbox_data は配列形式またはオブジェクト形式
-                    messages_list = inbox_data if isinstance(inbox_data, list) else inbox_data.get("messages", [])
+                    messages_list = (
+                        inbox_data
+                        if isinstance(inbox_data, list)
+                        else inbox_data.get("messages", [])
+                    )
                     for msg in messages_list:
                         mapped = self._map_inbox_message(msg, recipient)
                         if mapped:
@@ -183,9 +190,7 @@ class TimelineService:
         return entries
 
     async def load_session_entries_since(
-        self,
-        team_name: str,
-        since: Optional[str] = None
+        self, team_name: str, since: Optional[str] = None
     ) -> list[dict]:
         """差分読み込みを行います。
 
@@ -323,7 +328,9 @@ class TimelineService:
         if entry_type == "file-history-snapshot":
             return None
 
-        parsed_type = "unknown" if entry_type is None else type_mapping.get(entry_type, "unknown")
+        parsed_type = (
+            "unknown" if entry_type is None else type_mapping.get(entry_type, "unknown")
+        )
 
         # エージェント名を推定（セッションでは送信者情報が限定的）
         # message.role を優先、なければ entry.role を使用
@@ -332,7 +339,10 @@ class TimelineService:
         role = message.get("role", entry.get("role", "assistant"))
 
         # thinking と file-history-snapshot は assistant の model チェックをスキップ
-        if role == "assistant" and entry_type not in ("thinking", "file-history-snapshot"):
+        if role == "assistant" and entry_type not in (
+            "thinking",
+            "file-history-snapshot",
+        ):
             model = message.get("model")
             # モデルが特定できない場合はエントリを除外
             if not model or model == "unknown":
@@ -387,7 +397,7 @@ class TimelineService:
                     if block_type == "text":
                         text_parts.append(block.get("text", ""))
                     elif block_type == "thinking":
-                        thinking_text = block.get('thinking', '')
+                        thinking_text = block.get("thinking", "")
                         text_parts.append(f"💭 {thinking_text}")
 
                 # テキストを結合
@@ -411,7 +421,9 @@ class TimelineService:
             # ファイル変更履歴の処理
             # データ構造：entry.fileChanges（辞書形式）を優先
             # フォールバック：entry.snapshot.trackedFileBackups
-            file_changes = entry.get("fileChanges") or entry.get("snapshot", {}).get("trackedFileBackups", {})
+            file_changes = entry.get("fileChanges") or entry.get("snapshot", {}).get(
+                "trackedFileBackups", {}
+            )
             files_list = []
 
             # fileChanges が辞書形式かリスト形式かを判定
@@ -425,46 +437,50 @@ class TimelineService:
                             # operation を推論
                             backup_file_name = change_info.get("backupFileName")
                             version = change_info.get("version", 1)
-                            
+
                             if backup_file_name is None and version == 1:
                                 operation = "created"
                             elif backup_file_name is not None:
                                 operation = "modified"
                             else:
                                 operation = "read"
-                        
+
                         version = change_info.get("version")
-                        files_list.append({
-                            "path": path,
-                            "operation": operation,
-                            "version": version,
-                        })
+                        files_list.append(
+                            {
+                                "path": path,
+                                "operation": operation,
+                                "version": version,
+                            }
+                        )
             elif isinstance(file_changes, list):
                 # リスト形式：[{path, operation, version}] または [{path, backupFileName, version, backupTime}]
                 for change_info in file_changes:
                     if isinstance(change_info, dict):
                         path = change_info.get("path", "")
-                        
+
                         # operation フィールドがない場合、backupFileName と version から推論
                         operation = change_info.get("operation")
                         if operation is None:
                             backup_file_name = change_info.get("backupFileName")
                             version = change_info.get("version", 1)
-                            
+
                             if backup_file_name is None and version == 1:
                                 operation = "created"
                             elif backup_file_name is not None:
                                 operation = "modified"
                             else:
                                 operation = "read"
-                        
+
                         version = change_info.get("version")
                         if path:
-                            files_list.append({
-                                "path": path,
-                                "operation": operation,
-                                "version": version,
-                            })
+                            files_list.append(
+                                {
+                                    "path": path,
+                                    "operation": operation,
+                                    "version": version,
+                                }
+                            )
 
             changed_count = len(files_list)
             if changed_count == 1:
