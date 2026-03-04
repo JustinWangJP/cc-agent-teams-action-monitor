@@ -21,7 +21,14 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./src/test/setup.tsx'],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
+      // テストで .tsx ファイルを拡張子なしでインポート可能にする
+      extensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

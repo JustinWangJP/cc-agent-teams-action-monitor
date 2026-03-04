@@ -1,0 +1,64 @@
+# Pre-commit hooks for Agent Teams Dashboard
+# https://pre-commit.com/
+
+repos:
+  # Python linting and formatting
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        language_version: python3.11
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  # JavaScript/TypeScript linting
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.57.0
+    hooks:
+      - id: eslint
+        files: \.[jt]sx?$
+        types: [file]
+        additional_dependencies:
+          - eslint@8.57.0
+          - '@typescript-eslint/eslint-plugin@7.3.1'
+          - '@typescript-eslint/parser@7.3.1'
+
+  # JSON validation
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.28.0
+    hooks:
+      - id: check-jsonschema
+        name: Validate translation files (frontend)
+        files: ^frontend/locales/.*\.json$
+        types: [json]
+      - id: check-jsonschema
+        name: Validate translation files (backend)
+        files: ^backend/locales/.*\.json$
+        types: [json]
+
+  # Custom translation key consistency check
+  - repo: local
+    hooks:
+      - id: verify-translations
+        name: Verify translation keys consistency
+        entry: node scripts/verify-translations.js
+        language: node
+        files: ^(frontend|backend)/locales/.*\.json$
+        pass_filenames: false
+        additional_dependencies: []
+
+  # General checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: debug-statements
