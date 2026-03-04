@@ -8,6 +8,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useDashboardStore } from '../dashboardStore';
+import type { MessageType, MessageFilter } from '@/types/message';
 import type { ParsedMessage } from '@/types/message';
 import type { Task } from '@/types/task';
 
@@ -82,8 +83,8 @@ describe('dashboardStore', () => {
         status: 'pending',
         owner: 'agent-1',
         blockedBy: [],
-        createdAt: '2026-02-16T10:00:00Z',
-        updatedAt: '2026-02-16T10:00:00Z',
+        blocks: [],
+        activeForm: 'Testing',
       };
 
       useDashboardStore.getState().setSelectedTask(mockTask);
@@ -118,7 +119,7 @@ describe('dashboardStore', () => {
 
   describe('フィルターアクション', () => {
     it('setMessageFilter でメッセージフィルターを設定できること', () => {
-      const filter = { senders: ['agent-1'], receivers: ['agent-2'], types: ['message'] };
+      const filter: MessageFilter = { senders: ['agent-1'], receivers: ['agent-2'], types: ['message'] as MessageType[] };
       useDashboardStore.getState().setMessageFilter(filter);
 
       expect(useDashboardStore.getState().messageFilter).toEqual(filter);
@@ -126,7 +127,7 @@ describe('dashboardStore', () => {
 
     it('updateMessageFilter でメッセージフィルターを部分的に更新できること', () => {
       useDashboardStore.getState().setMessageFilter({ senders: ['agent-1'], receivers: [], types: [] });
-      useDashboardStore.getState().updateMessageFilter({ types: ['task'] });
+      useDashboardStore.getState().updateMessageFilter({ types: ['task_assignment'] });
 
       const filter = useDashboardStore.getState().messageFilter;
       expect(filter.senders).toEqual(['agent-1']);

@@ -7,7 +7,6 @@
  * @module test/setup
  */
 import '@testing-library/jest-dom';
-import React from 'react';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, vi, beforeAll } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
