@@ -27,6 +27,8 @@ Agent Teams Dashboard 是一个用于实时监控和管理 Claude Code Agent Tea
 - **团队监控**: 显示活跃的代理团队及状态指示器
 - **任务管理**: 按状态可视化任务（看板风格）
 - **统一时间线**: 集成显示代理消息 + 会话日志
+- **多语言支持**: 支持日语、英语、中文三种语言（UI/API错误消息）
+- **自动语言检测**: 通过 Accept-Language 请求头或浏览器设置自动检测
 - **深色模式**: 支持主题切换
 
 ---
@@ -163,6 +165,7 @@ npm run dev
 | 框架 | FastAPI 0.109+ |
 | 数据验证 | Pydantic 2.5+ |
 | 文件监控 | watchdog 4.0+ |
+| 国际化 | 自定义 i18n 服务 |
 
 ### 前端
 
@@ -173,6 +176,7 @@ npm run dev
 | 打包工具 | Vite 5+ |
 | CSS | Tailwind CSS 3.4+ |
 | 状态管理 | Zustand 5.0.2+ |
+| 国际化 | i18next + react-i18next |
 | 数据获取 | TanStack Query 5.90.21+ |
 
 > 详细版本信息请参考 [docs/spec/frontend-tech-stack.zh.md](docs/spec/frontend-tech-stack.zh.md) 和 [docs/spec/backend-tech-stack.zh.md](docs/spec/backend-tech-stack.zh.md)
@@ -255,6 +259,7 @@ npm run build
 | `DASHBOARD_PORT` | `8000` | 服务器监听端口 |
 | `DASHBOARD_DEBUG` | `True` | 调试模式 |
 | `DASHBOARD_CLAUDE_DIR` | `~/.claude` | Claude 数据目录 |
+| `DASHBOARD_DEFAULT_LANGUAGE` | `ja` | 默认语言（ja/en/zh） |
 
 ---
 
@@ -300,6 +305,7 @@ npm run test:coverage  # 运行测试
 - [x] 团队监控和状态检测
 - [x] 任务管理（看板风格）
 - [x] 统一时间线（inbox + 会话日志）
+- [x] 多语言支持（i18n: 日语/英语/中文）
 - [x] 深色模式支持
 
 ---

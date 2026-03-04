@@ -1,0 +1,12 @@
+{
+  "title": "Agent Teams 仪表板",
+  "polling_interval": "更新间隔",
+  "next_update": "下次更新",
+  "intervals": {
+    "seconds": "{{count}}秒",
+    "seconds_later": "{{count}}秒后",
+    "minutes": "{{count}}分",
+    "minutes_later": "{{count}}分钟后",
+    "minutes_seconds_later": "{{minutes}}分{{seconds}}秒后"
+  }
+}

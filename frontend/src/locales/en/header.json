@@ -1,0 +1,12 @@
+{
+  "title": "Agent Teams Dashboard",
+  "polling_interval": "Update interval",
+  "next_update": "Next update",
+  "intervals": {
+    "seconds": "{{count}}s",
+    "seconds_later": "in {{count}}s",
+    "minutes": "{{count}}m",
+    "minutes_later": "in {{count}}m",
+    "minutes_seconds_later": "in {{minutes}}m {{seconds}}s"
+  }
+}

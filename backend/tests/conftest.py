@@ -5,6 +5,7 @@ FastAPI テストクライアント、モックデータ、テスト用ディレ
 
 @
 """
+
 import pytest
 import pytest_asyncio
 import asyncio
@@ -45,6 +46,7 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
 
 # ===== モックデータ =====
 
+
 @pytest.fixture
 def mock_team_data() -> dict:
     """モックチームデータ。"""
@@ -64,10 +66,10 @@ def mock_team_data() -> dict:
                 "cwd": "/home/user/project",
                 "subscriptions": ["tasks", "dashboard"],
                 "color": "#FF5733",
-                "status": "active"
+                "status": "active",
             }
         ],
-        "lastActivity": "2025-01-15T10:30:00Z"
+        "lastActivity": "2025-01-15T10:30:00Z",
     }
 
 
@@ -80,7 +82,7 @@ def mock_team_summary() -> dict:
         "memberCount": 3,
         "status": "active",
         "lastActivity": "2025-01-15T10:30:00Z",
-        "leadAgentId": "claude-sonnet-4@anthropic"
+        "leadAgentId": "claude-sonnet-4@anthropic",
     }
 
 
@@ -97,7 +99,7 @@ def mock_task_data() -> dict:
         "blocks": ["2", "3"],
         "blockedBy": [],
         "metadata": {"priority": "high"},
-        "teamName": "test-team"
+        "teamName": "test-team",
     }
 
 
@@ -110,7 +112,7 @@ def mock_task_summary() -> dict:
         "status": "in_progress",
         "owner": "agent-1",
         "blockedCount": 0,
-        "teamName": "test-team"
+        "teamName": "test-team",
     }
 
 
@@ -122,12 +124,12 @@ def mock_inbox_messages() -> list:
             "type": "message",
             "sender": "agent-2",
             "content": "Hello from agent 2",
-            "timestamp": "2025-01-15T10:30:00Z"
+            "timestamp": "2025-01-15T10:30:00Z",
         },
         {
             "type": "broadcast",
             "sender": "team-lead",
             "content": "Team meeting at 2pm",
-            "timestamp": "2025-01-15T09:00:00Z"
-        }
+            "timestamp": "2025-01-15T09:00:00Z",
+        },
     ]

@@ -27,6 +27,8 @@ Agent Teams Dashboard is a web application for real-time monitoring and manageme
 - **Team Monitoring**: Display active agent teams with status indicators
 - **Task Management**: Visualize tasks by status (Kanban-style)
 - **Unified Timeline**: Integrated display of agent messages + session logs
+- **Internationalization**: Support for Japanese, English, and Chinese (UI/API error messages)
+- **Auto Language Detection**: Automatic detection via Accept-Language header or browser settings
 - **Dark Mode**: Theme switching support
 
 ---
@@ -163,6 +165,7 @@ For detailed information, refer to the documents in `docs/spec/`:
 | Framework | FastAPI 0.109+ |
 | Data Validation | Pydantic 2.5+ |
 | File Watching | watchdog 4.0+ |
+| Internationalization | Custom i18n Service |
 
 ### Frontend
 
@@ -174,6 +177,7 @@ For detailed information, refer to the documents in `docs/spec/`:
 | CSS | Tailwind CSS 3.4+ |
 | State Management | Zustand 5.0.2+ |
 | Data Fetching | TanStack Query 5.90.21+ |
+| Internationalization | i18next + react-i18next |
 
 > For detailed version information, see [docs/spec/frontend-tech-stack.en.md](docs/spec/frontend-tech-stack.en.md) and [docs/spec/backend-tech-stack.en.md](docs/spec/backend-tech-stack.en.md)
 
@@ -255,6 +259,7 @@ npm run build
 | `DASHBOARD_PORT` | `8000` | Server listen port |
 | `DASHBOARD_DEBUG` | `True` | Debug mode |
 | `DASHBOARD_CLAUDE_DIR` | `~/.claude` | Claude data directory |
+| `DASHBOARD_DEFAULT_LANGUAGE` | `ja` | Default language (ja/en/zh) |
 
 ---
 
@@ -300,6 +305,7 @@ npm run test:coverage  # Run tests
 - [x] Team monitoring and status detection
 - [x] Task management (Kanban-style)
 - [x] Unified timeline (inbox + session logs)
+- [x] Internationalization (i18n: Japanese/English/Chinese)
 - [x] Dark mode support
 
 ---

@@ -16,7 +16,8 @@
  * - TC-009-10: 担当者リンク
  */
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { render } from '@/test/setup.tsx'
 import { ExpandedTaskCard } from '../ExpandedTaskCard'
 import type { TaskWithProgress } from '@/types/task'
 
@@ -154,16 +155,19 @@ describe('ExpandedTaskCard', () => {
   describe('TC-009-08: ステータス色分け', () => {
     it('pending: ステータス表示', () => {
       render(<ExpandedTaskCard task={{ ...mockTask, status: 'pending' }} />)
-      expect(screen.getByText('待機中')).toBeInTheDocument()
+      // 翻訳されたテキスト（日本語）を確認
+      expect(screen.getByText('未着手')).toBeInTheDocument()
     })
 
     it('in_progress: ステータス表示', () => {
       render(<ExpandedTaskCard task={{ ...mockTask, status: 'in_progress' }} />)
+      // 翻訳されたテキスト（日本語）を確認
       expect(screen.getByText('進行中')).toBeInTheDocument()
     })
 
     it('completed: ステータス表示', () => {
       render(<ExpandedTaskCard task={{ ...mockTask, status: 'completed' }} />)
+      // 翻訳されたテキスト（日本語）を確認
       expect(screen.getByText('完了')).toBeInTheDocument()
     })
   })

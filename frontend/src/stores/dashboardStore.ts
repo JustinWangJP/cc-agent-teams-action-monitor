@@ -230,7 +230,7 @@ const STORAGE_KEY = 'dashboard-state';
  *
  * @returns 復元された状態の部分オブジェクト、または null
  *
- * 
+ *
  */
 function loadState(): Partial<DashboardState> | null {
   if (typeof window === 'undefined') return null;
@@ -263,7 +263,7 @@ function loadState(): Partial<DashboardState> | null {
  *
  * @param state - 保存する状態の部分オブジェクト
  *
- * 
+ *
  */
 function saveState(state: Partial<DashboardState>) {
   if (typeof window === 'undefined') return;
@@ -394,8 +394,9 @@ export const useDashboardStore = create<DashboardState>()(
         // HTML class も更新
         if (typeof document !== 'undefined') {
           const html = document.documentElement;
-          const newDarkMode = !get().isDarkMode;
-          if (newDarkMode) {
+          // set()後なので、get()は新しい値を返す（すでにトグル済み）
+          const isDark = get().isDarkMode;
+          if (isDark) {
             html.classList.add('dark');
           } else {
             html.classList.remove('dark');

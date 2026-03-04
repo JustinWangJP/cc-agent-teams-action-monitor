@@ -38,7 +38,7 @@ export interface TeamInbox {
  * @returns error - エラーメッセージ（null 可能）
  * @returns refetch - 手動再取得関数
  *
- * 
+ *
  */
 export function useInbox(teamName: string) {
   const inboxInterval = useDashboardStore((state) => state.inboxInterval);

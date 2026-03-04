@@ -1,0 +1,27 @@
+{
+  "cache": {
+    "hit": "缓存命中: 团队 '{team}' 配置",
+    "miss": "缓存未命中: 正在加载团队 '{team}' 配置",
+    "invalidate_config": "已使团队 '{team}' 配置缓存失效",
+    "invalidate_inbox": "已使团队 '{team}' 代理 '{agent}' 收件箱缓存失效",
+    "started": "缓存服务已启动 (config_ttl={config_ttl}秒, inbox_ttl={inbox_ttl}秒)",
+    "stopped": "缓存服务已停止"
+  },
+  "watcher": {
+    "started": "文件监视器已启动: {directory}",
+    "stopped": "文件监视器已停止",
+    "team_updated": "团队配置已更新: {team} ({event_type})",
+    "inbox_updated": "收件箱已更新: 团队={team}, 代理={agent} ({event_type})",
+    "task_updated": "任务已更新: 团队={team}, 任务={task} ({event_type})"
+  },
+  "timeline": {
+    "config_not_found": "未找到团队配置: {path}",
+    "session_not_found": "未找到会话文件: {file}",
+    "session_found": "已找到会话文件: {file}",
+    "config_load_failed": "加载团队配置失败: {error}",
+    "lead_session_not_found": "未找到团队 '{team}' 的 leadSessionId 或 members",
+    "inbox_load_failed": "加载收件箱文件失败: {file}",
+    "session_parse_failed": "解析会话条目失败: {error}",
+    "session_read_failed": "读取会话文件失败: {error}"
+  }
+}

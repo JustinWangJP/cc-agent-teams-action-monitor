@@ -1,0 +1,22 @@
+{
+  "errors": {
+    "team_not_found": "チーム「{team}」が見つかりません",
+    "team_config_not_found": "チーム設定が見つかりません",
+    "team_tasks_not_found": "チームのタスクが見つかりません",
+    "inbox_not_found": "エージェント「{agent}」の受信箱が見つかりません",
+    "invalid_timestamp": "タイムスタンプ形式が無効です: {timestamp}",
+    "cache_not_initialized": "キャッシュサービスが初期化されていません",
+    "file_not_found": "ファイルが見つかりません: {path}",
+    "invalid_team_name": "チーム名が無効です: {name}",
+    "invalid_agent_name": "エージェント名が無効です: {name}",
+    "cannot_delete_active_team": "このチームは削除できません。ステータスが「{status}」です。削除できるのは stopped, inactive, unknown 状態のチームのみです。",
+    "delete_error": "チーム「{team}」の削除中にエラーが発生しました: {error}",
+    "delete_success": "チーム「{team}」を削除しました"
+  },
+  "delete": {
+    "success_team": "チームディレクトリを削除しました: {team}",
+    "success_tasks": "タスクディレクトリを削除しました: {dir}",
+    "success_session": "セッションファイルを削除しました: {file}",
+    "failed": "チーム「{team}」の削除に失敗しました: {error}"
+  }
+}

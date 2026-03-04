@@ -1,7 +1,6 @@
 """TimelineService のユニットテスト."""
+
 import json
-import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -44,10 +43,7 @@ class TestTimelineService:
         cwd = "/Users/test/project"
         project_hash = "-" + cwd.lstrip("/").replace("/", "-")
 
-        config = {
-            "leadSessionId": lead_session_id,
-            "members": [{"cwd": cwd}]
-        }
+        config = {"leadSessionId": lead_session_id, "members": [{"cwd": cwd}]}
         config_file = team_dir / "config.json"
         config_file.write_text(json.dumps(config))
 
@@ -76,7 +72,7 @@ class TestTimelineService:
         # config.json を作成（セッションファイルは作成しない）
         config = {
             "leadSessionId": "non-existent-session",
-            "members": [{"cwd": "/Users/test/project"}]
+            "members": [{"cwd": "/Users/test/project"}],
         }
         config_file = team_dir / "config.json"
         config_file.write_text(json.dumps(config))
@@ -106,7 +102,7 @@ class TestTimelineService:
                     "content": "Test message",
                     "from": "sender",
                     "timestamp": "2026-02-21T10:00:00Z",
-                    "read": True
+                    "read": True,
                 }
             ]
         }
@@ -142,14 +138,14 @@ class TestTimelineService:
                 "content": "Array format message",
                 "from": "sender",
                 "timestamp": "2026-02-21T10:00:00Z",
-                "read": True
+                "read": True,
             },
             {
                 "content": "Second message",
                 "from": "sender2",
                 "timestamp": "2026-02-21T10:01:00Z",
-                "read": False
-            }
+                "read": False,
+            },
         ]
 
         inbox_file = inbox_dir / "recipient.json"
@@ -184,10 +180,7 @@ class TestTimelineService:
         cwd = "/Users/test/project"
         project_hash = "-" + cwd.lstrip("/").replace("/", "-")
 
-        config = {
-            "leadSessionId": lead_session_id,
-            "members": [{"cwd": cwd}]
-        }
+        config = {"leadSessionId": lead_session_id, "members": [{"cwd": cwd}]}
         config_file = team_dir / "config.json"
         config_file.write_text(json.dumps(config))
 
@@ -222,7 +215,7 @@ class TestTimelineService:
             "content": '{"type": "task_assignment", "taskId": "1", "subject": "Test task"}',
             "from": "team-lead",
             "timestamp": "2026-02-21T10:00:00Z",
-            "read": False
+            "read": False,
         }
 
         result = service._map_inbox_message(msg, "backend-developer")
@@ -241,7 +234,7 @@ class TestTimelineService:
             "type": "user",
             "role": "user",
             "message": {"role": "user", "content": "Hello"},
-            "timestamp": "2026-02-21T10:00:00Z"
+            "timestamp": "2026-02-21T10:00:00Z",
         }
 
         result = service._map_session_entry(entry)
@@ -260,7 +253,7 @@ class TestTimelineService:
         entry = {
             "type": "thinking",
             "thinking": "Let me analyze this...",
-            "timestamp": "2026-02-21T10:00:00Z"
+            "timestamp": "2026-02-21T10:00:00Z",
         }
 
         result = service._map_session_entry(entry)
@@ -280,7 +273,7 @@ class TestTimelineService:
             "type": "tool_use",
             "name": "read_file",
             "input": {"path": "/path/to/file.py"},
-            "timestamp": "2026-02-21T10:00:00Z"
+            "timestamp": "2026-02-21T10:00:00Z",
         }
 
         result = service._map_session_entry(entry)
@@ -405,12 +398,9 @@ class TestTimelineService:
             "role": "assistant",
             "message": {"role": "assistant", "model": "claude-opus-4-6"},
             "fileChanges": {
-                "/path/to/file.py": {
-                    "operation": "modified",
-                    "version": 5
-                }
+                "/path/to/file.py": {"operation": "modified", "version": 5}
             },
-            "timestamp": "2026-02-21T10:00:00Z"
+            "timestamp": "2026-02-21T10:00:00Z",
         }
 
         result = service._map_session_entry(entry)
@@ -436,20 +426,11 @@ class TestTimelineService:
             "role": "assistant",
             "message": {"role": "assistant", "model": "claude-opus-4-6"},
             "fileChanges": {
-                "/path/to/file1.py": {
-                    "operation": "created",
-                    "version": 1
-                },
-                "/path/to/file2.py": {
-                    "operation": "read",
-                    "version": 2
-                },
-                "/path/to/file3.py": {
-                    "operation": "deleted",
-                    "version": 3
-                }
+                "/path/to/file1.py": {"operation": "created", "version": 1},
+                "/path/to/file2.py": {"operation": "read", "version": 2},
+                "/path/to/file3.py": {"operation": "deleted", "version": 3},
             },
-            "timestamp": "2026-02-21T10:00:00Z"
+            "timestamp": "2026-02-21T10:00:00Z",
         }
 
         result = service._map_session_entry(entry)
@@ -480,7 +461,7 @@ class TestTimelineService:
             "role": "assistant",
             "message": {"role": "assistant", "model": "claude-opus-4-6"},
             "fileChanges": {},
-            "timestamp": "2026-02-21T10:00:00Z"
+            "timestamp": "2026-02-21T10:00:00Z",
         }
 
         result = service._map_session_entry(entry)
@@ -508,10 +489,7 @@ class TestTimelineService:
         cwd = "/Users/test/project"
         project_hash = "-" + cwd.lstrip("/").replace("/", "-")
 
-        config = {
-            "leadSessionId": lead_session_id,
-            "members": [{"cwd": cwd}]
-        }
+        config = {"leadSessionId": lead_session_id, "members": [{"cwd": cwd}]}
         config_file = team_dir / "config.json"
         config_file.write_text(json.dumps(config))
 
@@ -547,7 +525,7 @@ class TestTimelineService:
             "content": '{"type": "file_change", "files": ["/path/to/file.py"], "operation": "modified"}',
             "from": "agent",
             "timestamp": "2026-02-21T10:00:00Z",
-            "read": True
+            "read": True,
         }
 
         result = service._map_inbox_message(msg, "recipient")
@@ -566,7 +544,7 @@ class TestTimelineService:
             "content": '{"type": "error", "errorType": "ValidationError", "errorMessage": "Invalid input"}',
             "from": "agent",
             "timestamp": "2026-02-21T10:00:00Z",
-            "read": True
+            "read": True,
         }
 
         result = service._map_inbox_message(msg, "recipient")
@@ -585,7 +563,7 @@ class TestTimelineService:
             "content": '{"type": "file_change", "files": ["/a.py", "/b.py"], "operation": "created"}',
             "from": "agent",
             "timestamp": "2026-02-21T10:00:00Z",
-            "read": True
+            "read": True,
         }
 
         result = service._map_inbox_message(msg, "recipient")
@@ -613,10 +591,7 @@ class TestTimelineService:
         cwd = "/Users/test/project"
         project_hash = "-" + cwd.lstrip("/").replace("/", "-")
 
-        config = {
-            "leadSessionId": lead_session_id,
-            "members": [{"cwd": cwd}]
-        }
+        config = {"leadSessionId": lead_session_id, "members": [{"cwd": cwd}]}
         config_file = team_dir / "config.json"
         config_file.write_text(json.dumps(config))
 
@@ -640,15 +615,13 @@ class TestTimelineService:
 
         # since 指定：指定時刻以降のエントリのみを取得
         since_entries = await service.load_session_entries_since(
-            team_name,
-            since="2026-02-21T10:00:05Z"
+            team_name, since="2026-02-21T10:00:05Z"
         )
         assert len(since_entries) == 1
         assert since_entries[0]["content"] == "Third"
 
         # 境界値テスト：ちょうど同じタイムスタンプは含まれない
         boundary_entries = await service.load_session_entries_since(
-            team_name,
-            since="2026-02-21T10:00:10Z"
+            team_name, since="2026-02-21T10:00:10Z"
         )
         assert len(boundary_entries) == 0

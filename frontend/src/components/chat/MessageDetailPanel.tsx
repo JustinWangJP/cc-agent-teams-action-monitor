@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale/ja';
 import type { ParsedMessage, UnifiedTimelineEntry } from '@/types/message';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 統合メッセージ型。
@@ -24,61 +25,42 @@ import { clsx } from 'clsx';
 type TimelineMessage = ParsedMessage | UnifiedTimelineEntry;
 
 /**
- * メッセージタイプに対応するアイコンを取得。
+ * メッセージタイプに対応するアイコンを取得（翻訳キー経由）。
  */
-const getMessageTypeIcon = (type: string): string => {
-  const icons: Record<string, string> = {
-    message: '💬',
-    idle_notification: '💤',
-    shutdown_request: '🛑',
-    shutdown_response: '✅',
-    plan_approval_request: '📋',
-    plan_approval_response: '✅',
-    task_assignment: '📝',
-    shutdown_approved: '✅',
-    // session 由来のタイプを追加
-    user_message: '👤',
-    assistant_message: '🤖',
-    thinking: '💭',
-  };
-  return icons[type] || '❓';
+const getMessageTypeIcon = (
+  type: string,
+  t: (key: string, options?: { defaultValue?: string }) => string
+): string => {
+  return t(`event_icons.${type}`, { defaultValue: '❓' });
 };
 
 /**
- * メッセージタイプの日本語名を取得。
+ * メッセージタイプの表示名を取得（翻訳キー経由）。
  */
-const getMessageTypeName = (type: string): string => {
-  const names: Record<string, string> = {
-    message: 'メッセージ',
-    idle_notification: 'アイドル通知',
-    shutdown_request: 'シャットダウン要求',
-    shutdown_response: 'シャットダウン応答',
-    plan_approval_request: 'プラン承認要求',
-    plan_approval_response: 'プラン承認応答',
-    task_assignment: 'タスク割り当て',
-    shutdown_approved: 'シャットダウン了承',
-    // session 由来のタイプを追加
-    user_message: 'ユーザーメッセージ',
-    assistant_message: 'AIアシスタント応答',
-    thinking: '思考プロセス',
-  };
-  return names[type] || '不明';
+const getMessageTypeName = (
+  type: string,
+  t: (key: string, options?: { defaultValue?: string }) => string
+): string => {
+  return t(`event_types.${type}`, { defaultValue: t('detail.unknown_type') });
 };
 
 /**
  * 安全に日付をフォーマットする関数。
  */
-const safeFormatDate = (timestamp: string | number | Date | undefined): string => {
-  if (!timestamp) return '日時不明';
+const safeFormatDate = (
+  timestamp: string | number | Date | undefined,
+  t: (key: string) => string
+): string => {
+  if (!timestamp) return t('detail.unknown_time');
 
   try {
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) {
-      return '無効な日時';
+      return t('detail.invalid_time');
     }
     return format(date, 'yyyy-MM-dd HH:mm:ss', { locale: ja });
   } catch {
-    return '無効な日時';
+    return t('detail.invalid_time');
   }
 };
 
@@ -139,6 +121,8 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { t } = useTranslation('timeline');
+
   /**
    * ESC キーで閉じる。
    */
@@ -184,8 +168,8 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
     ? message.content
     : message.text;
 
-  const typeIcon = getMessageTypeIcon(message.parsedType);
-  const typeName = getMessageTypeName(message.parsedType);
+  const typeIcon = getMessageTypeIcon(message.parsedType, t);
+  const typeName = getMessageTypeName(message.parsedType, t);
   const isJsonMessage = message.parsedType !== 'message';
   const isPrivate = !!message.to && message.to !== 'all';
 
@@ -206,10 +190,10 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
             <div className="flex flex-col gap-1">
               <Dialog.Title className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <span>{typeIcon}</span>
-                <span>メッセージ詳細</span>
+                <span>{t('detail.title')}</span>
               </Dialog.Title>
               <Dialog.Description className="text-sm text-slate-500 dark:text-slate-400">
-                メッセージの詳細情報を表示します
+                {t('detail.description')}
               </Dialog.Description>
             </div>
             <Dialog.Close
@@ -225,32 +209,32 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
             id="message-detail-content"
             className="flex-1 overflow-y-auto px-6 py-4"
             role="region"
-            aria-label="メッセージ詳細"
+            aria-label={t('detail.title')}
           >
             {/* メタ情報 */}
             <div className="mb-6">
               <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3 flex items-center gap-1">
                 <Info className="w-3 h-3" />
-                基本情報
+                {t('detail.basic_info')}
               </h3>
-              <MetaItem label="送信者" value={message.from} icon="👤" />
-              {isPrivate && <MetaItem label="受信者" value={message.to} icon="📨" />}
+              <MetaItem label={t('detail.sender')} value={message.from} icon="👤" />
+              {isPrivate && <MetaItem label={t('detail.recipient')} value={message.to} icon="📨" />}
               <MetaItem
-                label="時刻"
-                value={safeFormatDate(message.timestamp)}
+                label={t('detail.time')}
+                value={safeFormatDate(message.timestamp, t)}
                 icon="🕐"
               />
               <MetaItem
-                label="タイプ"
+                label={t('detail.type')}
                 value={`${typeIcon} ${typeName}`}
                 icon="📋"
               />
               {message.summary && !isJsonMessage && (
-                <MetaItem label="サマリー" value={message.summary} icon="📝" />
+                <MetaItem label={t('detail.summary')} value={message.summary} icon="📝" />
               )}
               {message.color && (
                 <MetaItem
-                  label="カラー"
+                  label={t('detail.color')}
                   value={
                     <span className="flex items-center gap-2">
                       <span
@@ -264,8 +248,8 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
                 />
               )}
               <MetaItem
-                label="既読"
-                value={message.read ? '✅ 既読' : '📬 未読'}
+                label={t('detail.read_status')}
+                value={message.read ? `✅ ${t('detail.read')}` : `📬 ${t('detail.unread')}`}
                 icon={message.read ? '✓' : '📬'}
               />
             </div>
@@ -273,7 +257,7 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
             {/* メッセージ本文 */}
             <div className="mb-4">
               <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
-                {isJsonMessage ? 'プロトコルデータ' : 'メッセージ本文'}
+                {isJsonMessage ? t('detail.protocol_data') : t('detail.message_body')}
               </h3>
               <div className="bg-slate-50 dark:bg-slate-950 rounded-lg p-4 border border-slate-200 dark:border-slate-800 overflow-x-auto">
                 {isJsonMessage && message.parsedData ? (
@@ -292,7 +276,7 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
             <details className="mt-4">
               <summary className="text-xs font-medium text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1">
                 <Info className="w-3 h-3" />
-                生データを表示
+                {t('detail.show_raw_data')}
               </summary>
               <div className="mt-2 bg-slate-50 dark:bg-slate-950 rounded-lg p-4 border border-slate-200 dark:border-slate-800 overflow-x-auto">
                 <pre className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap font-mono">
@@ -317,7 +301,7 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
               )}
             >
               <Copy className="w-4 h-4" />
-              コピー
+              {t('detail.copy')}
             </button>
             <button
               type="button"
@@ -329,7 +313,7 @@ export const MessageDetailPanel: React.FC<MessageDetailPanelProps> = ({
                 'transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
               )}
             >
-              閉じる
+              {t('detail.close')}
             </button>
           </div>
         </Dialog.Content>

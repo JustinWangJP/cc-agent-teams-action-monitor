@@ -3,16 +3,17 @@
 メッセージのタイムライン表示、フィルタリング、検索機能を提供します。
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pathlib import Path
 import json
 from datetime import datetime
-from typing import Optional, Literal
+from typing import Optional
 
 from app.config import settings
 from app.models.timeline import TimelineData, TimelineItem, TimelineGroup, MessageType
 from app.models.model import ModelListResponse, ModelConfig
 from app.models.chat import ChatMessage, ChatMessageList
+from app.services.i18n_service import i18n
 
 router = APIRouter()
 
@@ -78,11 +79,13 @@ MODEL_CONFIGS = [
 # ヘルパー関数
 # ============================================================================
 
-def get_team_dir(team_name: str) -> Path:
+
+def get_team_dir(team_name: str, lang: str = "en") -> Path:
     """チームディレクトリのパスを取得する。
 
     Args:
         team_name: チーム名
+        lang: 言語コード
 
     Returns:
         チームディレクトリのパス
@@ -93,7 +96,10 @@ def get_team_dir(team_name: str) -> Path:
     """
     team_dir = settings.teams_dir / team_name
     if not team_dir.exists():
-        raise HTTPException(status_code=404, detail="Team not found")
+        raise HTTPException(
+            status_code=404,
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name),
+        )
     return team_dir
 
 
@@ -111,11 +117,13 @@ async def get_team_inboxes(team_dir: Path, team_name: str) -> dict[str, list]:
 
     """
     import logging
+
     logger = logging.getLogger(__name__)
 
     # キャッシュサービスが利用可能な場合はキャッシュから取得
     try:
         from app.services.cache_service import get_cache
+
         cache = get_cache()
         cached_inboxes = await cache.get_team_inboxes(team_dir, team_name)
         if cached_inboxes:
@@ -137,7 +145,7 @@ async def get_team_inboxes(team_dir: Path, team_name: str) -> dict[str, list]:
                 # TC-023: エラーハンドリング - 読み込みエラーをログに出力
                 logger.warning(
                     f"Failed to read inbox file {inbox_file}: {e}",
-                    extra={"file": str(inbox_file), "error": str(e)}
+                    extra={"file": str(inbox_file), "error": str(e)},
                 )
                 continue
     return inboxes
@@ -167,10 +175,11 @@ def safe_parse_timestamp(timestamp_str: str) -> tuple[Optional[datetime], bool]:
     except (ValueError, AttributeError):
         # TC-024: 無効なタイムスタンプはログに出力
         import logging
+
         logger = logging.getLogger(__name__)
         logger.debug(
             f"Invalid timestamp format: {timestamp_str}",
-            extra={"timestamp": timestamp_str}
+            extra={"timestamp": timestamp_str},
         )
         return None, False
 
@@ -308,7 +317,9 @@ def filter_messages(
     if types:
         type_strs = {t.value for t in types}
         filtered = [
-            m for m in filtered if parse_message_type(m.get("text", "")).value in type_strs
+            m
+            for m in filtered
+            if parse_message_type(m.get("text", "")).value in type_strs
         ]
 
     # 検索フィルター
@@ -378,6 +389,7 @@ def get_time_range(messages: list[dict]) -> dict[str, str]:
 # API エンドポイント
 # ============================================================================
 
+
 @router.get("/models", response_model=ModelListResponse)
 async def get_available_models():
     """利用可能なモデル一覧と設定を取得する。
@@ -403,6 +415,7 @@ async def get_cache_stats():
     """
     try:
         from app.services.cache_service import get_cache
+
         cache = get_cache()
         return cache.get_stats()
     except RuntimeError:
@@ -411,10 +424,13 @@ async def get_cache_stats():
 
 @router.get("/teams/{team_name}/messages/timeline", response_model=TimelineData)
 async def get_message_timeline(
+    request: Request,
     team_name: str,
     start_time: Optional[str] = Query(None, description="開始時刻 (ISO 8601)"),
     end_time: Optional[str] = Query(None, description="終了時刻 (ISO 8601)"),
-    since: Optional[str] = Query(None, description="差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)"),
+    since: Optional[str] = Query(
+        None, description="差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)"
+    ),
     senders: Optional[str] = Query(None, description="送信者（カンマ区切り）"),
     types: Optional[str] = Query(None, description="タイプ（カンマ区切り）"),
     search: Optional[str] = Query(None, description="検索キーワード"),
@@ -428,6 +444,7 @@ async def get_message_timeline(
     時間範囲、送信者、タイプ、検索キーワードでフィルタリング可能です。
 
     Args:
+        request: FastAPI リクエストオブジェクト（言語判定用）
         team_name: チーム名
         start_time: 開始時刻 (ISO 8601形式)
         end_time: 終了時刻 (ISO 8601形式)
@@ -442,7 +459,8 @@ async def get_message_timeline(
     Returns:
         タイムラインデータ（アイテム、グループ、時間範囲）
     """
-    team_dir = get_team_dir(team_name)
+    lang = getattr(request.state, "language", "en")
+    team_dir = get_team_dir(team_name, lang)
     inboxes = await get_team_inboxes(team_dir, team_name)
 
     # 全メッセージを収集
@@ -484,7 +502,9 @@ async def get_message_timeline(
             "task_assignment": MessageType.TASK_ASSIGNMENT,
             "unknown": MessageType.UNKNOWN,
         }
-        type_list = [type_map[t.strip()] for t in types.split(",") if t.strip() in type_map]
+        type_list = [
+            type_map[t.strip()] for t in types.split(",") if t.strip() in type_map
+        ]
 
     # フィルタリング適用
     filtered_messages = filter_messages(
@@ -535,10 +555,13 @@ async def get_message_timeline(
 
 @router.get("/teams/{team_name}/messages")
 async def get_messages(
+    request: Request,
     team_name: str,
     start_time: Optional[str] = Query(None, description="開始時刻 (ISO 8601)"),
     end_time: Optional[str] = Query(None, description="終了時刻 (ISO 8601)"),
-    since: Optional[str] = Query(None, description="差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)"),
+    since: Optional[str] = Query(
+        None, description="差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)"
+    ),
     senders: Optional[str] = Query(None, description="送信者（カンマ区切り）"),
     types: Optional[str] = Query(None, description="タイプ（カンマ区切り）"),
     search: Optional[str] = Query(None, description="検索キーワード"),
@@ -549,6 +572,7 @@ async def get_messages(
     タイムライン形式ではなく、元のメッセージデータをそのまま返します。
 
     Args:
+        request: FastAPI リクエストオブジェクト（言語判定用）
         team_name: チーム名
         start_time: 開始時刻 (ISO 8601形式)
         end_time: 終了時刻 (ISO 8601形式)
@@ -561,7 +585,8 @@ async def get_messages(
     Returns:
         メッセージリスト
     """
-    team_dir = get_team_dir(team_name)
+    lang = getattr(request.state, "language", "en")
+    team_dir = get_team_dir(team_name, lang)
     inboxes = await get_team_inboxes(team_dir, team_name)
 
     # 全メッセージを収集
@@ -602,7 +627,9 @@ async def get_messages(
             "task_assignment": MessageType.TASK_ASSIGNMENT,
             "unknown": MessageType.UNKNOWN,
         }
-        type_list = [type_map[t.strip()] for t in types.split(",") if t.strip() in type_map]
+        type_list = [
+            type_map[t.strip()] for t in types.split(",") if t.strip() in type_map
+        ]
 
     # フィルタリング適用
     filtered_messages = filter_messages(
@@ -620,10 +647,13 @@ async def get_messages(
 
 @router.get("/teams/{team_name}/messages/chat", response_model=ChatMessageList)
 async def get_chat_messages(
+    request: Request,
     team_name: str,
     start_time: Optional[str] = Query(None, description="開始時刻 (ISO 8601)"),
     end_time: Optional[str] = Query(None, description="終了時刻 (ISO 8601)"),
-    since: Optional[str] = Query(None, description="差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)"),
+    since: Optional[str] = Query(
+        None, description="差分更新用: 前回取得時刻以降のメッセージのみ取得 (ISO 8601)"
+    ),
     senders: Optional[str] = Query(None, description="送信者（カンマ区切り）"),
     types: Optional[str] = Query(None, description="タイプ（カンマ区切り）"),
     search: Optional[str] = Query(None, description="検索キーワード"),
@@ -637,6 +667,7 @@ async def get_chat_messages(
     秘密メッセージ（DM）の判定、閲覧可能エージェントの設定を含みます。
 
     Args:
+        request: FastAPI リクエストオブジェクト（言語判定用）
         team_name: チーム名
         start_time: 開始時刻 (ISO 8601形式)
         end_time: 終了時刻 (ISO 8601形式)
@@ -651,7 +682,8 @@ async def get_chat_messages(
     Returns:
         チャットメッセージリスト
     """
-    team_dir = get_team_dir(team_name)
+    lang = getattr(request.state, "language", "en")
+    team_dir = get_team_dir(team_name, lang)
     inboxes = await get_team_inboxes(team_dir, team_name)
 
     # チーム設定からメンバー情報を取得
@@ -722,7 +754,9 @@ async def get_chat_messages(
             "task_assignment": MessageType.TASK_ASSIGNMENT,
             "unknown": MessageType.UNKNOWN,
         }
-        type_list = [type_map[t.strip()] for t in types.split(",") if t.strip() in type_map]
+        type_list = [
+            type_map[t.strip()] for t in types.split(",") if t.strip() in type_map
+        ]
 
     # フィルタリング適用
     filtered_messages = filter_messages(

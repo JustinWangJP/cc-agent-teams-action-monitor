@@ -7,6 +7,8 @@
 export { ThemeToggle } from './ThemeToggle';
 export type { ThemeToggleProps } from './ThemeToggle';
 
+export { LanguageSelector } from './LanguageSelector';
+
 export { LoadingSpinner, SkeletonLoader, LoadingOverlay } from './LoadingSpinner';
 export type { LoadingSpinnerProps } from './LoadingSpinner';
 

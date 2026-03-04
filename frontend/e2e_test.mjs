@@ -27,13 +27,13 @@ try {
     console.log('\n=== TC-001: Page Load ===');
     await page.goto('http://localhost:5173', { waitUntil: 'networkidle' });
     await page.waitForTimeout(2000);
-    
+
     const title = await page.title();
-    recordTest('TC-001', 'ページ読み込み', 
+    recordTest('TC-001', 'ページ読み込み',
         title === 'Agent Teams Dashboard',
         `Title: ${title}`
     );
-    
+
     // TC-002: Check tabs exist
     console.log('\n=== TC-002: Tab Elements ===');
     const tabs = await page.$$('button[role="tab"]');
@@ -41,7 +41,7 @@ try {
         tabs.length >= 5,
         `Found ${tabs.length} tabs`
     );
-    
+
     // Get tab names
     const tabNames = [];
     for (const tab of tabs) {
@@ -49,7 +49,7 @@ try {
         if (text) tabNames.push(text.trim());
     }
     console.log('Tab names:', tabNames);
-    
+
     // TC-003: Timeline tab exists
     console.log('\n=== TC-003: Timeline Tab ===');
     const hasTimelineTab = tabNames.some(name => name.includes('タイムライン'));
@@ -57,7 +57,7 @@ try {
         hasTimelineTab,
         `Tab names: ${tabNames.join(', ')}`
     );
-    
+
     // TC-004: Click timeline tab
     console.log('\n=== TC-004: Click Timeline Tab ===');
     let timelineTab = null;
@@ -68,7 +68,7 @@ try {
             break;
         }
     }
-    
+
     if (timelineTab) {
         await timelineTab.click();
         await page.waitForTimeout(2000);
@@ -82,7 +82,7 @@ try {
             'Timeline tab not found'
         );
     }
-    
+
     // TC-005: Check team selector
     console.log('\n=== TC-005: Team Selector ===');
     const teamSelector = await page.$('select');
@@ -91,7 +91,7 @@ try {
         hasTeamSelector,
         hasTeamSelector ? 'Team selector found' : 'Team selector not found'
     );
-    
+
     // TC-006: Get team options
     console.log('\n=== TC-006: Team Options ===');
     let teamOptions = [];
@@ -106,12 +106,12 @@ try {
         }
         console.log('Team options:', teamOptions.map(o => o.text).join(', '));
     }
-    
+
     recordTest('TC-006', 'チーム選択肢が存在する',
         teamOptions.length > 1,
         `Found ${teamOptions.length} teams`
     );
-    
+
     // TC-007: Select a team (using correct API)
     console.log('\n=== TC-007: Select Team ===');
     let selectedTeam = null;
@@ -126,12 +126,12 @@ try {
             }
         }
     }
-    
+
     recordTest('TC-007', 'チームを選択できる',
         selectedTeam !== null,
         `Selected: ${selectedTeam || 'None'}`
     );
-    
+
     // TC-008: Check for messages/timeline content
     console.log('\n=== TC-008: Message Display ===');
     const pageText = await page.textContent('body');
@@ -140,12 +140,12 @@ try {
         pageText.includes('Message Timeline') ||
         pageText.includes('タイムラインを表示')
     );
-    
+
     recordTest('TC-008', 'タイムラインコンテンツが表示される',
         hasMessages,
         hasMessages ? 'Timeline content found' : 'No timeline content'
     );
-    
+
     // TC-009: Check for search box
     console.log('\n=== TC-009: Search Box ===');
     const searchInput = await page.$('input[type="text"]');
@@ -153,7 +153,7 @@ try {
         searchInput !== null,
         searchInput ? 'Search input found' : 'Search input not found'
     );
-    
+
     // TC-010: Check for PollingIntervalSelector
     console.log('\n=== TC-010: Polling Control ===');
     const hasPollingControl = pageText && pageText.includes('更新間隔');
@@ -161,7 +161,7 @@ try {
         hasPollingControl,
         hasPollingControl ? 'Polling control found' : 'Not found'
     );
-    
+
     // TC-011: Check for message bubbles after team selection
     console.log('\n=== TC-011: Message Bubbles ===');
     const messageElements = await page.$$('.message-bubble, [class*="message"], [class*="chat"]');
@@ -169,7 +169,7 @@ try {
         messageElements.length > 0,
         `Found ${messageElements.length} message elements`
     );
-    
+
     // TC-012: Check for refresh button
     console.log('\n=== TC-012: Refresh Button ===');
     const refreshButton = await page.$('button:has-text("更新"), button:has-text("Refresh"), [title*="refresh"], [title*="更新"]');
@@ -177,7 +177,7 @@ try {
         refreshButton !== null,
         refreshButton ? 'Refresh button found' : 'Not found'
     );
-    
+
     // TC-013: Check timestamp display
     console.log('\n=== TC-013: Timestamp Display ===');
     const hasTimestamp = pageText && (
@@ -188,7 +188,7 @@ try {
         hasTimestamp,
         hasTimestamp ? 'Timestamps found' : 'No timestamps'
     );
-    
+
     // TC-014: Check for sender names
     console.log('\n=== TC-014: Sender Names ===');
     const senderElements = await page.$$('[class*="sender"], [class*="from"], [class*="avatar"]');
@@ -196,14 +196,14 @@ try {
         senderElements.length > 0,
         `Found ${senderElements.length} sender elements`
     );
-    
+
     // Take final screenshot
-    await page.screenshot({ 
-        path: '/tmp/e2e_final.png', 
-        fullPage: true 
+    await page.screenshot({
+        path: '/tmp/e2e_final.png',
+        fullPage: true
     });
     console.log('\nScreenshot saved: /tmp/e2e_final.png');
-    
+
 } catch (error) {
     console.error('Error during test:', error);
     recordTest('ERROR', 'Test execution', false, error.message);

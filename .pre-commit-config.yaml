@@ -1,0 +1,72 @@
+# Pre-commit hooks for Agent Teams Dashboard
+# https://pre-commit.com/
+
+# Exclude skill directories from all hooks
+exclude: ^(\.agents|\.claude)/
+
+repos:
+  # Python linting and formatting
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        language_version: python3.11
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  # JSON syntax validation (simpler than schema check)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-json
+        name: Validate JSON files
+        files: \.json$
+
+  # Custom translation key consistency check
+  - repo: local
+    hooks:
+      - id: verify-translations
+        name: Verify translation keys consistency
+        entry: node scripts/verify-translations.js
+        language: node
+        files: ^(frontend|backend)/locales/.*\.json$
+        pass_filenames: false
+        additional_dependencies: []
+
+  # Frontend ESLint
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint (frontend)
+        entry: bash -c 'cd frontend && npm run lint'
+        language: node
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        additional_dependencies: []
+
+  # Frontend TypeScript type check
+  - repo: local
+    hooks:
+      - id: typescript-check
+        name: TypeScript type check (frontend)
+        entry: bash -c 'cd frontend && npx tsc --noEmit'
+        language: node
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        additional_dependencies: []
+
+  # General checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: debug-statements

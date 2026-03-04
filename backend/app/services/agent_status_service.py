@@ -2,9 +2,9 @@
 
 inbox メッセージとタスクからエージェントの状態を推論します。
 """
-import json
+
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -52,7 +52,7 @@ class AgentStatusService:
         agent_name: str,
         messages: list[dict],
         tasks: list[dict],
-        session_entries: Optional[list[dict]] = None
+        session_entries: Optional[list[dict]] = None,
     ) -> dict:
         """エージェントの状態を推論します。
 
@@ -76,30 +76,17 @@ class AgentStatusService:
         message_info = self._collect_message_info(agent_name, messages)
 
         # 状態を推論
-        status = self._infer_status(
-            agent_name,
-            task_info,
-            message_info,
-            now
-        )
+        status = self._infer_status(agent_name, task_info, message_info, now)
 
         # 現在のタスクを推定
-        current_task = self._estimate_current_task(
-            agent_name,
-            task_info,
-            message_info
-        )
+        current_task = self._estimate_current_task(agent_name, task_info, message_info)
 
         # プログレスを計算
-        progress = self._calculate_progress(
-            task_info,
-            status
-        )
+        progress = self._calculate_progress(task_info, status)
 
         # セッションログから追加情報を抽出
         session_info = await self._extract_session_info(
-            agent_name,
-            session_entries or []
+            agent_name, session_entries or []
         )
 
         # 最終活動時刻
@@ -169,10 +156,7 @@ class AgentStatusService:
             # blockedBy 情報を収集
             blocked_by = task.get("blockedBy", [])
             if blocked_by:
-                blocked.append({
-                    "id": task_id_str,
-                    "blocked_by": blocked_by
-                })
+                blocked.append({"id": task_id_str, "blocked_by": blocked_by})
 
         return {
             "assigned": assigned,
@@ -224,11 +208,7 @@ class AgentStatusService:
         return result
 
     def _infer_status(
-        self,
-        agent_name: str,
-        task_info: dict,
-        message_info: dict,
-        now: datetime
+        self, agent_name: str, task_info: dict, message_info: dict, now: datetime
     ) -> str:
         """エージェントの状態を推論します。
 
@@ -299,10 +279,7 @@ class AgentStatusService:
         return "idle"
 
     def _estimate_current_task(
-        self,
-        agent_name: str,
-        task_info: dict,
-        message_info: dict
+        self, agent_name: str, task_info: dict, message_info: dict
     ) -> dict:
         """現在のタスクを推定します。
 
@@ -328,7 +305,10 @@ class AgentStatusService:
         # 2. in_progress タスクを取得
         in_progress = task_info.get("in_progress", [])
         if in_progress:
-            return {"id": in_progress[0], "subject": None}  # TODO: subjectをtasksから取得
+            return {
+                "id": in_progress[0],
+                "subject": None,
+            }  # TODO: subjectをtasksから取得
 
         # 3. pending タスクを取得
         pending = task_info.get("pending", [])
@@ -372,7 +352,9 @@ class AgentStatusService:
         if total_count == 0:
             return 0
 
-        progress = int(((completed_count + in_progress_count * 0.5) / total_count) * 100)
+        progress = int(
+            ((completed_count + in_progress_count * 0.5) / total_count) * 100
+        )
 
         # 状態による補正
         if status == "waiting":
@@ -385,9 +367,7 @@ class AgentStatusService:
         return min(max(progress, 0), 100)
 
     async def _extract_session_info(
-        self,
-        agent_name: str,
-        session_entries: list[dict]
+        self, agent_name: str, session_entries: list[dict]
     ) -> dict:
         """セッションログから追加情報を抽出します。
 
@@ -417,7 +397,11 @@ class AgentStatusService:
                 files = details.get("files", [])
                 if isinstance(files, list):
                     for file_info in files:
-                        file_path = file_info.get("path", "") if isinstance(file_info, dict) else str(file_info)
+                        file_path = (
+                            file_info.get("path", "")
+                            if isinstance(file_info, dict)
+                            else str(file_info)
+                        )
                         if file_path and file_path not in touched_files:
                             touched_files.append(file_path)
 
@@ -437,11 +421,11 @@ class AgentStatusService:
 
         """
         color_map = {
-            "idle": "#f59e0b",      # 黄色（オレンジ）
-            "working": "#3b82f6",   # 青色
-            "waiting": "#8b5cf6",   # 紫色（ブロック中）
-            "error": "#ef4444",     # 赤色
-            "completed": "#22c55e", # 緑色
+            "idle": "#f59e0b",  # 黄色（オレンジ）
+            "working": "#3b82f6",  # 青色
+            "waiting": "#8b5cf6",  # 紫色（ブロック中）
+            "error": "#ef4444",  # 赤色
+            "completed": "#22c55e",  # 緑色
         }
         return color_map.get(status, "#6b7280")  # デフォルトは灰色
 

@@ -4,14 +4,16 @@
 ~/.claude/teams/{team_name}/inboxes/ ディレクトリからデータを読み込みます。
 
 """
-from datetime import datetime, timedelta
+
+from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pathlib import Path
 import json
 
 from app.config import settings
 from app.models.agent import AgentStatus, AgentStatusList, TypingIndicators
+from app.services.i18n_service import i18n
 
 router = APIRouter()
 
@@ -59,8 +61,9 @@ def get_team_inboxes(team_dir: Path) -> dict[str, list]:
 
     """
     import logging
+
     logger = logging.getLogger(__name__)
-    
+
     inboxes_dir = team_dir / "inboxes"
     inboxes = {}
     if inboxes_dir.exists():
@@ -72,7 +75,7 @@ def get_team_inboxes(team_dir: Path) -> dict[str, list]:
                 # TC-023: エラーハンドリング - 読み込みエラーをログに出力
                 logger.warning(
                     f"Failed to read inbox file {inbox_file}: {e}",
-                    extra={"file": str(inbox_file), "error": str(e)}
+                    extra={"file": str(inbox_file), "error": str(e)},
                 )
                 continue
     return inboxes
@@ -107,13 +110,14 @@ def determine_agent_status(last_activity: Optional[datetime]) -> str:
 
 
 @router.get("/{team_name}/agents/status", response_model=AgentStatusList)
-async def get_agents_status(team_name: str):
+async def get_agents_status(request: Request, team_name: str):
     """チーム内の全エージェントステータスを取得するエンドポイント。
 
     インボックスメッセージのタイムスタンプを解析し、各エージェントの
     オンライン状態 (online/idle/offline) を判定して返します。
 
     Args:
+        request: FastAPI リクエストオブジェクト（言語判定用）
         team_name: チーム名
 
     Returns:
@@ -123,9 +127,14 @@ async def get_agents_status(team_name: str):
         HTTPException: チームが存在しない場合 (404)
 
     """
+    lang = getattr(request.state, "language", "en")
+
     team_dir = settings.teams_dir / team_name
     if not team_dir.exists():
-        raise HTTPException(status_code=404, detail="Team not found")
+        raise HTTPException(
+            status_code=404,
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name),
+        )
 
     # インボックスメッセージを取得
     inboxes = get_team_inboxes(team_dir)
@@ -159,23 +168,26 @@ async def get_agents_status(team_name: str):
     agents = []
     for agent_name, last_activity in sorted(agent_last_activity.items()):
         status = determine_agent_status(last_activity)
-        agents.append(AgentStatus(
-            name=agent_name,
-            status=status,
-            lastActivity=last_activity,
-        ))
+        agents.append(
+            AgentStatus(
+                name=agent_name,
+                status=status,
+                lastActivity=last_activity,
+            )
+        )
 
     return AgentStatusList(agents=agents)
 
 
 @router.get("/{team_name}/agents/typing", response_model=TypingIndicators)
-async def get_typing_indicators(team_name: str):
+async def get_typing_indicators(request: Request, team_name: str):
     """現在入力中のエージェントリストを取得するエンドポイント。
 
     現在の実装では空のリストを返します。
     将来的には、エージェントの入力状態を検出して返すよう拡張可能です。
 
     Args:
+        request: FastAPI リクエストオブジェクト（言語判定用）
         team_name: チーム名
 
     Returns:
@@ -185,9 +197,14 @@ async def get_typing_indicators(team_name: str):
         HTTPException: チームが存在しない場合 (404)
 
     """
+    lang = getattr(request.state, "language", "en")
+
     team_dir = settings.teams_dir / team_name
     if not team_dir.exists():
-        raise HTTPException(status_code=404, detail="Team not found")
+        raise HTTPException(
+            status_code=404,
+            detail=i18n.t("api.errors.team_not_found", lang=lang, team=team_name),
+        )
 
     # 現時点では実際のタイピング状態を検出する手段がないため
     # 空のリストを返す

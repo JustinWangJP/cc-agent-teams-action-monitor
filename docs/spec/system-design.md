@@ -788,11 +788,105 @@ def _cwd_to_project_hash(cwd: str) -> str:
 | E2Eテスト | 自動テストの実装 |
 | ログ管理 | 構造化ログの導入 |
 | パフォーマンス監視 | メトリクス収集機能 |
-| i18n | 多言語対応 |
+| ✅ i18n | 多言語対応（実装済み） |
 | 新規データソース | TimelineService への外部ログ統合 |
 
 ---
 
+## 12. 国際化（i18n）アーキテクチャ
+
+### 12.1 概要
+
+Agent Teams Dashboard は日本語・英語・中国語の3言語に対応しています。
+
+| コンポーネント | 技術 | 説明 |
+|--------------|------|------|
+| フロントエンド | i18next + react-i18next | UI翻訳 |
+| バックエンド | 独自I18nService | APIエラーメッセージ翻訳 |
+
+### 12.2 言語検出フロー
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      言語検出フロー                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐ │
+│  │ Browser      │    │ Language     │    │ Backend      │ │
+│  │ Settings     │───▶│ Middleware   │───▶│ I18nService  │ │
+│  └──────────────┘    └──────────────┘    └──────────────┘ │
+│         │                   │                      │          │
+│         │                   │                      ▼          │
+│         │                   │              ┌──────────────┐  │
+│         │                   │              │ Translation  │  │
+│         │                   │              │ Files        │  │
+│         │                   │              └──────────────┘  │
+│         │                   │                      ▲          │
+│         │                   └──────────────────────┤          │
+│         │                                          │          │
+│         ▼                                          ▼          │
+│  ┌──────────────────────────────────────────────────────────┐│
+│  │                  Accept-Language Header                    ││
+│  │                  (ja, en, zh)                              ││
+│  └──────────────────────────────────────────────────────────┘│
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 12.3 言語検出優先順位
+
+1. **Accept-Language ヘッダー**: HTTP リクエストヘッダーから言語を検出
+2. **localStorage**: フロントエンドで保存された言語設定
+3. **ブラウザ設定**: `navigator.language`
+4. **デフォルト**: 日本語（`ja`）
+
+### 12.4 翻訳ファイル構造
+
+**フロントエンド**:
+```
+frontend/src/locales/
+├── ja/    # 日本語
+├── en/    # 英語
+└── zh/    # 中国語
+    ├── common.json
+    ├── dashboard.json
+    ├── tasks.json
+    ├── timeline.json
+    ├── errors.json
+    └── ...
+```
+
+**バックエンド**:
+```
+backend/locales/
+├── ja/
+│   ├── api.json   # APIエラーメッセージ
+│   └── logs.json  # ログメッセージ
+├── en/
+│   ├── api.json
+│   └── logs.json
+└── zh/
+    ├── api.json
+    └── logs.json
+```
+
+### 12.5 翻訳キー整合性チェック
+
+`.pre-commit-config.yaml` で `scripts/verify-translations.js` が自動実行され、全言語の翻訳キーが一致しているかを検証します。
+
+```yaml
+# Custom translation key consistency check
+- repo: local
+  hooks:
+    - id: verify-translations
+      name: Verify translation keys consistency
+      entry: node scripts/verify-translations.js
+      language: node
+      files: ^(frontend|backend)/locales/.*\.json$
+```
+
+---
+
 *作成日: 2026-02-16*
-*最終更新日: 2026-02-24*
-*バージョン: 2.1.0*
+*最終更新日: 2026-03-04*
+*バージョン: 2.2.0*

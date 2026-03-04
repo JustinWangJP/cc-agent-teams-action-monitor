@@ -17,6 +17,7 @@ import { ExpandedTaskCard } from './ExpandedTaskCard';
 import { useTeamTasks } from '@/hooks/useTasks';
 import { TaskWithProgress } from '@/types/task';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 
 /**
  * タスク監視パネルのプロパティ。
@@ -66,16 +67,6 @@ function convertToTaskWithProgress(task: {
   };
 }
 
-/**
- * ステータス統計のツールチップ説明
- */
-const STATUS_TOOLTIP_DESCRIPTIONS: Record<string, string> = {
-  total: 'チームに割り当てられた全てのタスク',
-  pending: 'まだ着手していないタスク',
-  inProgress: '現在作業中のタスク',
-  other: '他のタスクにブロックされている',
-  completed: '完了したタスク',
-};
 
 /**
  * Portalを使用したツールチップコンポーネント。
@@ -162,6 +153,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
   isCollapsed = false,
   onToggle,
 }) => {
+  const { t } = useTranslation('tasks');
   const { tasks, loading, error } = useTeamTasks(teamName);
 
   // TaskWithProgress に変換
@@ -213,7 +205,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
       <div className="flex items-center justify-center h-full bg-slate-50 dark:bg-slate-900">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-2" />
-          <p className="text-slate-500 dark:text-slate-400">チームを選択してください</p>
+          <p className="text-slate-500 dark:text-slate-400">{t('monitor.select_team')}</p>
         </div>
       </div>
     );
@@ -228,8 +220,8 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
           type="button"
           onClick={onToggle}
           className="flex items-center justify-center p-2 border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex-shrink-0"
-          aria-label="タスクパネルを展開"
-          title="タスクパネルを展開"
+          aria-label={t('monitor.expand_panel')}
+          title={t('monitor.expand_panel')}
         >
           <ChevronLeft className="w-5 h-5 text-slate-600 dark:text-slate-400 rotate-180" />
         </button>
@@ -237,7 +229,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
         {/* 統計アイコン縦列 */}
         <div className="flex-1 flex flex-col items-center py-4 space-y-4 overflow-y-auto px-1">
           {/* 全タスク */}
-          <PortalTooltip content={STATUS_TOOLTIP_DESCRIPTIONS.total} position="left">
+          <PortalTooltip content={t('monitor.tooltips.total')} position="left">
             <div className="flex flex-col items-center justify-center">
               <LayoutList className="w-5 h-5 text-slate-600 dark:text-slate-400" />
               <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-1">
@@ -247,7 +239,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
           </PortalTooltip>
 
           {/* 未着手 */}
-          <PortalTooltip content={STATUS_TOOLTIP_DESCRIPTIONS.pending} position="left">
+          <PortalTooltip content={t('monitor.tooltips.pending')} position="left">
             <div className="flex flex-col items-center justify-center">
               <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               <span className="text-sm font-semibold text-amber-900 dark:text-amber-100 mt-1">
@@ -257,7 +249,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
           </PortalTooltip>
 
           {/* 進行中 */}
-          <PortalTooltip content={STATUS_TOOLTIP_DESCRIPTIONS.inProgress} position="left">
+          <PortalTooltip content={t('monitor.tooltips.in_progress')} position="left">
             <div className="flex flex-col items-center justify-center">
               <RefreshCw className={clsx(
                 'w-5 h-5 text-blue-600 dark:text-blue-400',
@@ -271,7 +263,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
 
           {/* 待機中（ブロックされているタスク） */}
           {stats.other > 0 && (
-            <PortalTooltip content={STATUS_TOOLTIP_DESCRIPTIONS.other} position="left">
+            <PortalTooltip content={t('monitor.tooltips.other')} position="left">
               <div className="flex flex-col items-center justify-center">
                 <PauseCircle className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-1">
@@ -282,7 +274,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
           )}
 
           {/* 完了 */}
-          <PortalTooltip content={STATUS_TOOLTIP_DESCRIPTIONS.completed} position="left">
+          <PortalTooltip content={t('monitor.tooltips.completed')} position="left">
             <div className="flex flex-col items-center justify-center">
               <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
               <span className="text-sm font-semibold text-green-900 dark:text-green-100 mt-1">
@@ -309,7 +301,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
       <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
         <div>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            タスク監視
+            {t('monitor.title')}
           </h2>
         </div>
         <div className="flex items-center gap-2">
@@ -325,8 +317,8 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
                 'hover:bg-slate-100 dark:hover:bg-slate-800',
                 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
               )}
-              aria-label="タスクパネルを折りたたむ"
-              title="タスクパネルを折りたたむ"
+              aria-label={t('monitor.collapse_panel')}
+              title={t('monitor.collapse_panel')}
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -343,12 +335,12 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
             </div>
             <div>
               <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{stats.total}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">全タスク</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">{t('monitor.stats.total')}</div>
             </div>
           </div>
           {/* ツールチップ */}
           <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-10">
-            {STATUS_TOOLTIP_DESCRIPTIONS.total}
+            {t('monitor.tooltips.total')}
             <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700" />
           </span>
         </span>
@@ -357,12 +349,12 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
             <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             <div>
               <div className="text-lg font-semibold text-amber-900 dark:text-amber-100">{stats.pending}</div>
-              <div className="text-xs text-amber-700 dark:text-amber-300">未着手</div>
+              <div className="text-xs text-amber-700 dark:text-amber-300">{t('monitor.stats.pending')}</div>
             </div>
           </div>
           {/* ツールチップ */}
           <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-10">
-            {STATUS_TOOLTIP_DESCRIPTIONS.pending}
+            {t('monitor.tooltips.pending')}
             <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700" />
           </span>
         </span>
@@ -371,12 +363,12 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
             <RefreshCw className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <div>
               <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">{stats.inProgress}</div>
-              <div className="text-xs text-blue-700 dark:text-blue-300">進行中</div>
+              <div className="text-xs text-blue-700 dark:text-blue-300">{t('monitor.stats.in_progress')}</div>
             </div>
           </div>
           {/* ツールチップ */}
           <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-10">
-            {STATUS_TOOLTIP_DESCRIPTIONS.inProgress}
+            {t('monitor.tooltips.in_progress')}
             <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700" />
           </span>
         </span>
@@ -385,12 +377,12 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
             <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
             <div>
               <div className="text-lg font-semibold text-green-900 dark:text-green-100">{stats.completed}</div>
-              <div className="text-xs text-green-700 dark:text-green-300">完了</div>
+              <div className="text-xs text-green-700 dark:text-green-300">{t('monitor.stats.completed')}</div>
             </div>
           </div>
           {/* ツールチップ */}
           <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-10">
-            {STATUS_TOOLTIP_DESCRIPTIONS.completed}
+            {t('monitor.tooltips.completed')}
             <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700" />
           </span>
         </span>
@@ -413,7 +405,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
           <div>
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
               <RefreshCw className="w-4 h-4 text-blue-500" />
-              進行中 ({inProgressTasks.length})
+              {t('monitor.sections.in_progress')} ({inProgressTasks.length})
             </h3>
             <div className="space-y-2">
               {inProgressTasks.map((task) => (
@@ -432,7 +424,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
           <div>
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-500" />
-              未着手 ({pendingTasks.length})
+              {t('monitor.sections.pending')} ({pendingTasks.length})
             </h3>
             <div className="space-y-2">
               {pendingTasks.map((task) => (
@@ -451,7 +443,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
           <details className="group/completed">
             <summary className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2 cursor-pointer hover:text-slate-900 dark:hover:text-slate-100 select-none">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
-              完了 ({completedTasks.length})
+              {t('monitor.sections.completed')} ({completedTasks.length})
               <span className="group-open/completed:rotate-90 transition-transform">▶</span>
             </summary>
             <div className="space-y-2">
@@ -471,7 +463,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
           <details className="group/other">
             <summary className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2 cursor-pointer hover:text-slate-900 dark:hover:text-slate-100 select-none">
               <AlertCircle className="w-4 h-4 text-gray-500" />
-              その他 ({otherTasks.length})
+              {t('monitor.sections.other')} ({otherTasks.length})
               <span className="group-open/other:rotate-90 transition-transform">▶</span>
             </summary>
             <div className="space-y-2">
@@ -491,7 +483,7 @@ export const TaskMonitorPanel: React.FC<TaskMonitorPanelProps> = ({
           <div className="flex items-center justify-center h-64 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
             <div className="text-center">
               <CheckCircle2 className="w-12 h-12 text-slate-400 mx-auto mb-2" />
-              <p className="text-slate-500 dark:text-slate-400">タスクがありません</p>
+              <p className="text-slate-500 dark:text-slate-400">{t('monitor.no_tasks')}</p>
             </div>
           </div>
         )}

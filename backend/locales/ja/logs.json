@@ -1,0 +1,27 @@
+{
+  "cache": {
+    "hit": "キャッシュヒット: チーム「{team}」の設定",
+    "miss": "キャッシュミス: チーム「{team}」の設定を読み込み",
+    "invalidate_config": "チーム「{team}」の設定キャッシュを無効化",
+    "invalidate_inbox": "チーム「{team}」エージェント「{agent}」のインボックスキャッシュを無効化",
+    "started": "キャッシュサービス開始（config_ttl={config_ttl}秒, inbox_ttl={inbox_ttl}秒）",
+    "stopped": "キャッシュサービス停止"
+  },
+  "watcher": {
+    "started": "ファイル監視開始: {directory}",
+    "stopped": "ファイル監視停止",
+    "team_updated": "チーム設定更新: {team} ({event_type})",
+    "inbox_updated": "インボックス更新: チーム={team}, エージェント={agent} ({event_type})",
+    "task_updated": "タスク更新: チーム={team}, タスク={task} ({event_type})"
+  },
+  "timeline": {
+    "config_not_found": "チーム設定が見つかりません: {path}",
+    "session_not_found": "セッションファイルが見つかりません: {file}",
+    "session_found": "セッションファイル発見: {file}",
+    "config_load_failed": "チーム設定の読み込みに失敗: {error}",
+    "lead_session_not_found": "チーム「{team}」に leadSessionId または members が見つかりません",
+    "inbox_load_failed": "インボックスファイルの読み込みに失敗: {file}",
+    "session_parse_failed": "セッションエントリの解析に失敗: {error}",
+    "session_read_failed": "セッションファイルの読み込みに失敗: {error}"
+  }
+}

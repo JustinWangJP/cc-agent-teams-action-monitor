@@ -5,9 +5,8 @@ FileWatcherService の単体テスト。
 
 @
 """
+
 import pytest
-import asyncio
-from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from watchdog.events import FileModifiedEvent, FileCreatedEvent
 
@@ -136,7 +135,7 @@ async def test_log_file_change_inbox(tmp_path, caplog):
     team_dir = tmp_path / "teams" / "test-team" / "inboxes"
     team_dir.mkdir(parents=True)
     inbox_file = team_dir / "agent-1.json"
-    inbox_file.write_text('[]')
+    inbox_file.write_text("[]")
 
     with caplog.at_level("INFO"):
         await handler._log_file_change(str(inbox_file), "modified")
@@ -172,7 +171,7 @@ async def test_log_file_change_lock_file_ignored(tmp_path, caplog):
     tasks_dir = tmp_path / "tasks" / "test-team"
     tasks_dir.mkdir(parents=True)
     lock_file = tasks_dir / ".lock"
-    lock_file.write_text('')
+    lock_file.write_text("")
 
     with caplog.at_level("INFO"):
         await handler._log_file_change(str(lock_file), "created")

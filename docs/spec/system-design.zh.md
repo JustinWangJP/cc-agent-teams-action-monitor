@@ -794,11 +794,141 @@ def _cwd_to_project_hash(cwd: str) -> str:
 | E2E 测试 | 实现自动化测试 |
 | 日志管理 | 引入结构化日志 |
 | 性能监控 | 指标收集功能 |
-| i18n | 多语言支持 |
+| ✅ i18n | 多语言支持（已实现） |
 | 新数据源 | 将外部日志集成到 TimelineService |
 
 ---
 
+## 12. 国际化（i18n）架构
+
+### 12.1 概述
+
+应用程序支持三种语言：日语、英语和中文。前端和后端都实现了 i18n 功能。
+
+### 12.2 前端 i18n
+
+**技术栈：**
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| i18next | 24.2.0+ | 国际化框架 |
+| react-i18next | 15.4.0+ | React i18n 绑定 |
+
+**翻译文件结构：**
+```
+frontend/src/locales/
+├── ja/                     # 日语
+│   ├── common.json         # 通用翻译
+│   ├── dashboard.json      # 仪表板
+│   ├── tasks.json          # 任务管理
+│   ├── timeline.json       # 时间线
+│   ├── errors.json         # 错误消息
+│   └── ...                 # 其他模块
+├── en/                     # 英语
+│   └── ...（相同结构）
+└── zh/                     # 中文
+    └── ...（相同结构）
+```
+
+**语言检测优先级：**
+1. **localStorage**：保存在 `i18nextLng` 键中的语言设置
+2. **浏览器设置**：`navigator.language`
+3. **默认值**：日语（`ja`）
+
+**使用示例：**
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function TeamCard({ team }: { team: TeamSummary }) {
+  const { t } = useTranslation();
+
+  return (
+    <div>
+      <h3>{team.name}</h3>
+      <span>{t(`common.status.${team.status}`)}</span>
+    </div>
+  );
+}
+```
+
+### 12.3 后端 i18n
+
+**架构：**
+后端实现了自定义轻量级 i18n 服务，用于多语言 API 错误消息和日志消息。
+
+**翻译文件结构：**
+```
+backend/locales/
+├── ja/                     # 日语
+│   ├── api.json            # API 错误消息
+│   └── logs.json           # 日志消息
+├── en/                     # 英语
+│   ├── api.json
+│   └── logs.json
+└── zh/                     # 中文
+    ├── api.json
+    └── logs.json
+```
+
+**语言检测中间件：**
+
+`LanguageMiddleware` 按以下优先级检测语言：
+
+1. **Accept-Language 请求头**：HTTP 请求头
+2. **默认语言**：`DASHBOARD_DEFAULT_LANGUAGE` 设置
+
+```python
+# app/middleware/language.py
+class LanguageMiddleware:
+    async def dispatch(self, request: Request, call_next):
+        # 从 Accept-Language 请求头获取语言
+        accept_language = request.headers.get("Accept-Language", "ja")
+        language = self._parse_accept_language(accept_language)
+
+        # 保存到请求状态
+        request.state.language = language
+
+        response = await call_next(request)
+        return response
+```
+
+**I18nService：**
+```python
+# app/services/i18n_service.py
+class I18nService:
+    def __init__(self, locales_dir: Path, default_language: str = "ja"):
+        self._translations: dict[str, dict] = {}
+        self._default_language = default_language
+        self._load_translations(locales_dir)
+
+    def t(self, key: str, language: str, **kwargs) -> str:
+        """获取翻译键对应的翻译文本"""
+        translation = self._get_nested_value(
+            self._translations.get(language, {}),
+            key
+        )
+        return translation.format(**kwargs) if translation else key
+```
+
+### 12.4 支持的语言
+
+| 语言代码 | 语言名称 |
+|---------|---------|
+| `ja` | 日本語（默认） |
+| `en` | English |
+| `zh` | 中文 |
+
+### 12.5 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `DASHBOARD_DEFAULT_LANGUAGE` | `ja` | 默认语言（ja/en/zh） |
+
+### 12.6 翻译键一致性检查
+
+`scripts/verify-translations.js` 脚本通过 pre-commit 钩子自动运行，用于验证所有语言之间的翻译键一致性。
+
+---
+
 *创建日期: 2026-02-16*
-*最后更新日期: 2026-02-24*
-*版本: 2.1.0*
+*最后更新日期: 2026-03-04*
+*版本: 2.2.0*

@@ -1,0 +1,27 @@
+{
+  "cache": {
+    "hit": "Cache hit: team '{team}' config",
+    "miss": "Cache miss: loading team '{team}' config",
+    "invalidate_config": "Invalidated team '{team}' config cache",
+    "invalidate_inbox": "Invalidated team '{team}' agent '{agent}' inbox cache",
+    "started": "Cache service started (config_ttl={config_ttl}s, inbox_ttl={inbox_ttl}s)",
+    "stopped": "Cache service stopped"
+  },
+  "watcher": {
+    "started": "File watcher started: {directory}",
+    "stopped": "File watcher stopped",
+    "team_updated": "Team config updated: {team} ({event_type})",
+    "inbox_updated": "Inbox updated: team={team}, agent={agent} ({event_type})",
+    "task_updated": "Task updated: team={team}, task={task} ({event_type})"
+  },
+  "timeline": {
+    "config_not_found": "Team configuration not found: {path}",
+    "session_not_found": "Session file not found: {file}",
+    "session_found": "Session file found: {file}",
+    "config_load_failed": "Failed to load team configuration: {error}",
+    "lead_session_not_found": "leadSessionId or members not found for team '{team}'",
+    "inbox_load_failed": "Failed to load inbox file: {file}",
+    "session_parse_failed": "Failed to parse session entry: {error}",
+    "session_read_failed": "Failed to read session file: {error}"
+  }
+}

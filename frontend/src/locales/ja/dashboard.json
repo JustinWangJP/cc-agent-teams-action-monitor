@@ -1,0 +1,25 @@
+{
+  "team_card": {
+    "delete_button": "チームを削除",
+    "status": {
+      "active": "アクティブ",
+      "active_tooltip": "セッションログが1時間以内に更新されています（活動中）",
+      "inactive": "非アクティブ",
+      "inactive_tooltip": "チームにメンバーが存在しません",
+      "stopped": "停止中",
+      "stopped_tooltip": "セッションログが1時間以上更新されていません（停止中）",
+      "unknown": "不明",
+      "unknown_tooltip": "セッションログが見つかりません（状態不明）",
+      "idle": "アイドル状態",
+      "pending": "保留中",
+      "in_progress": "進行中",
+      "completed": "完了",
+      "deleted": "削除済み"
+    }
+  },
+  "delete_dialog": {
+    "title": "チーム削除の確認",
+    "message": "{{name}}を削除しますか？",
+    "warning": "この操作は取り消せません。チーム設定、タスク、セッションログなど関連ファイルがすべて削除されます。"
+  }
+}

@@ -1,7 +1,5 @@
 """MessageParser のユニットテスト."""
 
-import pytest
-
 from app.services.message_parser import (
     MessageParser,
     MessageType,
@@ -99,7 +97,9 @@ class TestMessageParser:
     def test_parse_shutdown_response_approved(self):
         """シャットダウン承認メッセージのパースをテストします."""
         parser = MessageParser()
-        text = '{"type": "shutdown_response", "approve": true, "content": "了解しました"}'
+        text = (
+            '{"type": "shutdown_response", "approve": true, "content": "了解しました"}'
+        )
 
         result = parser.parse(text)
 
@@ -249,7 +249,7 @@ class TestMessageParser:
     def test_parse_invalid_json(self):
         """不正なJSONのパースをテストします."""
         parser = MessageParser()
-        text = 'Not a JSON at all'
+        text = "Not a JSON at all"
 
         result = parser.parse(text)
 

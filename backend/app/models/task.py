@@ -4,6 +4,7 @@ Task、TaskSummary、TaskUpdate の3つのモデルを定義し、
 チーム内のタスク管理と状態追跡をサポートします。
 
 """
+
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel

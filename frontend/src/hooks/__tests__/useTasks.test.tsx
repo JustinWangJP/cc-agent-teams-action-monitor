@@ -3,12 +3,15 @@
  *
  * T-HK-003: データ取得
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { useTasks, useTeamTasks } from '../useTasks'
 
-global.fetch = vi.fn()
+// fetchのモック
+const mockFetch = vi.fn()
+global.fetch = mockFetch
 
 const mockTasksResponse = [
   {
@@ -30,7 +33,7 @@ const mockTasksResponse = [
 ]
 
 // Zustand Store のモック
-vi.mock('../stores/dashboardStore', () => ({
+vi.mock('@/stores/dashboardStore', () => ({
   useDashboardStore: vi.fn((selector) => {
     const state = {
       teamsInterval: 30000,
@@ -47,10 +50,13 @@ const createWrapper = () => {
     defaultOptions: {
       queries: {
         retry: false,
+        gcTime: 0,
+        staleTime: 0,
       },
     },
   })
-  return ({ children }: { children: React.ReactNode }) => (
+
+  return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
 }
@@ -58,16 +64,11 @@ const createWrapper = () => {
 describe('useTasks (React Query)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
   })
 
   describe('T-HK-003: データ取得', () => {
     it('タスク一覧を取得して tasks を更新する', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockTasksResponse
       } as Response)
@@ -76,13 +77,20 @@ describe('useTasks (React Query)', () => {
         wrapper: createWrapper(),
       })
 
+      // 初期状態は空配列
+      expect(result.current.tasks).toEqual([])
+      expect(result.current.loading).toBe(true)
+
       await waitFor(() => {
         expect(result.current.tasks).toEqual(mockTasksResponse)
       })
+
+      expect(result.current.loading).toBe(false)
+      expect(result.current.error).toBeNull()
     })
 
     it('refetch 関数で再取得できる', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockTasksResponse
       } as Response)
@@ -95,11 +103,13 @@ describe('useTasks (React Query)', () => {
         expect(result.current.tasks.length).toBe(2)
       })
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      // 2回目のfetchをモック
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => [mockTasksResponse[0]]
       } as Response)
 
+      // refetchを実行
       await result.current.refetch()
 
       await waitFor(() => {
@@ -110,8 +120,10 @@ describe('useTasks (React Query)', () => {
 
   describe('エラーハンドリング', () => {
     it('APIエラー時に error を設定する', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: false
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error'
       } as Response)
 
       const { result } = renderHook(() => useTasks(), {
@@ -121,10 +133,12 @@ describe('useTasks (React Query)', () => {
       await waitFor(() => {
         expect(result.current.error).toBe('Failed to fetch tasks')
       })
+
+      expect(result.current.tasks).toEqual([])
     })
 
     it('ネットワークエラー時に error を設定する', async () => {
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+      mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
       const { result } = renderHook(() => useTasks(), {
         wrapper: createWrapper(),
@@ -157,7 +171,7 @@ describe('useTeamTasks (React Query)', () => {
       }
     ]
 
-    vi.mocked(fetch).mockResolvedValueOnce({
+    mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockTeamTasks
     } as Response)
@@ -170,9 +184,7 @@ describe('useTeamTasks (React Query)', () => {
       expect(result.current.tasks).toEqual(mockTeamTasks)
     })
 
-    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
-      '/api/tasks/team/team1'
-    )
+    expect(mockFetch).toHaveBeenCalledWith('/api/tasks/team/team1')
   })
 
   it('teamName が空の場合、API呼び出しを行わない', async () => {
@@ -180,10 +192,12 @@ describe('useTeamTasks (React Query)', () => {
       wrapper: createWrapper(),
     })
 
+    // enabled: falseなので即座に空配列が返る
     await waitFor(() => {
       expect(result.current.tasks).toEqual([])
     })
 
-    expect(fetch).not.toHaveBeenCalled()
+    // fetchは呼ばれない
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 })

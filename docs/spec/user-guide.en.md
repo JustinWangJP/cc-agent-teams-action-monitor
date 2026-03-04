@@ -188,6 +188,7 @@ Open your browser and access http://localhost:5173/.
 | Feature | Description |
 |---------|-------------|
 | 🌙/☀️ Theme Toggle | Switch between dark mode and light mode |
+| 🌐 Language Selector | Switch UI language (Japanese/English/Chinese) |
 | ⏱️ Polling Interval | Set data refresh interval (5s/10s/20s/30s/60s) |
 
 ### 5.4 Team Status Display
@@ -284,7 +285,21 @@ Teams with status other than **active** (stopped / unknown / inactive) can be de
 
 **Note**: Active teams cannot be deleted.
 
-### 6.6 Adjusting Polling Interval
+### 6.6 Switching Language
+
+The application supports three languages: Japanese, English, and Chinese.
+
+1. Click the language selector (🌐) in the header
+2. Select your preferred language from the dropdown:
+   - **日本語** (Japanese) - Default
+   - **English**
+   - **中文** (Chinese)
+3. The UI will update immediately
+4. Your language preference is saved to browser local storage
+
+**Note**: Language selection is also detected automatically from browser settings on first visit.
+
+### 6.7 Adjusting Polling Interval
 
 Configure via the polling interval selector in the header:
 
@@ -296,7 +311,7 @@ Configure via the polling interval selector in the header:
 | 30 seconds (recommended) | Default value |
 | 60 seconds | Low load, power saving |
 
-### 6.7 Using Unified Timeline
+### 6.8 Using Unified Timeline
 
 The Timeline view displays inbox messages and session logs integrated together.
 
@@ -411,5 +426,5 @@ If the issue persists, please check GitHub Issues.
 ---
 
 *Created: 2026-02-16*
-*Last Updated: 2026-02-24*
-*Version: 2.1.0*
+*Last Updated: 2026-03-04*
+*Version: 2.2.0*

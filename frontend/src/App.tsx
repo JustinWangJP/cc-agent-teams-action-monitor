@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Layout } from "@/components/layout/Layout";
 import { TeamCard, TeamDetailPanel } from "@/components/dashboard";
 import { TaskCard } from "@/components/tasks/TaskCard";
@@ -34,13 +35,18 @@ import { clsx } from "clsx";
 /**
  * ビュー定義。
  */
-const VIEWS = [
-  { id: "overview" as const, label: "概要", icon: LayoutDashboard },
-  { id: "timeline" as const, label: "タイムライン", icon: MessageSquare },
-  { id: "tasks" as const, label: "タスク", icon: ListTodo },
-];
+function useViews() {
+  const { t } = useTranslation('common');
+  return [
+    { id: "overview" as const, label: t('navigation.overview'), icon: LayoutDashboard },
+    { id: "timeline" as const, label: t('navigation.timeline'), icon: MessageSquare },
+    { id: "tasks" as const, label: t('navigation.tasks'), icon: ListTodo },
+  ] as const;
+}
 
 function App() {
+  const { t } = useTranslation(['common', 'a11y']);
+  const VIEWS = useViews();
   const {
     teams,
     loading: teamsLoading,
@@ -156,7 +162,7 @@ function App() {
   if (isLoading && !hasError) {
     return (
       <Layout>
-        <LoadingSpinner message="データを読み込んでいます..." />
+        <LoadingSpinner message={t('loading_data')} />
       </Layout>
     );
   }
@@ -164,7 +170,7 @@ function App() {
   // エラー状態
   if (hasError && !isLoading) {
     const errorMessage =
-      teamsError || tasksError || "データの読み込みに失敗しました";
+      teamsError || tasksError || t('load_error');
 
     return (
       <Layout>
@@ -172,7 +178,7 @@ function App() {
           message={errorMessage}
           errorType="general"
           onRetry={handleRetry}
-          retryText="再接続"
+          retryText={t('buttons.reconnect')}
         />
       </Layout>
     );
@@ -186,7 +192,7 @@ function App() {
           <div className="flex items-center justify-between mb-6">
             <div
               role="tablist"
-              aria-label="ビュー切り替え"
+              aria-label={t('a11y:view_switcher')}
               className="flex items-center gap-2"
             >
               {VIEWS.map((view) => {
@@ -243,10 +249,10 @@ function App() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
                       <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                        Active Teams
+                        {t('teams.active_teams')}
                       </h2>
                       <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {teams.length} teams
+                        {t('teams.teams_count', { count: teams.length })}
                       </span>
                       <PollingIntervalSelector
                         value={teamsInterval}
@@ -275,7 +281,7 @@ function App() {
                           teamsLoading && "animate-spin",
                         )}
                       />
-                      更新
+                      {t('buttons.refresh')}
                     </button>
                   </div>
                   {/* 検索ボックス (TC-006) */}
@@ -286,7 +292,7 @@ function App() {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="チーム名を検索..."
+                        placeholder={t('teams.search_placeholder')}
                         className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                       {searchQuery && (
@@ -302,7 +308,7 @@ function App() {
                     {/* 検索結果数 */}
                     {searchQuery && (
                       <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        {filteredTeams.length} 件の結果
+                        {t('teams.search_results', { count: filteredTeams.length })}
                       </p>
                     )}
                   </div>
@@ -322,17 +328,17 @@ function App() {
                       <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
                         {searchQuery ? (
                           <>
-                            <p className="mb-2">検索結果がありません</p>
+                            <p className="mb-2">{t('teams.no_search_results')}</p>
                             <button
                               type="button"
                               onClick={() => setSearchQuery("")}
                               className="text-blue-500 hover:text-blue-600 text-sm"
                             >
-                              検索をクリア
+                              {t('teams.clear_search')}
                             </button>
                           </>
                         ) : (
-                          "No teams found. Create a team in Claude Code to see it here."
+                          t('teams.no_teams')
                         )}
                       </div>
                     )}
@@ -354,7 +360,7 @@ function App() {
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <label htmlFor="timeline-team-select" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    チームを選択:
+                    {t('teams.select_team')}:
                   </label>
                   <select
                     id="timeline-team-select"
@@ -362,7 +368,7 @@ function App() {
                     onChange={(e) => setSelectedTeam(e.target.value || null)}
                     className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">-- チームを選択 --</option>
+                    <option value="">{t('teams.select_team_placeholder')}</option>
                     {teams.map((team) => (
                       <option key={team.name} value={team.name}>
                         {team.name}
@@ -389,10 +395,10 @@ function App() {
                         "hover:bg-slate-50 dark:hover:bg-slate-700",
                         "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
                       )}
-                      aria-label="タイムラインとタスクを更新"
+                      aria-label={t('a11y.refresh_timeline')}
                     >
                       <RefreshCw className="w-4 h-4" />
-                      更新
+                      {t('buttons.refresh')}
                     </button>
                   </div>
                 )}
@@ -414,7 +420,7 @@ function App() {
                 <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 h-[600px] flex items-center justify-center">
                   <div className="text-center text-gray-500 dark:text-gray-400">
                     <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>タイムラインを表示するチームを選択してください</p>
+                    <p>{t('teams.select_timeline_team')}</p>
                   </div>
                 </div>
               )}
@@ -434,15 +440,15 @@ function App() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-4">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                      Tasks
+                      {t('tasks.title')}
                     </h2>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {filteredTasks.length} / {tasks.length} 件
+                      {t('tasks.count', { filtered: filteredTasks.length, total: tasks.length })}
                     </span>
                     <PollingIntervalSelector
                       value={tasksInterval}
                       onChange={setTasksInterval}
-                      label="更新間隔"
+                      label={t('header.polling_interval')}
                       lastUpdateTimestamp={tasksDataUpdatedAt}
                     />
                   </div>
@@ -466,7 +472,7 @@ function App() {
                         tasksLoading && "animate-spin",
                       )}
                     />
-                    更新
+                    {t('buttons.refresh')}
                   </button>
                 </div>
 
@@ -478,7 +484,7 @@ function App() {
                       htmlFor="task-team-filter"
                       className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
                     >
-                      チームフィルタ
+                      {t('tasks.filter_label')}
                     </label>
                     <select
                       id="task-team-filter"
@@ -486,7 +492,7 @@ function App() {
                       onChange={(e) => setTaskTeamFilter(e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="all">全チーム</option>
+                      <option value="all">{t('tasks.filter_all')}</option>
                       {teams.map((team) => (
                         <option key={team.name} value={team.name}>
                           {team.name}
@@ -501,7 +507,7 @@ function App() {
                       htmlFor="task-search"
                       className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
                     >
-                      件名・担当者で検索
+                      {t('tasks.search_label')}
                     </label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -510,7 +516,7 @@ function App() {
                         type="text"
                         value={taskSearchQuery}
                         onChange={(e) => setTaskSearchQuery(e.target.value)}
-                        placeholder="件名や担当者を検索..."
+                        placeholder={t('tasks.search_placeholder')}
                         className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                       {taskSearchQuery && (
@@ -518,7 +524,7 @@ function App() {
                           type="button"
                           onClick={() => setTaskSearchQuery("")}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                          aria-label="検索をクリア"
+                          aria-label={t('a11y.clear_search')}
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -537,7 +543,7 @@ function App() {
                         }}
                         className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                       >
-                        フィルタを解除
+                        {t('tasks.clear_filters')}
                       </button>
                     </div>
                   )}
@@ -546,8 +552,8 @@ function App() {
                 {/* 機能説明 */}
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
                   <p className="text-sm text-blue-800 dark:text-blue-300">
-                    <span className="font-medium">タスクについて:</span>
-                    タスクはエージェントチームの作業単位です。チームフィルタや検索で特定のタスクを見つけられます。
+                    <span className="font-medium">{t('tasks.title')}:</span>
+                    {t('tasks.description')}
                   </p>
                 </div>
               </div>
@@ -558,7 +564,7 @@ function App() {
                 <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
                   <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-gray-400" />
-                    Pending ({filteredTasksByStatus.pending.length})
+                    {t('tasks.status.pending')} ({filteredTasksByStatus.pending.length})
                   </h3>
                   <div className="space-y-3">
                     {filteredTasksByStatus.pending.map((task) => (
@@ -569,7 +575,7 @@ function App() {
                     ))}
                     {filteredTasksByStatus.pending.length === 0 && (
                       <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
-                        タスクがありません
+                        {t('tasks.no_tasks')}
                       </p>
                     )}
                   </div>
@@ -579,7 +585,7 @@ function App() {
                 <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
                   <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-blue-500" />
-                    In Progress ({filteredTasksByStatus.in_progress.length})
+                    {t('tasks.status.in_progress')} ({filteredTasksByStatus.in_progress.length})
                   </h3>
                   <div className="space-y-3">
                     {filteredTasksByStatus.in_progress.map((task) => (
@@ -590,7 +596,7 @@ function App() {
                     ))}
                     {filteredTasksByStatus.in_progress.length === 0 && (
                       <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
-                        タスクがありません
+                        {t('tasks.no_tasks')}
                       </p>
                     )}
                   </div>
@@ -600,7 +606,7 @@ function App() {
                 <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
                   <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-green-500" />
-                    Completed ({filteredTasksByStatus.completed.length})
+                    {t('tasks.status.completed')} ({filteredTasksByStatus.completed.length})
                   </h3>
                   <div className="space-y-3">
                     {filteredTasksByStatus.completed.map((task) => (
@@ -611,7 +617,7 @@ function App() {
                     ))}
                     {filteredTasksByStatus.completed.length === 0 && (
                       <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
-                        タスクがありません
+                        {t('tasks.no_tasks')}
                       </p>
                     )}
                   </div>

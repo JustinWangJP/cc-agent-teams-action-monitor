@@ -1,0 +1,12 @@
+{
+  "title": "Agent Teams Dashboard",
+  "polling_interval": "更新間隔",
+  "next_update": "次回更新",
+  "intervals": {
+    "seconds": "{{count}}秒",
+    "seconds_later": "{{count}}秒後",
+    "minutes": "{{count}}分",
+    "minutes_later": "{{count}}分後",
+    "minutes_seconds_later": "{{minutes}}分{{seconds}}秒後"
+  }
+}

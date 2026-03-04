@@ -6,6 +6,8 @@ import './index.css'
 // vis-timeline CSS - タイムライン表示に必須
 import 'vis-timeline/styles/vis-timeline-graph2d.css'
 import { queryClient } from './lib/queryClient'
+// i18n 初期化
+import { initI18n } from './i18n'
 
 // ============================================
 // ダークモード初期設定（ハイドレーション防止）
@@ -44,15 +46,28 @@ if (typeof window !== 'undefined') {
   });
 }
 
-// 診断: CSSが読み込まれたか確認
-console.log('[DIAG] main.tsx loaded')
-console.log('[DIAG] vis-timeline CSS should be loaded')
-console.log('[DIAG] Dark mode initialized:', document.documentElement.classList.contains('dark'))
+// ============================================
+// アプリケーション初期化
+// ============================================
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  </React.StrictMode>,
-)
+// i18n初期化後にアプリケーションをマウント
+const initApp = async () => {
+  await initI18n();
+
+  // 診断: CSSが読み込まれたか確認
+  console.log('[DIAG] main.tsx loaded')
+  console.log('[DIAG] vis-timeline CSS should be loaded')
+  console.log('[DIAG] Dark mode initialized:', document.documentElement.classList.contains('dark'))
+
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </React.StrictMode>,
+  )
+}
+
+initApp().catch((error) => {
+  console.error('Failed to initialize app:', error);
+});
