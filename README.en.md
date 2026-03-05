@@ -113,26 +113,38 @@ Kanban-style task management with columns for Pending / In Progress / Completed.
 
 ## Design Philosophy
 
-### Why HTTP Polling?
+### Background and Problem Recognition
 
-This system uses **HTTP Polling instead of WebSocket**:
+Claude Code's Agent Teams feature is powerful, but operating it in the terminal presents these challenges:
 
-1. **Simple Architecture**: No WebSocket connection management required
-2. **Cache Utilization**: TanStack Query's caching (staleTime: 10s) reduces unnecessary requests
-3. **Scalability**: Polling interval is user-adjustable
+- **Opaque Task Assignment**: Task allocation from Team Lead to Teammates is difficult to see
+- **Difficult Communication Tracking**: The flow of coordinated communication between agents is hard to follow
+- **Black-boxed Thinking Process**: Each Agent's thinking and action process is not visualized
 
-### Team Status Determination
+### Teamworks Skill Design Philosophy
 
-Team status is determined by **session log mtime**:
+**Transcending General-Purpose Agent Limitations through Specialization**
 
-| Status | Condition | Can Delete |
-|--------|-----------|------------|
-| `active` | Session log mtime ≤ 1 hour | ❌ No |
-| `stopped` | Session log mtime > 1 hour | ✅ Yes |
-| `unknown` | No session log | ✅ Yes |
-| `inactive` | Empty members array | ✅ Yes |
+General-purpose agents alone cannot fully utilize project-specific Skills and MCP Servers. Teamworks Skill meticulously defines the optimal Agent Type, Skills, and MCP Servers for each role, enabling agents to operate with specialized focus.
 
-> See [docs/spec/system-design.en.md](docs/spec/system-design.en.md) §2.2 for details
+**Minimal Configuration Based on YAGNI Principle**
+
+Based on development requirements and task details, only the minimum necessary agents are assigned. Since token consumption and management costs increase proportionally with the number of agents, optimal team structures are designed from a cost-effectiveness perspective.
+
+**Clear Communication Pathways**
+
+Inter-section communication is limited to section leaders only, and direct cross-communication between members is prohibited. This allows the main session (you) to interact only with each Section's Lead, simplifying approval flows even in large-scale development.
+
+### Monitoring Dashboard Design Philosophy
+
+**Enhanced Transparency**
+
+Real-time visualization of Agent Teams activities enables:
+
+- **System Prompt Visualization**: Review each agent's role and configuration
+- **Thinking Process Tracking**: Display LLM communication messages and thinking history chronologically
+- **Communication Message Monitoring**: Visualize coordinated communication between Teammates
+- **Task Progress Confirmation**: Track progress in real-time on the GUI
 
 ---
 

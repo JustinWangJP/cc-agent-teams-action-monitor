@@ -68,5 +68,6 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
         args: ['--maxkb=500']
+        exclude: ^blog/images/
       - id: check-merge-conflict
       - id: debug-statements
