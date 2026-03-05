@@ -113,26 +113,38 @@ npm run dev
 
 ## 设计思想
 
-### 为什么使用 HTTP 轮询？
+### 背景与问题认识
 
-本系统采用 **HTTP 轮询而非 WebSocket**：
+Claude Code 的 Agent Teams 功能非常强大，但在终端上运行时存在以下问题：
 
-1. **简单架构**: 无需 WebSocket 连接管理
-2. **利用缓存**: TanStack Query 的缓存功能（staleTime: 10秒）减少不必要的请求
-3. **可扩展性**: 用户可调整轮询间隔
+- **任务分配的不透明性**: 从 Team Lead 到 Teammates 的任务分配难以查看
+- **通信追踪的困难性**: 代理间的协调通信流程难以追踪
+- **思考过程的黑盒化**: 各个 Agent 的思考和行动过程没有可视化
 
-### 团队状态判定
+### Teamworks Skill 设计思想
 
-团队状态通过 **会话日志的 mtime** 判定：
+**通过专业化超越通用代理的局限**
 
-| 状态 | 条件 | 可删除 |
-|------|------|--------|
-| `active` | 会话日志 mtime ≤ 1小时 | ❌ 否 |
-| `stopped` | 会话日志 mtime > 1小时 | ✅ 是 |
-| `unknown` | 无会话日志 | ✅ 是 |
-| `inactive` | members 数组为空 | ✅ 是 |
+仅靠通用代理（General-Purpose）无法充分利用项目特定的 Skills 和 MCP Servers。Teamworks Skill 为每个角色精确定义最合适的 Agent Type、Skills 和 MCP Servers，使代理能够以专业化方式运行。
 
-> 详细请参考 [docs/spec/system-design.zh.md](docs/spec/system-design.zh.md) §2.2
+**基于 YAGNI 原则的最小配置**
+
+根据开发需求和任务详情，只分配必要的最小代理数量。由于令牌消耗和管理成本随代理数量成比例增加，因此从成本效益角度设计最优的团队结构。
+
+**明确的通信路径**
+
+Section 间通信仅限于 Section 负责人之间，禁止成员之间的直接跨组通信。这使得主会话（您）只需与各 Section 的 Lead 进行交互，即使在大规模开发中也能简化审批流程。
+
+### 监控仪表板设计思想
+
+**提高透明度**
+
+实时可视化 Agent Teams 的活动，实现：
+
+- **系统提示可视化**: 查看每个代理的角色和配置
+- **思考过程追踪**: 按时间顺序显示 LLM 通信消息和思考历史
+- **通信消息监控**: 可视化 Teammates 之间的协调通信
+- **任务进度确认**: 在 GUI 上实时跟踪进度
 
 ---
 
