@@ -131,7 +131,7 @@ describe('dashboardStore', () => {
 
       const filter = useDashboardStore.getState().messageFilter;
       expect(filter.senders).toEqual(['agent-1']);
-      expect(filter.types).toEqual(['task']);
+      expect(filter.types).toEqual(['task_assignment']);
     });
 
     it('resetFilters でフィルターをリセットできること', () => {

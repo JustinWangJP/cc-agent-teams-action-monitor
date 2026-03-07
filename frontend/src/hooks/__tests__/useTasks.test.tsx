@@ -123,7 +123,8 @@ describe('useTasks (React Query)', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
-        statusText: 'Internal Server Error'
+        statusText: 'Internal Server Error',
+        json: async () => ({ detail: 'Failed to fetch tasks' })
       } as Response)
 
       const { result } = renderHook(() => useTasks(), {
@@ -184,7 +185,14 @@ describe('useTeamTasks (React Query)', () => {
       expect(result.current.tasks).toEqual(mockTeamTasks)
     })
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/tasks/team/team1')
+    // apiClientを使用しているため、URLとheadersが含まれる
+    expect(mockFetch).toHaveBeenCalledWith('/api/tasks/team/team1', expect.objectContaining({
+      method: 'GET',
+      headers: expect.objectContaining({
+        'Accept-Language': expect.any(String),
+        'Content-Type': 'application/json',
+      }),
+    }))
   })
 
   it('teamName が空の場合、API呼び出しを行わない', async () => {

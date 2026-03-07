@@ -1,6 +1,7 @@
 import { TaskSummary } from '@/types/task';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { useTranslation } from 'react-i18next';
+import { getTaskBorderClass } from '@/utils/statusColors';
 
 /**
  * タスク情報をカード形式で表示するコンポーネント。
@@ -18,16 +19,9 @@ interface TaskCardProps {
 
 export function TaskCard({ task }: TaskCardProps) {
   const { t } = useTranslation(['tasks', 'common']);
-  const statusColors: Record<string, string> = {
-    pending: 'border-l-gray-400',
-    in_progress: 'border-l-blue-500',
-    completed: 'border-l-green-500',
-    deleted: 'border-l-red-500',
-    stopped: 'border-l-gray-500',
-  };
 
   return (
-    <div className={`bg-white rounded-lg shadow p-4 border-l-4 ${statusColors[task.status] || 'border-l-gray-400'}`}>
+    <div className={`bg-white rounded-lg shadow p-4 border-l-4 ${getTaskBorderClass(task.status)}`}>
       <div className="flex justify-between items-start mb-3">
         <h4 className="font-medium text-gray-900 text-sm flex-1 pr-2">{task.subject}</h4>
         <StatusBadge status={task.status} size="sm" />

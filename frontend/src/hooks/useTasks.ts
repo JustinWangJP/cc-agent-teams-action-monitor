@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Task, TaskSummary } from '@/types/task';
 import { useDashboardStore } from '@/stores/dashboardStore';
+import { apiGet } from '@/lib/apiClient';
 
 /**
  * 全タスク一覧を取得・管理するカスタムフック（React Query版）。
@@ -18,11 +19,7 @@ export function useTasks() {
 
   const { data: tasks = [], isLoading, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['tasks'],
-    queryFn: async () => {
-      const response = await fetch('/api/tasks/');
-      if (!response.ok) throw new Error('Failed to fetch tasks');
-      return response.json() as Promise<TaskSummary[]>;
-    },
+    queryFn: () => apiGet<TaskSummary[]>('/api/tasks/'),
     refetchInterval: tasksInterval,
     staleTime: 0,
   });
@@ -53,11 +50,7 @@ export function useTeamTasks(teamName: string) {
 
   const { data: tasks = [], isLoading, error, refetch } = useQuery({
     queryKey: ['tasks', 'team', teamName],
-    queryFn: async () => {
-      const response = await fetch(`/api/tasks/team/${teamName}`);
-      if (!response.ok) throw new Error('Failed to fetch team tasks');
-      return response.json() as Promise<Task[]>;
-    },
+    queryFn: () => apiGet<Task[]>(`/api/tasks/team/${teamName}`),
     enabled: !!teamName,
     refetchInterval: messagesInterval,
     staleTime: 0,
