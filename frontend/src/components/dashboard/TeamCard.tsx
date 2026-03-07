@@ -6,12 +6,7 @@ import { ModelBadge } from '@/components/overview/ModelBadge';
 import { useDeleteTeam } from '@/hooks/useTeams';
 import type { ModelUsage } from '@/types/model';
 import { useTranslation } from 'react-i18next';
-
-/**
- * 削除可能なステータス一覧
- * active 状態以外は削除可能
- */
-const DELETABLE_STATUSES = ['stopped', 'inactive', 'unknown'];
+import { getTeamBorderClass, isTeamDeletable } from '@/utils/statusColors';
 
 /**
  * チーム情報をカード形式で表示するコンポーネント。
@@ -37,24 +32,6 @@ interface TeamCardProps {
   onDeleted?: () => void;
 }
 
-/**
- * ステータスに応じたボーダー色を返す
- */
-function getBorderClass(status: string): string {
-  switch (status) {
-    case 'active':
-      return 'border-green-500 dark:border-green-400';
-    case 'stopped':
-      return 'border-gray-400 dark:border-gray-600 opacity-70';
-    case 'inactive':
-      return 'border-gray-300 dark:border-gray-700 opacity-60';
-    case 'unknown':
-      return 'border-yellow-400 dark:border-yellow-600 opacity-70';
-    default:
-      return 'border-primary-500 dark:border-primary-400';
-  }
-}
-
 export function TeamCard({
   team,
   onClick,
@@ -67,8 +44,8 @@ export function TeamCard({
   const { deleteTeam, isDeleting } = useDeleteTeam();
   const { t } = useTranslation(['dashboard', 'common', 'a11y']);
 
-  const borderClass = getBorderClass(team.status);
-  const canDelete = DELETABLE_STATUSES.includes(team.status);
+  const borderClass = getTeamBorderClass(team.status);
+  const canDelete = isTeamDeletable(team.status);
 
   /**
    * 削除ボタンクリック時のハンドラー

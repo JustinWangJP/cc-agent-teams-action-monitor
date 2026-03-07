@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDashboardStore } from '@/stores/dashboardStore';
+import { apiGet } from '@/lib/apiClient';
 
 /**
  * インボックスメッセージの型定義。
@@ -45,11 +46,7 @@ export function useInbox(teamName: string) {
 
   const { data: inbox = {}, isLoading, error, refetch } = useQuery({
     queryKey: ['inbox', teamName],
-    queryFn: async () => {
-      const response = await fetch(`/api/teams/${teamName}/inboxes`);
-      if (!response.ok) throw new Error('Failed to fetch inbox');
-      return response.json() as Promise<TeamInbox>;
-    },
+    queryFn: () => apiGet<TeamInbox>(`/api/teams/${teamName}/inboxes`),
     refetchInterval: inboxInterval,
     enabled: !!teamName,
     staleTime: 0,

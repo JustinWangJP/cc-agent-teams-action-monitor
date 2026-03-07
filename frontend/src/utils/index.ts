@@ -6,3 +6,4 @@
 
 export * from './dateFormat';
 export * from './teamModels';
+export * from './statusColors';
