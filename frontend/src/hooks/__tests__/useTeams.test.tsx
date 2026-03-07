@@ -128,7 +128,8 @@ describe('useTeams (React Query)', () => {
   describe('エラーハンドリング', () => {
     it('APIエラー時に error を設定する', async () => {
       vi.mocked(fetch).mockResolvedValueOnce({
-        ok: false
+        ok: false,
+        json: async () => ({ detail: 'Failed to fetch teams' })
       } as Response)
 
       const { result } = renderHook(() => useTeams(), {
