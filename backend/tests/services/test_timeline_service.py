@@ -387,90 +387,6 @@ class TestTimelineService:
         assert result["type"] == "plan_approval_response"
         assert result["summary"] == "プラン却下"
 
-    @pytest.mark.skip(reason="UAT 要件：file-history-snapshot はスキップされるため")
-    @pytest.mark.asyncio
-    async def test_map_session_entry_file_history_snapshot_single(self):
-        """ファイル変更履歴（単一ファイル）のマッピングをテストします."""
-        service = TimelineService()
-
-        entry = {
-            "type": "file-history-snapshot",
-            "role": "assistant",
-            "message": {"role": "assistant", "model": "claude-opus-4-6"},
-            "fileChanges": {
-                "/path/to/file.py": {"operation": "modified", "version": 5}
-            },
-            "timestamp": "2026-02-21T10:00:00Z",
-        }
-
-        result = service._map_session_entry(entry)
-
-        assert result is not None
-        assert result["parsed_type"] == "file_change"
-        assert result["content"] == "ファイル変更: /path/to/file.py"
-        assert result["color"] == "#0891b2"
-        assert result["source"] == "session"
-        assert len(result["details"]["files"]) == 1
-        assert result["details"]["files"][0]["path"] == "/path/to/file.py"
-        assert result["details"]["files"][0]["operation"] == "modified"
-        assert result["details"]["files"][0]["version"] == 5
-
-    @pytest.mark.skip(reason="UAT 要件：file-history-snapshot はスキップされるため")
-    @pytest.mark.asyncio
-    async def test_map_session_entry_file_history_snapshot_multiple(self):
-        """ファイル変更履歴（複数ファイル）のマッピングをテストします."""
-        service = TimelineService()
-
-        entry = {
-            "type": "file-history-snapshot",
-            "role": "assistant",
-            "message": {"role": "assistant", "model": "claude-opus-4-6"},
-            "fileChanges": {
-                "/path/to/file1.py": {"operation": "created", "version": 1},
-                "/path/to/file2.py": {"operation": "read", "version": 2},
-                "/path/to/file3.py": {"operation": "deleted", "version": 3},
-            },
-            "timestamp": "2026-02-21T10:00:00Z",
-        }
-
-        result = service._map_session_entry(entry)
-
-        assert result is not None
-        assert result["parsed_type"] == "file_change"
-        assert result["content"] == "3 ファイル変更"
-        assert result["color"] == "#0891b2"
-        assert len(result["details"]["files"]) == 3
-
-        # ファイル情報の検証
-        files = result["details"]["files"]
-        assert files[0]["path"] == "/path/to/file1.py"
-        assert files[0]["operation"] == "created"
-        assert files[1]["path"] == "/path/to/file2.py"
-        assert files[1]["operation"] == "read"
-        assert files[2]["path"] == "/path/to/file3.py"
-        assert files[2]["operation"] == "deleted"
-
-    @pytest.mark.skip(reason="UAT 要件：file-history-snapshot はスキップされるため")
-    @pytest.mark.asyncio
-    async def test_map_session_entry_file_history_snapshot_empty(self):
-        """空のファイル変更履歴のマッピングをテストします."""
-        service = TimelineService()
-
-        entry = {
-            "type": "file-history-snapshot",
-            "role": "assistant",
-            "message": {"role": "assistant", "model": "claude-opus-4-6"},
-            "fileChanges": {},
-            "timestamp": "2026-02-21T10:00:00Z",
-        }
-
-        result = service._map_session_entry(entry)
-
-        assert result is not None
-        assert result["parsed_type"] == "file_change"
-        assert result["content"] == "0 ファイル変更"
-        assert len(result["details"]["files"]) == 0
-
     @pytest.mark.asyncio
     async def test_load_session_entries_with_file_history(self, tmp_path):
         """ファイル変更履歴を含むセッションログの読み込みをテストします."""
@@ -514,26 +430,6 @@ class TestTimelineService:
         assert len(result) == 2
         assert result[0]["parsed_type"] == "user_message"
         assert result[1]["parsed_type"] == "thinking"
-
-    @pytest.mark.skip(reason="UAT 要件：file_change タイプは削除されるため")
-    @pytest.mark.asyncio
-    async def test_map_inbox_message_file_change(self):
-        """ファイル変更構造化メッセージのマッピングをテストします."""
-        service = TimelineService()
-
-        msg = {
-            "content": '{"type": "file_change", "files": ["/path/to/file.py"], "operation": "modified"}',
-            "from": "agent",
-            "timestamp": "2026-02-21T10:00:00Z",
-            "read": True,
-        }
-
-        result = service._map_inbox_message(msg, "recipient")
-
-        assert result is not None
-        assert result["parsed_type"] == "file_change"
-        assert result["summary"] == "ファイルmodified: /path/to/file.py"
-        assert result["color"] == "#0891b2"
 
     @pytest.mark.asyncio
     async def test_map_inbox_message_error(self):
