@@ -91,76 +91,72 @@ export const ChatHeader = memo<ChatHeaderProps>(
     return (
       <div className="flex flex-col gap-3">
         {/* メインタイトルバー */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* 表示件数セレクター */}
-            {onDisplayLimitChange && (
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => onDisplayLimitChange('500')}
-                  className={clsx(
-                    'px-2 py-0.5 text-xs rounded transition-colors',
-                    displayLimit === '500'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
-                  )}
-                >
-                  {t('header.display_limit_500')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDisplayLimitChange('all')}
-                  className={clsx(
-                    'px-2 py-0.5 text-xs rounded transition-colors',
-                    displayLimit === 'all'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
-                  )}
-                >
-                  {t('header.display_limit_all')}
-                </button>
-              </div>
-            )}
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              {displayTitle}
-            </h2>
-            {messageCount > 0 && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                {t('header.message_count', { count: messageCount })}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* フィルタートグルボタン */}
-            {(messageTypeFilter || senderFilter) && onToggleFilter && (
+        <div className="flex flex-wrap items-center gap-3">
+          {/* 表示件数セレクター */}
+          {onDisplayLimitChange && (
+            <div className="flex items-center gap-1 max-[550px]:basis-full">
               <button
                 type="button"
-                onClick={onToggleFilter}
+                onClick={() => onDisplayLimitChange('500')}
                 className={clsx(
-                  'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
-                  'text-slate-700 dark:text-slate-300',
-                  'bg-white dark:bg-slate-800',
-                  'border border-slate-300 dark:border-slate-700',
-                  'hover:bg-slate-50 dark:hover:bg-slate-700',
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                  showFilter && 'bg-slate-100 dark:bg-slate-700'
+                  'px-2 py-0.5 text-xs rounded transition-colors',
+                  displayLimit === '500'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
                 )}
-                aria-label={t('header.filter_toggle_aria')}
-                aria-pressed={showFilter}
               >
-                <Filter className="w-4 h-4" />
-                {t('header.filter_toggle')}
-                {/* フィルター選択数の合計を表示 */}
-                {(messageTypeFilter?.selectedTypes.length || 0) + (senderFilter?.selectedSenders.length || 0) > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                    {(messageTypeFilter?.selectedTypes.length || 0) + (senderFilter?.selectedSenders.length || 0)}
-                  </span>
-                )}
+                {t('header.display_limit_500')}
               </button>
-            )}
-          </div>
+              <button
+                type="button"
+                onClick={() => onDisplayLimitChange('all')}
+                className={clsx(
+                  'px-2 py-0.5 text-xs rounded transition-colors',
+                  displayLimit === 'all'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+                )}
+              >
+                {t('header.display_limit_all')}
+              </button>
+            </div>
+          )}
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            {displayTitle}
+          </h2>
+          {messageCount > 0 && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+              {t('header.message_count', { count: messageCount })}
+            </span>
+          )}
+
+          {/* フィルタートグルボタン */}
+          {(messageTypeFilter || senderFilter) && onToggleFilter && (
+            <button
+              type="button"
+              onClick={onToggleFilter}
+              className={clsx(
+                'inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ml-auto',
+                'text-slate-700 dark:text-slate-300',
+                'bg-white dark:bg-slate-800',
+                'border border-slate-300 dark:border-slate-700',
+                'hover:bg-slate-50 dark:hover:bg-slate-700',
+                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                showFilter && 'bg-slate-100 dark:bg-slate-700'
+              )}
+              aria-label={t('header.filter_toggle_aria')}
+              aria-pressed={showFilter}
+            >
+              <Filter className="w-4 h-4" />
+              {t('header.filter_toggle')}
+              {/* フィルター選択数の合計を表示 */}
+              {(messageTypeFilter?.selectedTypes.length || 0) + (senderFilter?.selectedSenders.length || 0) > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                  {(messageTypeFilter?.selectedTypes.length || 0) + (senderFilter?.selectedSenders.length || 0)}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* 検索バー */}
