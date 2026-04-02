@@ -162,7 +162,7 @@ export const PollingIntervalSelector = memo<PollingIntervalSelectorProps>(
       : 0;
 
     return (
-      <div className={clsx('flex items-center gap-2', className)}>
+      <div className={clsx('flex flex-wrap items-center gap-2', className)}>
         {displayLabel && (
           <span className="text-sm text-slate-600 dark:text-slate-400 shrink-0">
             {displayLabel}:
