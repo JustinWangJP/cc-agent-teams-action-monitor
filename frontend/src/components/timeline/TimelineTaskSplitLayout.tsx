@@ -65,24 +65,26 @@ export const TimelineTaskSplitLayout = memo<TimelineTaskSplitLayoutProps>(
         )}
         style={{ gap: PANEL_GAP }}
       >
-        {/* 左: タイムラインパネル（可変幅） */}
+        {/* 左: タイムラインパネル（モバイル: 全幅、デスクトップ: タスクパネル分を引いた幅） */}
         <div
           className={clsx(
             'w-full lg:h-full overflow-y-auto',
-            'transition-all duration-300 ease-out'
+            'transition-all duration-300 ease-out',
+            'min-w-0'
           )}
           style={{
-            width: `calc(100% - ${taskPanelWidth}px - ${PANEL_GAP}px)`,
+            // lg (1024px) 以上でのみタスクパネル分の幅を引く。CSS変数でメディアクエリ相当を実現
+            flex: `1 1 0%`,
           }}
         >
           {timelinePanel}
         </div>
 
-        {/* 右: タスク監視パネル（固定幅） */}
+        {/* 右: タスク監視パネル（モバイル: 非表示、デスクトップ: 固定幅） */}
         <div
           className={clsx(
-            'w-full lg:h-full overflow-visible lg:overflow-visible',
-            'border-t lg:border-t-0 lg:border-l',
+            'hidden lg:block lg:h-full overflow-visible lg:overflow-visible',
+            'lg:border-l',
             'border-slate-200 dark:border-slate-700',
             'transition-all duration-300 ease-out',
             'flex-shrink-0',

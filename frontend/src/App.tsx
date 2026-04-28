@@ -246,27 +246,25 @@ function App() {
 
                 {/* Teams Section - 全幅表示 */}
                 <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                        {t('teams.active_teams')}
-                      </h2>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {t('teams.teams_count', { count: teams.length })}
-                      </span>
-                      <PollingIntervalSelector
-                        value={teamsInterval}
-                        onChange={setTeamsInterval}
-                        label=""
-                        lastUpdateTimestamp={teamsDataUpdatedAt}
-                      />
-                    </div>
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      {t('teams.active_teams')}
+                    </h2>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('teams.teams_count', { count: teams.length })}
+                    </span>
+                    <PollingIntervalSelector
+                      value={teamsInterval}
+                      onChange={setTeamsInterval}
+                      label=""
+                      lastUpdateTimestamp={teamsDataUpdatedAt}
+                    />
                     <button
                       type="button"
                       onClick={() => refetchTeams()}
                       disabled={teamsLoading}
                       className={clsx(
-                        "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                        "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ml-auto",
                         "text-slate-700 dark:text-slate-300",
                         "bg-white dark:bg-slate-800",
                         "border border-slate-300 dark:border-slate-700",
@@ -357,27 +355,25 @@ function App() {
               className="animate-in fade-in slide-in-from-bottom-2 duration-300 h-[calc(100vh-200px)]"
             >
               {/* チームセレクター + 更新UI（統合） */}
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <label htmlFor="timeline-team-select" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('teams.select_team')}:
-                  </label>
-                  <select
-                    id="timeline-team-select"
-                    value={selectedTeam || ""}
-                    onChange={(e) => setSelectedTeam(e.target.value || null)}
-                    className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">{t('teams.select_team_placeholder')}</option>
-                    {teams.map((team) => (
-                      <option key={team.name} value={team.name}>
-                        {team.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <label htmlFor="timeline-team-select" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('teams.select_team')}:
+                </label>
+                <select
+                  id="timeline-team-select"
+                  value={selectedTeam || ""}
+                  onChange={(e) => setSelectedTeam(e.target.value || null)}
+                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">{t('teams.select_team_placeholder')}</option>
+                  {teams.map((team) => (
+                    <option key={team.name} value={team.name}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
                 {selectedTeam && (
-                  <div className="flex items-center gap-3">
+                  <>
                     <PollingIntervalSelector
                       value={messagesInterval}
                       onChange={setMessagesInterval}
@@ -388,7 +384,7 @@ function App() {
                       type="button"
                       onClick={handleTimelineRefresh}
                       className={clsx(
-                        "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                        "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ml-auto",
                         "text-slate-700 dark:text-slate-300",
                         "bg-white dark:bg-slate-800",
                         "border border-slate-300 dark:border-slate-700",
@@ -400,7 +396,7 @@ function App() {
                       <RefreshCw className="w-4 h-4" />
                       {t('buttons.refresh')}
                     </button>
-                  </div>
+                  </>
                 )}
               </div>
               {selectedTeam ? (
@@ -437,27 +433,24 @@ function App() {
             >
               {/* ヘッダーセクション */}
               <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                      {t('tasks.title')}
-                    </h2>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('tasks.count', { filtered: filteredTasks.length, total: tasks.length })}
-                    </span>
-                    <PollingIntervalSelector
-                      value={tasksInterval}
-                      onChange={setTasksInterval}
-                      label={t('header.polling_interval')}
-                      lastUpdateTimestamp={tasksDataUpdatedAt}
-                    />
-                  </div>
+                <div className="flex flex-wrap items-center gap-3 mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 max-[550px]:basis-full">
+                    {t('tasks.title')}
+                  </h2>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('tasks.count', { filtered: filteredTasks.length, total: tasks.length })}
+                  </span>
+                  <PollingIntervalSelector
+                    value={tasksInterval}
+                    onChange={setTasksInterval}
+                    lastUpdateTimestamp={tasksDataUpdatedAt}
+                  />
                   <button
                     type="button"
                     onClick={() => refetchTasks()}
                     disabled={tasksLoading}
                     className={clsx(
-                      "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                      "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ml-auto",
                       "text-slate-700 dark:text-slate-300",
                       "bg-white dark:bg-slate-800",
                       "border border-slate-300 dark:border-slate-700",
