@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Team, TeamSummary } from '@/types/team';
 import { useDashboardStore } from '@/stores/dashboardStore';
+import { apiGet, apiDelete } from '@/lib/apiClient';
 import toast from 'react-hot-toast';
 
 /**
@@ -27,11 +28,7 @@ export function useTeams() {
 
   const { data: teams = [], isLoading, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['teams'],
-    queryFn: async () => {
-      const response = await fetch('/api/teams/');
-      if (!response.ok) throw new Error('Failed to fetch teams');
-      return response.json() as Promise<TeamSummary[]>;
-    },
+    queryFn: () => apiGet<TeamSummary[]>('/api/teams/'),
     refetchInterval: teamsInterval,
     staleTime: 0,
   });
@@ -59,11 +56,7 @@ export function useTeams() {
 export function useTeam(teamName: string) {
   const { data: team = null, isLoading, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['team', teamName],
-    queryFn: async () => {
-      const response = await fetch(`/api/teams/${teamName}`);
-      if (!response.ok) throw new Error('Failed to fetch team');
-      return response.json() as Promise<Team>;
-    },
+    queryFn: () => apiGet<Team>(`/api/teams/${teamName}`),
     enabled: !!teamName,
     staleTime: 0,
   });
@@ -91,18 +84,7 @@ export function useDeleteTeam() {
   const queryClient = useQueryClient();
 
   const { mutate, isPending, error } = useMutation({
-    mutationFn: async (teamName: string) => {
-      const response = await fetch(`/api/teams/${teamName}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'チームの削除に失敗しました');
-      }
-
-      return response.json() as Promise<DeleteTeamResponse>;
-    },
+    mutationFn: (teamName: string) => apiDelete<DeleteTeamResponse>(`/api/teams/${teamName}`),
     onSuccess: (data) => {
       // チーム一覧を再取得してキャッシュを更新
       queryClient.invalidateQueries({ queryKey: ['teams'] });

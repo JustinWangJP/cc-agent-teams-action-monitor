@@ -7,20 +7,14 @@ FileWatcherService の単体テスト。
 """
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch
 from watchdog.events import FileModifiedEvent, FileCreatedEvent
 
 from app.services.file_watcher import FileWatcherService, ClaudeFileHandler
 
 
-@pytest.fixture
-def file_watcher():
-    """FileWatcherService インスタンス"""
-    return FileWatcherService()
-
-
 @pytest.mark.asyncio
-async def test_file_watcher_start(file_watcher, tmp_path, monkeypatch):
+async def test_file_watcher_start(tmp_path, monkeypatch):
     """ファイル監視サービスの開始テスト"""
     from app.config import settings
 
@@ -44,7 +38,7 @@ async def test_file_watcher_start(file_watcher, tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_file_watcher_stop(file_watcher):
+async def test_file_watcher_stop():
     """ファイル監視サービスの停止テスト"""
     # Observer のモック
     with patch("app.services.file_watcher.Observer") as mock_observer_class:
@@ -189,7 +183,10 @@ async def test_schedule_log_debounce():
     with patch("app.services.file_watcher.asyncio.get_event_loop") as mock_loop:
         mock_loop_instance = Mock()
         mock_loop.return_value = mock_loop_instance
-        mock_task = AsyncMock()
+
+        # cancelメソッドは同期メソッドとしてモック
+        mock_task = Mock()
+        mock_task.cancel = Mock()
         mock_loop_instance.create_task.return_value = mock_task
 
         # 1回目
@@ -204,3 +201,4 @@ async def test_schedule_log_debounce():
         assert first_task is not None
         assert second_task is not None
         # タスクがキャンセルされていることを確認（2回目で1回目がキャンセルされる）
+        mock_task.cancel.assert_called_once()

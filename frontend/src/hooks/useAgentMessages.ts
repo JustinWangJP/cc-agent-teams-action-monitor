@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useDashboardStore } from '@/stores/dashboardStore';
+import { apiGet } from '@/lib/apiClient';
 import type { InboxMessage } from './useInbox';
 
 /**
@@ -23,11 +24,7 @@ export function useAgentMessages(teamName: string, agentName: string) {
 
   const { data: messages = [], isLoading, error, refetch } = useQuery({
     queryKey: ['inbox', teamName, agentName],
-    queryFn: async () => {
-      const response = await fetch(`/api/teams/${teamName}/inboxes/${agentName}`);
-      if (!response.ok) throw new Error('Failed to fetch agent messages');
-      return response.json() as Promise<InboxMessage[]>;
-    },
+    queryFn: () => apiGet<InboxMessage[]>(`/api/teams/${teamName}/inboxes/${agentName}`),
     refetchInterval: messagesInterval,
     enabled: !!teamName && !!agentName,
     staleTime: 0,
